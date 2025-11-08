@@ -1,0 +1,4 @@
+# Backend 相關
+Backend/.env
+Backend/__pycache__/
+Backend/*.pyc
