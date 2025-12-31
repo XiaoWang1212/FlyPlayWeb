@@ -1,4 +1,4 @@
-import requests
+import requests 
 from config import Config
 
 class GoogleMapService:

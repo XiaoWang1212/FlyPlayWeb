@@ -1,30 +1,104 @@
+"""
+Map Routes - 地圖路由
+定義地圖和地點相關的路由端點（使用新版Google Places API）
+"""
 from flask import Blueprint, request, jsonify
-from services.googlemap_service import GoogleMapService
+from controllers.map_controller import MapController
 
 map_bp = Blueprint('maps', __name__)
-map_service = GoogleMapService()
+map_controller = MapController()
 
 @map_bp.route('/search', methods=['POST'])
-def search_places():
-    data = request.get_json()
-    query = data.get('query')
-    location = data.get('location')
-    radius = data.get('radius', 5000)
-    
-    result = map_service.search_places(query, location, radius)
-    return jsonify(result)
+def text_search():
+    """文字搜索地點（新版API）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '請求體不能為空'
+            }), 400
+        
+        text_query = data.get('textQuery') or data.get('text_query')
+        language_code = data.get('languageCode', 'zh-TW')
+        max_results = data.get('maxResultCount', 5)
+        
+        # 調用控制器處理業務邏輯
+        result = map_controller.handle_text_search(
+            text_query, 
+            language_code, 
+            max_results
+        )
+        
+        # 根據結果返回相應的響應
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'服務器錯誤: {str(e)}'
+        }), 500
 
 @map_bp.route('/details/<place_id>', methods=['GET'])
 def get_place_details(place_id):
-    result = map_service.get_place_details(place_id)
-    return jsonify(result)
+    """獲取地點詳情"""
+    try:
+        # 調用控制器處理業務邏輯
+        result = map_controller.handle_place_details(place_id)
+        
+        # 根據結果返回相應的響應
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'服務器錯誤: {str(e)}'
+        }), 500
 
-@map_bp.route('/directions', methods=['POST'])
-def get_directions():
-    data = request.get_json()
-    origin = data.get('origin')
-    destination = data.get('destination')
-    mode = data.get('mode', 'driving')
-    
-    result = map_service.get_directions(origin, destination, mode)
-    return jsonify(result)
+@map_bp.route('/nearby', methods=['POST'])
+def nearby_search():
+    """附近搜索"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '請求體不能為空'
+            }), 400
+        
+        location = data.get('location')
+        radius = data.get('radius', 1500)
+        included_types = data.get('includedTypes') or data.get('types')
+        language_code = data.get('languageCode', 'zh-TW')
+        max_results = data.get('maxResultCount', 10)
+        
+        # 驗證location
+        if not location:
+            return jsonify({
+                'success': False,
+                'error': '必須提供location參數'
+            }), 400
+        
+        # 調用控制器處理業務邏輯
+        result = map_controller.handle_nearby_search(
+            location, 
+            radius, 
+            included_types,
+            language_code,
+            max_results
+        )
+        
+        # 根據結果返回相應的響應
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'服務器錯誤: {str(e)}'
+        }), 500
