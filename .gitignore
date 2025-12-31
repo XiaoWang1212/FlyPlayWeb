@@ -1,4 +1,6 @@
 # Backend 相關
 Backend/.env
 Backend/__pycache__/
+Backend/**/__pycache__/
 Backend/*.pyc
+Backend/flyplayweb-5e4a0-firebase-adminsdk-fbsvc-e5ea6adb65.json

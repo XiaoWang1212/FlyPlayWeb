@@ -2,6 +2,10 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
+import os
+
+if Config.GOOGLE_APPLICATION_CREDENTIALS:
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = Config.GOOGLE_APPLICATION_CREDENTIALS
 
 def create_app():
     app = Flask(__name__)

@@ -1,7 +1,3 @@
-"""
-Map Routes - 地圖路由
-定義地圖和地點相關的路由端點（使用新版Google Places API）
-"""
 from flask import Blueprint, request, jsonify
 from controllers.map_controller import MapController
 
@@ -10,7 +6,6 @@ map_controller = MapController()
 
 @map_bp.route('/search', methods=['POST'])
 def text_search():
-    """文字搜索地點（新版API）"""
     try:
         data = request.get_json()
         if not data:
@@ -23,14 +18,12 @@ def text_search():
         language_code = data.get('languageCode', 'zh-TW')
         max_results = data.get('maxResultCount', 5)
         
-        # 調用控制器處理業務邏輯
         result = map_controller.handle_text_search(
             text_query, 
             language_code, 
             max_results
         )
         
-        # 根據結果返回相應的響應
         if result['success']:
             return jsonify(result), 200
         else:
@@ -45,10 +38,8 @@ def text_search():
 def get_place_details(place_id):
     """獲取地點詳情"""
     try:
-        # 調用控制器處理業務邏輯
         result = map_controller.handle_place_details(place_id)
         
-        # 根據結果返回相應的響應
         if result['success']:
             return jsonify(result), 200
         else:
@@ -76,14 +67,12 @@ def nearby_search():
         language_code = data.get('languageCode', 'zh-TW')
         max_results = data.get('maxResultCount', 10)
         
-        # 驗證location
         if not location:
             return jsonify({
                 'success': False,
                 'error': '必須提供location參數'
             }), 400
         
-        # 調用控制器處理業務邏輯
         result = map_controller.handle_nearby_search(
             location, 
             radius, 
@@ -92,7 +81,6 @@ def nearby_search():
             max_results
         )
         
-        # 根據結果返回相應的響應
         if result['success']:
             return jsonify(result), 200
         else:
@@ -102,3 +90,66 @@ def nearby_search():
             'success': False,
             'error': f'服務器錯誤: {str(e)}'
         }), 500
+        
+@map_bp.route('/distance', methods=['POST'])
+def get_distance_and_duration():
+    try:
+        data = request.get_json()
+        origin = data.get('origin')
+        destination = data.get('destination')
+        mode = data.get('mode', 'driving')
+        if not origin or not destination:
+            return jsonify({'success': False, 'error': '必須提供origin與destination'}), 400
+        result = map_controller.handle_distance_and_duration(origin, destination, mode)
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@map_bp.route('/opening_hours/<place_id>', methods=['GET'])
+def get_opening_hours(place_id):
+    try:
+        result = map_controller.handle_opening_hours(place_id)
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@map_bp.route('/opening_hours', methods=['POST'])
+def get_opening_hours_by_name():
+    """
+    支援只傳店名查營業時間
+    """
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        if not name:
+            return jsonify({'success': False, 'error': '請提供店名'}), 400
+        result = map_controller.handle_opening_hours(name, is_name=True)
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@map_bp.route('/route_details', methods=['POST'])
+def get_route_details():
+    try:
+        data = request.get_json()
+        origin = data.get('origin')
+        destination = data.get('destination')
+        mode = data.get('mode', 'driving')
+        if not origin or not destination:
+            return jsonify({'success': False, 'error': '必須提供origin與destination'}), 400
+        result = map_controller.handle_route_details(origin, destination, mode)
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500  

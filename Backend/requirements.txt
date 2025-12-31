@@ -1,12 +1,11 @@
-# Web Framework
 Flask==2.3.3
 flask-cors==4.0.0
 
-# HTTP Requests
 requests==2.31.0
 
-# Environment Variables
 python-dotenv==1.0.0
 
-# Utilities
 Werkzeug==2.3.7
+
+google-cloud-firestore==2.22.0
+google-cloud-core==2.5.0
