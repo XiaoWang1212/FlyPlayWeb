@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選擇目的地</title>
+    <link rel="stylesheet" href="css/choose_destination.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="back-btn" onclick="history.back()">‹ 返回</button>
+            <h1>選擇目的地</h1>
+        </header>
+
+        <!-- 已選擇的目的地 -->
+        <div class="selected-area" id="selected-area">
+            <div class="selected-label">已選擇：</div>
+            <div class="selected-list" id="selected-list">
+                <span class="no-selection">尚未選擇</span>
+            </div>
+        </div>
+
+        <!-- 搜尋框 -->
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="搜尋城市或國家" oninput="searchDestination()">
+        </div>
+
+        <!-- 地區分類 -->
+        <div class="region-tabs">
+            <button class="tab-btn active" onclick="filterRegion('all')">全部</button>
+            <button class="tab-btn" onclick="filterRegion('taiwan')">台灣</button>
+            <button class="tab-btn" onclick="filterRegion('asia')">亞洲</button>
+            <button class="tab-btn" onclick="filterRegion('europe')">歐洲</button>
+            <button class="tab-btn" onclick="filterRegion('america')">北美洲</button>
+            <button class="tab-btn" onclick="filterRegion('oceania')">大洋洲</button>
+            <button class="tab-btn" onclick="filterRegion('africa')">非洲</button>
+        </div>
+
+        <!-- 城市列表 -->
+        <div class="destination-list" id="destination-list">
+            <!-- JavaScript 會動態生成 -->
+        </div>
+
+        <!-- 確認按鈕 -->
+        <button class="confirm-btn" id="confirm-btn" onclick="confirmSelection()" disabled>
+            請選擇目的地
+        </button>
+    </div>
+
+    <script src="js/choose_destination.js"></script>
+</body>
+</html>
