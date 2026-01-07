@@ -9,3 +9,7 @@ Werkzeug==2.3.7
 
 google-cloud-firestore==2.22.0
 google-cloud-core==2.5.0
+
+pymongo >= 4.5
+itsdangerous >= 2.1
+Authlib >= 1.2

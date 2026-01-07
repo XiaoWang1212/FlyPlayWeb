@@ -1,0 +1,4 @@
+{% extends "base.html" %} {% block content %}
+<h1>首頁</h1>
+<p>{% if user %}歡迎回來{{ user }}!{% else %}請登入或註冊{% endif %}</p>
+{% endblock %}

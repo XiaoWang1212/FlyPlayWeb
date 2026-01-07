@@ -1,0 +1,9 @@
+{% extends "base.html" %} {% block content %}
+<h1>註冊</h1>
+<form method="post" action="{{ url_for('register_submit') }}">
+  <input name="username" placeholder="帳號" required />
+  <input name="email" placeholder="Email" type="email" required />
+  <input name="password" placeholder="密碼" type="password" required />
+  <button type="submit">建立帳號</button>
+</form>
+{% endblock %}
