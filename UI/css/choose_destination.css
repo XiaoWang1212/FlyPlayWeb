@@ -1,0 +1,226 @@
+* {
+	box-sizing: border-box;
+}
+
+body,
+html {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	background-color: #121212;
+	color: #e0e0e0;
+	font-family: -apple-system, system-ui, sans-serif;
+	position: fixed;  
+}
+
+.container {
+	padding: 20px;
+	max-width: 600px;
+	margin: 0 auto;
+	height: 100vh;
+	height: 100dvh;  
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+/* Header */
+.header {
+	margin-bottom: 20px;
+	flex-shrink: 0;
+}
+
+/* 返回按鈕 */
+.back-btn {
+	background: transparent;
+	border: none;
+	color: #e0e0e0;
+	font-size: 18px;
+	cursor: pointer;
+	padding: 5px 0;
+	margin-bottom: 10px;
+}
+
+h1 {
+	font-size: 24px;
+	font-weight: 500;
+	margin: 0;
+	color: #fff;
+}
+
+/* 搜尋框 */
+.search-box {
+	margin-bottom: 20px;
+	flex-shrink: 0;
+}
+
+.search-box input {
+	width: 100%;
+	padding: 12px 15px;
+	background-color: #2a2a2a;
+	border: 1px solid #333;
+	border-radius: 8px;
+	color: #e0e0e0;
+	font-size: 16px;
+	outline: none;
+}
+
+.search-box input::placeholder {
+	color: #666;
+}
+
+.search-box input:focus {
+	border-color: #555;
+}
+
+/* 地區分類標籤 */
+.region-tabs {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	margin-bottom: 20px;
+	padding-bottom: 5px;
+	flex-shrink: 0;
+}
+
+.tab-btn {
+	padding: 8px 16px;
+	background-color: #2a2a2a;
+	border: 1px solid #333;
+	border-radius: 20px;
+	color: #888;
+	font-size: 14px;
+	white-space: nowrap;
+}
+
+.tab-btn.active {
+	background-color: #444;
+	color: #fff;
+	border-color: #555;
+}
+
+/* 城市列表 */
+.destination-list {
+	flex: 1;
+	overflow-y: scroll;  
+	-webkit-overflow-scrolling: touch;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	align-content: start;
+	margin-bottom: 15px;
+}
+
+.destination-item {
+	padding: 12px;
+	background-color: #2a2a2a;
+	border: 1px solid #333;
+	border-radius: 8px;
+	text-align: center;
+	cursor: pointer;
+}
+
+.destination-item:hover {
+	background-color: #333;
+	border-color: #555;
+}
+
+/* 選中狀態 */
+.destination-item.selected {
+	background-color: #444;
+	border-color: #666;
+}
+
+.destination-item.selected .city-name {
+	color: #fff;
+	font-weight: 600;
+}
+
+.destination-item .city-name {
+	font-size: 14px;
+	color: #e0e0e0;
+	margin-bottom: 4px;
+	font-weight: 500;
+}
+
+.destination-item .country-name {
+	font-size: 12px;
+	color: #888;
+}
+
+.destination-item.hidden {
+	display: none;
+}
+
+/* 確認按鈕 */
+.confirm-btn {
+	width: 100%;
+	padding: 15px;
+	background-color: #e0e0e0;
+	color: #121212;
+	border: none;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.confirm-btn:disabled {
+	background-color: #333;
+	color: #666;
+	cursor: not-allowed;
+}
+
+/* 已選擇區域 */
+.selected-area {
+    background-color: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.selected-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.selected-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.selected-tag {
+    background-color: #444;
+    color: #e0e0e0;
+    padding: 6px 10px;
+    border-radius: 16px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.selected-tag .remove-btn {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.selected-tag .remove-btn:hover {
+    color: #fff;
+}
+
+.no-selection {
+    color: #666;
+    font-size: 13px;
+}

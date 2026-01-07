@@ -1,0 +1,106 @@
+* {
+    box-sizing: border-box; 
+}
+
+body,
+html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: -apple-system, system-ui, sans-serif;
+}
+
+.container {
+    padding: 20px;
+    max-width: 600px; 
+    margin: 0 auto; 
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 30px;
+    color: #fff;
+}
+
+/* 表單群組 */
+.form-group {
+    margin-bottom: 15px;
+    background-color: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;  /* 新增：增加 label 和內容之間的間距 */
+}
+
+.form-group label {
+    font-size: 16px;
+    color: #e0e0e0;
+    margin: 0;
+
+}
+
+.select-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* 下拉選單樣式 */
+.select-input {
+    padding: 0;
+    padding-right: 20px;
+    background-color: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 16px;
+    outline: none;
+    text-align: right;
+    width: auto;
+    direction: rtl; 
+
+    /* 隱藏預設箭頭 */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.select-input option {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.arrow-icon {
+    position: absolute;
+    right: 0;
+    color: #666;
+    font-size: 20px;
+    pointer-events: none;
+    transform: rotate(90deg);
+}
+
+/* 目的地按鈕樣式 */
+.destination-btn {
+    padding: 0;
+    padding-right: 20px;
+    background-color: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 16px;
+    outline: none;
+    text-align: right;
+}
+
+.destination-btn #selected-destination {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 200px;
+}
