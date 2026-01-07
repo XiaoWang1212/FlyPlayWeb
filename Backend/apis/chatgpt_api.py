@@ -8,7 +8,7 @@ class ChatGPTService:
     async def get_travel_recommendation(self, location, preferences):
         try:
             response = await openai.ChatCompletion.acreate(
-                model="gpt--mini",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "你是一個專業的旅遊顧問"},
                     {"role": "user", "content": f"請推薦{location}的旅遊景點，偏好：{preferences}"}
@@ -30,7 +30,7 @@ class ChatGPTService:
             messages = conversation_history + [{"role": "user", "content": message}]
             
             response = await openai.ChatCompletion.acreate(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=300
             )
