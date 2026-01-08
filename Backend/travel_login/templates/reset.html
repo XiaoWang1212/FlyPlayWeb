@@ -1,0 +1,10 @@
+{% extends "base.html" %} {% block content %}
+<h1>重設密碼</h1>
+<form
+  method="post"
+  action="{{ url_for('reset_password_submit', token=token) }}"
+>
+  <input name="password" type="password" placeholder="新密碼" required />
+  <button type="submit">更新密碼</button>
+</form>
+{% endblock %}

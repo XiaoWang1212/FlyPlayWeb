@@ -1,0 +1,12 @@
+{% extends "base.html" %} {% block content %}
+<h1>登入</h1>
+<form method="post" action="{{ url_for('login_submit') }}">
+  <input name="account" placeholder="請輸入Email" required />
+  <input name="password" placeholder="密碼" type="password" required />
+  <button type="submit">登入</button>
+</form>
+<form method="get" action="{{ url_for('forgot_page')}}">
+  <button type="submit">忘記密碼</button>
+</form>
+<a href="{{ url_for('google_login') }}">透過Google登入</a>
+{% endblock %}
