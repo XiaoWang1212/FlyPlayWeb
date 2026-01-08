@@ -24,7 +24,7 @@ class ChatGPTService:
                     {"role": "system", "content": "你是一個專業的旅遊顧問，僅以JSON格式回傳行程資料。"},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
                 max_tokens = 1500
             )
             #解析內容
