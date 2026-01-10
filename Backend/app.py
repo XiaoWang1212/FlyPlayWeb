@@ -17,6 +17,8 @@ def create_app():
     CORS(app)
     
     app.register_blueprint(map_bp, url_prefix='/api/maps')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    
     
     @app.route('/')
     def index():
