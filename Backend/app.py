@@ -7,6 +7,9 @@ import os
 if Config.GOOGLE_APPLICATION_CREDENTIALS:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = Config.GOOGLE_APPLICATION_CREDENTIALS
 
+if Config.OPENAI_API_KEY:
+    os.environ['OPENAI_API_KEY'] = Config.OPENAI_API_KEY
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
