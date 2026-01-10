@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
+from routes.chat_routes import chat_bp
 import os
 
 if Config.GOOGLE_APPLICATION_CREDENTIALS:
