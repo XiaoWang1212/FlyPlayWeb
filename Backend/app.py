@@ -2,11 +2,15 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
+from routes.chat_routes import chat_bp
 import os
 from services.validate_api import test_get_distance_and_duration
 
 if Config.GOOGLE_APPLICATION_CREDENTIALS:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = Config.GOOGLE_APPLICATION_CREDENTIALS
+
+if Config.OPENAI_API_KEY:
+    os.environ['OPENAI_API_KEY'] = Config.OPENAI_API_KEY
 
 def create_app():
     app = Flask(__name__)
@@ -15,6 +19,8 @@ def create_app():
     CORS(app)
     
     app.register_blueprint(map_bp, url_prefix='/api/maps')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    
     
     @app.route('/test')
     def test():
