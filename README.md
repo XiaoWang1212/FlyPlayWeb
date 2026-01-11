@@ -2,7 +2,7 @@
 
 ## 一鍵啟動（推薦 Docker）
 
-前提：需安裝 Docker Desktop，且確保是開著的狀態
+前提：需安裝 Docker Desktop
 
 在專案根目錄執行：
 

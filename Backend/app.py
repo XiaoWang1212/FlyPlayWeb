@@ -4,6 +4,7 @@ from config import Config
 from routes.map_routes import map_bp
 from routes.chat_routes import chat_bp
 import os
+from services.validate_api import test_get_distance_and_duration
 
 if Config.GOOGLE_APPLICATION_CREDENTIALS:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = Config.GOOGLE_APPLICATION_CREDENTIALS
@@ -21,6 +22,16 @@ def create_app():
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
     
     
+    @app.route('/test')
+    def test():
+        test_get_distance_and_duration()
+        return jsonify({
+            'success': True,
+            'message': 'Test executed, check console for output.'
+        }), 200
+
+
+
     @app.route('/')
     def index():
         return jsonify({
