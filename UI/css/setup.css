@@ -1,5 +1,7 @@
 * {
     box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent;  /* 停用點擊高亮效果 */
+
 }
 
 body,
@@ -8,8 +10,8 @@ html {
     padding: 0;
     width: 100%;
     height: 100%;
-    background-color: #121212;
-    color: #e0e0e0;
+    background-color: #1a1a1a; 
+    color: #333; 
     font-family: -apple-system, system-ui, sans-serif;
 }
 
@@ -19,82 +21,129 @@ html {
     margin: 0 auto; 
 }
 
-h1 {
-    font-size: 24px;
-    font-weight: 500;
-    margin-bottom: 30px;
-    color: #fff;
+/* ==================== 返回按鈕 ==================== */
+.back-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin: 0 0 20px 0px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
-/* 表單群組 */
+.back-btn:active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.back-btn img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    filter: brightness(0) saturate(100%) invert(87%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(106%) contrast(88%);
+    /* 讓黑色 SVG 變成 #e0e0e0 */
+}
+
+h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin: 0 0 30px 8px;
+}
+
+/* ==================== 表單群組 ==================== */
 .form-group {
     margin-bottom: 15px;
-    background-color: #2a2a2a;
-    border: 1px solid #333;
+    background-color: #f5f5f5; 
+    border: none; 
     border-radius: 12px;
-    padding: 15px 20px;
+    --form-padding: 20px 20px; 
+    --form-text-size: 20px;  /* 統一右側文字大小 */
+    --form-text-weight: 600; /* 新增：統一右側字重 */
+    padding: var(--form-padding);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;  /* 新增：增加 label 和內容之間的間距 */
+    gap: 20px;
 }
 
 .form-group label {
     font-size: 16px;
-    color: #e0e0e0;
+    color: #333;
     margin: 0;
-
+    transition: font-size 0.3s ease, font-weight 0.3s ease;
 }
 
+/* 展開時放大 label */
+.expandable-picker.active label,
+.card-picker-group.active label {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* ==================== 下拉選單和按鈕共用樣式 ==================== */
 .select-wrapper {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
-/* 下拉選單樣式 */
+.arrow-icon {
+    position: absolute;
+    right: 0;
+    color: #999;
+    font-size: 20px;
+    pointer-events: none;
+    transform: rotate(90deg);
+}
+
+/* ==================== 出發地下拉選單 ==================== */
 .select-input {
     padding: 0;
     padding-right: 20px;
     background-color: transparent;
     border: none;
-    color: #e0e0e0;
-    font-size: 16px;
+    color: #333; 
+    font-size: var(--form-text-size);  
+    font-weight: var(--form-text-weight);
     outline: none;
     text-align: right;
     width: auto;
-    direction: rtl; 
-
-    /* 隱藏預設箭頭 */
+    direction: rtl;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
 }
 
 .select-input option {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
+    background-color: #f5f5f5;
+    color: #333;
 }
 
-.arrow-icon {
-    position: absolute;
-    right: 0;
-    color: #666;
-    font-size: 20px;
-    pointer-events: none;
-    transform: rotate(90deg);
-}
-
-/* 目的地按鈕樣式 */
+/* ==================== 目的地按鈕 ==================== */
 .destination-btn {
     padding: 0;
-    padding-right: 20px;
     background-color: transparent;
     border: none;
-    color: #e0e0e0;
-    font-size: 16px;
+    color: #333;
+    font-size: var(--form-text-size);  
+    font-weight: var(--form-text-weight);
     outline: none;
     text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    position: relative;
 }
 
 .destination-btn #selected-destination {
@@ -103,4 +152,278 @@ h1 {
     white-space: nowrap;
     display: inline-block;
     max-width: 200px;
+    padding-right: 15px;
+}
+
+/* ==================== 可展開選擇器（天數滾輪 + 卡片式） ==================== */
+.expandable-picker,
+.card-picker-group {
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    gap: 0; 
+}
+
+/* 統一的 header 樣式 */
+.expandable-picker .picker-header,
+.card-picker-group .picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: var(--form-padding);  
+}
+
+/* 統一的 display 樣式 */
+.expandable-picker .picker-display,
+.card-picker-group .picker-display {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    color: #333;
+    font-size: var(--form-text-size);
+    font-weight: var(--form-text-weight); 
+}
+
+/* 統一的箭頭動畫 */
+.expandable-picker .picker-display .arrow-icon,
+.card-picker-group .picker-display .arrow-icon {
+    position: static;
+    transform: rotate(90deg);
+    transition: transform 0.3s ease;
+}
+
+.expandable-picker.active .picker-display .arrow-icon,
+.card-picker-group.active .picker-display .arrow-icon {
+    transform: rotate(-90deg);
+}
+
+/* 展開時隱藏已選擇的選項文字 */
+.expandable-picker .picker-display span:first-child,
+.card-picker-group .picker-display span:first-child {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.expandable-picker.active .picker-display span:first-child,
+.card-picker-group.active .picker-display span:first-child {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* ==================== 天數滾輪選擇器 ==================== */
+.picker-body-inline {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    position: relative;
+    height: 150px;
+}
+
+.expandable-picker.active .picker-body-inline {
+    max-height: 200px;
+}
+
+.picker-highlight-inline {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 60px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.picker-highlight-inline::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right,
+        rgba(221, 221, 221, 0) 0%, 
+        rgba(221, 221, 221, 1) 20%, 
+        rgba(221, 221, 221, 1) 80%, 
+        rgba(221, 221, 221, 0) 100% 
+    )
+}
+
+.picker-highlight-inline::after{
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right,
+        rgba(221, 221, 221, 0) 0%, 
+        rgba(221, 221, 221, 1) 20%, 
+        rgba(221, 221, 221, 1) 80%, 
+        rgba(221, 221, 221, 0) 100% 
+    )
+}
+
+/* 滾輪容器 */
+.picker-scroll-inline {
+    height: 100%;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 50px 20px; 
+}
+
+.picker-scroll-inline::-webkit-scrollbar {
+    display: none; /* 隱藏滾動條 */
+}
+
+.picker-scroll-inline .picker-item {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    color: #999;
+    scroll-snap-align: center;
+    transition: all 0.2s;
+    min-width: 200px;
+}
+
+.picker-scroll-inline .picker-item.active {
+    color: #333;
+    font-size: 30px;
+    font-weight: 500;
+}
+
+/* ==================== 卡片式選擇器 ==================== */
+.card-picker-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.card-picker-group.active .card-picker-body {
+    max-height: 300px;
+}
+
+.card-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 20px 20px;
+}
+
+.picker-card {
+    background-color: #e8e8e8;
+    border: 2px solid #d0d0d0;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.picker-card:active {
+    transform: scale(0.98);
+}
+
+.picker-card.selected {
+    border-color: #888;
+    background-color: #d5d5d5;
+}
+
+.picker-card-icon {
+    font-size: 32px;
+}
+
+.picker-card-label {
+    font-size: 14px;
+    color: #555;
+}
+
+.picker-card.selected .picker-card-label {
+    color: #222;
+    font-weight: 600;
+}
+
+/* ==================== 防止雙擊縮放 ==================== */
+.picker-header,
+.picker-item,
+.destination-btn {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ==================== AI 推薦行程按鈕 ==================== */
+.ai-recommend-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: calc(100% - 40px);
+    max-width: 560px; 
+    padding: 20px;
+    background-color: #a4a4a4; 
+    color: #333; 
+    border: none;
+    border-radius: 8px; 
+    font-size: 18px;
+    font-weight: 600;
+    z-index: 100;
+    
+    /* 預設隱藏 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    
+    /* 防止雙擊縮放 */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.ai-recommend-btn.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.ai-recommend-btn:active {
+    background-color: #e8e8e8; /* 點擊時稍微變深 */
+}
+
+/* ==================== 缺少必填欄位提醒 ==================== */
+.missing-field-hint {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    width: auto;
+    padding: 0;
+    color: #e0e0e0;
+    border-radius: 0;
+    font-size: 14px;
+    text-align: center;
+    z-index: 100;
+    
+    /* 預設隱藏 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    
+    /* 防止雙擊縮放 */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.missing-field-hint.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }

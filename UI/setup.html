@@ -8,8 +8,13 @@
     </head>
     <body>
         <div class="container">
+            <button class="back-btn" onclick="goBack()">
+                <img src="assets/icons/back-arrow.svg" alt="返回">
+            </button>
+            <h1>旅程規劃</h1>
             <div class="form-group">
-                <label for="departure">出發地</label>
+                <label for="departure">出發地</label> 
+                <!-- TODO: 應該做台灣就好？-->
                 <div class="select-wrapper">
                     <select id="departure" class="select-input">
                         <option value="">請選擇出發地</option>
@@ -45,11 +50,67 @@
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDestinationPage()">
                         <span id="selected-destination">請選擇目的地</span>
+                        <span class="arrow-icon">›</span>
                     </button>
-                    <span class="arrow-icon">›</span>
+                </div>
+            </div>
+
+            <!-- 可展開的天數選擇器 -->
+            <div class="form-group expandable-picker" id="days-picker-group">
+                <div class="picker-header" onclick="toggleDaysPicker()">
+                    <label>天數</label>
+                    <div class="picker-display">
+                        <span id="selected-days">任何天數</span>
+                        <span class="arrow-icon">›</span>
+                    </div>
+                </div>
+                <div class="picker-body-inline">
+                    <div class="picker-highlight-inline"></div>
+                    <div class="picker-scroll-inline" id="days-picker-scroll">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 旅伴選擇器（卡片式 + icon） -->
+            <div class="form-group card-picker-group" id="companion-picker-group">
+                <div class="picker-header" onclick="toggleCompanionPicker()">
+                    <label>旅伴</label>
+                    <div class="picker-display">
+                        <span id="selected-companion">任何旅伴</span>
+                        <span class="arrow-icon">›</span>
+                    </div>
+                </div>
+                <div class="card-picker-body">
+                    <div class="card-picker-grid" id="companion-cards">
+                        <!-- 旅伴卡片會由 JavaScript 動態生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 旅遊類型選擇器（卡片式 + icon） -->
+            <div class="form-group card-picker-group" id="travel-type-picker-group">
+                <div class="picker-header" onclick="toggleTravelTypePicker()">
+                    <label>旅遊類型</label>
+                    <div class="picker-display">
+                        <span id="selected-travel-type">任何類型</span>
+                        <span class="arrow-icon">›</span>
+                    </div>
+                </div>
+                <div class="card-picker-body">
+                    <div class="card-picker-grid" id="travel-type-cards">
+                        <!-- 旅遊類型卡片會由 JavaScript 動態生成 -->
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- AI 推薦行程按鈕（預設隱藏，選完旅遊類型才出現） -->
+        <button id="ai-recommend-btn" class="ai-recommend-btn" onclick="submitAIRecommendation()">
+            AI 推薦行程
+        </button>
+        
+        <!-- 提示缺少欄位 -->
+        <div id="missing-field-hint" class="missing-field-hint"></div>
 
         <script src="js/setup.js"></script>
     </body>
