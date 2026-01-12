@@ -1,6 +1,6 @@
 * {
     box-sizing: border-box; 
-    -webkit-tap-highlight-color: transparent;  /* 停用點擊高亮效果 */
+    -webkit-tap-highlight-color: transparent; 
 
 }
 
@@ -130,7 +130,7 @@ h1 {
     color: #333;
 }
 
-/* ==================== 目的地按鈕 ==================== */
+/* ==================== 目的地和出發地按鈕 ==================== */
 .destination-btn {
     padding: 0;
     background-color: transparent;
@@ -144,9 +144,11 @@ h1 {
     align-items: center;
     gap: 0px;
     position: relative;
+    cursor: pointer;
 }
 
-.destination-btn #selected-destination {
+.destination-btn #selected-destination,
+.destination-btn #selected-departure {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

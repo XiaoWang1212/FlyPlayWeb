@@ -20,6 +20,16 @@ function goToDestinationPage() {
     window.location.href = basePath + 'choose_destination.html';
 }
 
+// 跳轉到出發地選擇頁面
+function goToDeparturePage() {
+    const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    window.location.href = basePath + 'choose_departure.html';
+}
+
+function goBack() {
+    window.history.back();
+}
+
 // 那個像 iOS 的滾輪天數選取器
 function toggleDaysPicker() {
     const pickerGroup = document.getElementById('days-picker-group');
@@ -172,10 +182,9 @@ window.onload = function() {
     // 回填之前選過的出發地、天數、旅伴等資料
     const tripSetup = loadTripSetup();
 
-    // 回填出發地
-    const departureSelect = document.getElementById('departure');
-    if (tripSetup.departure) {
-        departureSelect.value = tripSetup.departure;
+    // 回填出發地（從 choose_departure 存來的）
+    if (tripSetup.departureLabel) {
+        document.getElementById('selected-departure').textContent = tripSetup.departureLabel;
     }
 
     // 回填天數
@@ -183,12 +192,12 @@ window.onload = function() {
         document.getElementById('selected-days').textContent = tripSetup.daysLabel;
     }
 
-    // 回填旅伴（卡片式）
+    // 回填旅伴
     if (tripSetup.companionLabel) {
         document.getElementById('selected-companion').textContent = tripSetup.companionLabel;
     }
 
-    // 回填旅遊類型（卡片式）
+    // 回填旅遊類型
     if (tripSetup.travelTypeLabel) {
         document.getElementById('selected-travel-type').textContent = tripSetup.travelTypeLabel;
     }
@@ -447,6 +456,9 @@ function submitAIRecommendation() {
         destinations: destinations
     };
     
+    console.log('準備傳送給 AI 的資料:', fullData);
     
-    // TODO: 呼叫後端 API 產生行程
+    // 暫時先直接跳轉到聊天頁面
+    const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    window.location.href = basePath + 'index.html';
 }
