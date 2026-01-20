@@ -130,8 +130,8 @@ function confirmSelection() {
     departureLabel: selectedDepartureCity,
   });
 
-  const basePath = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
-  window.location.href = basePath + "setup.html";
+  // 使用動畫返回 setup.html
+  goBackWithTransition('setup.html');
 }
 
 function searchDeparture() {

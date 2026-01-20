@@ -249,12 +249,8 @@ function confirmSelection() {
         JSON.stringify(selectedDestinations)
     );
 
-    // 計算返回路徑並跳轉
-    const basePath = window.location.href.substring(
-        0,
-        window.location.href.lastIndexOf("/") + 1
-    );
-    window.location.href = basePath + "setup.html";
+    // 使用動畫返回 setup.html
+    goBackWithTransition('setup.html');
 }
 
 // ==================== 篩選功能 ====================
@@ -380,13 +376,3 @@ function setupScrollShadow() {
  */
 window.onload = init;
 
-// 修改返回按鈕的行為（在 HTML 中）
-function goBack() {
-    // 恢復到初始狀態（不保存當前的選擇）
-    selectedDestinations = [...initialSelectedDestinations];
-    localStorage.setItem(
-        "selectedDestinations",
-        JSON.stringify(selectedDestinations)
-    );
-    history.back();
-}
