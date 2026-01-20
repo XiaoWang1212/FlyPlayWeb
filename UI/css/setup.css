@@ -1,7 +1,7 @@
 * {
     box-sizing: border-box; 
-    -webkit-tap-highlight-color: transparent;  /* 停用點擊高亮效果 */
-
+    -webkit-tap-highlight-color: transparent; 
+    touch-action: manipulation;
 }
 
 body,
@@ -13,6 +13,15 @@ html {
     background-color: #1a1a1a; 
     color: #333; 
     font-family: -apple-system, system-ui, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 允許文字選取的元素例外 */
+input,
+textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
 }
 
 .container {
@@ -130,7 +139,7 @@ h1 {
     color: #333;
 }
 
-/* ==================== 目的地按鈕 ==================== */
+/* ==================== 目的地和出發地按鈕 ==================== */
 .destination-btn {
     padding: 0;
     background-color: transparent;
@@ -144,9 +153,11 @@ h1 {
     align-items: center;
     gap: 0px;
     position: relative;
+    cursor: pointer;
 }
 
-.destination-btn #selected-destination {
+.destination-btn #selected-destination,
+.destination-btn #selected-departure {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -351,14 +362,22 @@ h1 {
     font-weight: 600;
 }
 
-/* ==================== 防止雙擊縮放 ==================== */
-.picker-header,
-.picker-item,
-.destination-btn {
+/* ==================== 防止雙擊縮放（保留捏合縮放） ==================== */
+/* * {
     touch-action: manipulation;
+}
+
+body {
     -webkit-user-select: none;
     user-select: none;
 }
+
+允許文字選取的元素例外
+input,
+textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+} */
 
 /* ==================== AI 推薦行程按鈕 ==================== */
 .ai-recommend-btn {

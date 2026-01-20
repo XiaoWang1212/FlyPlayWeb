@@ -26,9 +26,18 @@
 
         a { text-decoration: none; color: inherit; }
 
+        html {
+            background-color: #f0f0f0;
+            overflow: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+        }
+
         body {
             background-color: #f0f0f0;
             height: 100vh;
+            height: 100dvh; /* 動態視窗高度，鍵盤彈出時不會改變 */
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -36,6 +45,10 @@
             overscroll-behavior-y: none;
             -webkit-user-select: none;
             user-select: none;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
         }
 
         /* Header */
@@ -47,7 +60,6 @@
             align-items: center;
             justify-content: space-between;
             padding: var(--safe-top) 15px 0 15px;
-            /* Header 層級很高 (2000) */
             z-index: 2000;
             position: sticky;
             top: 0;
@@ -130,12 +142,11 @@
         .fab-group {
             position: absolute; 
             right: 15px; 
-            bottom: 220px; /* 初始收合時的位置 */
+            bottom: 220px;
             display: flex; 
             flex-direction: column;
             gap: 10px;
             transition: all 0.3s ease;
-            /* 層級設定：要比 Map(0) 和 Sheet(500) 高，但比 Header(2000) 低 */
             z-index: 1500; 
         }
 
@@ -145,16 +156,15 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 20px; color: #333; cursor: pointer;
         }
 
-        /* FAB 水平狀態 (當白框展開時) */
         .fab-group.horizontal {
-            bottom: auto; /* 取消底部定位 */
-            
-            /* 【修正重點】定位在 Header 下方，確保不被 Header 蓋住 */
-            /* Header高度 + 安全區域 + 10px間距 */
+            bottom: auto;
             top: calc(var(--header-height) + var(--safe-top) + 50px); 
-            
             right: 15px;
-            flex-direction: row; /* 變橫向 */
+            flex-direction: row;
+        }
+        
+        .fab-group.half-mode {
+            bottom: 55%;
         }
 
         /* Bottom Sheet */
@@ -169,6 +179,7 @@
             z-index: 500;
         }
         .bottom-sheet.expanded { height: 75%; }
+        .bottom-sheet.half { height: 50%; }
 
         .sheet-handle-bar { width: 100%; padding: 15px 0 5px 0; display: flex; justify-content: center; cursor: pointer; touch-action: none; }
         .sheet-handle { width: 40px; height: 5px; background: #ddd; border-radius: 5px; }
@@ -180,19 +191,126 @@
         }
 
         .sheet-content {
-            flex: 1; overflow-y: auto; padding: 10px 20px;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: calc(20px + var(--safe-bottom)); 
+            flex: 1; overflow-y: hidden; padding: 0;
+            position: relative;
         }
 
-        /* Timeline UI */
+        /* 視圖切換 */
+        .view-section {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px 20px;
+            padding-bottom: calc(20px + var(--safe-bottom)); 
+        }
+        .view-section.active {
+            display: flex;
+        }
+
+        /* 聊天室樣式 */
+        #chatView {
+            padding: 0;
+            background: #f9f9f9;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: calc(80px + var(--safe-bottom)); /* 增加底部空間 */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .chat-msg {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        .chat-msg.bot {
+            background: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .chat-msg.user {
+            background: #333;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-input-bar {
+            position: fixed; /* 改為 fixed，讓它固定在視窗底部 */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            padding-bottom: calc(10px + var(--safe-bottom));
+            z-index: 600; /* 確保在 bottom-sheet 之上 */
+        }
+        .chat-input-field {
+            flex: 1;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            padding: 0 15px;
+            height: 40px;
+            font-size: 15px;
+            outline: none;
+        }
+        .chat-send-btn {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 15px;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #aaa;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Timeline UI (完全保持原樣) */
         .timeline-item { 
             display: flex; margin-bottom: 20px; position: relative; transition: background 0.2s; 
-            background: #fff; /* 確保拖拽時有背景色 */
-            border-radius: 8px; /* 拖拽時好看一點 */
+            background: #fff;
+            border-radius: 8px;
         }
         .timeline-left { display: flex; flex-direction: column; align-items: center; margin-right: 15px; width: 60px; }
-        .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; /* 防止拖拽圖片 */ }
+        .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; }
         .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; }
         .timeline-transit { display: flex; align-items: center; justify-content: center; margin: 10px 0; color: #999; font-size: 12px; }
         .timeline-transit i { margin-right: 5px; }
@@ -202,13 +320,11 @@
         .time-badge { font-size: 10px; background: #f0f0f0; padding: 2px 6px; border-radius: 10px; color: #666; font-weight: normal; }
         .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
 
-        /* 拖拽時的樣式 (SortableJS 預設 class) */
         .sortable-ghost { opacity: 0.4; background: #f0f0f0; }
         .sortable-drag { opacity: 1; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        /**/
         .sortable-chosen {
-            background-color: #e0e0e0 !important; /* 淺灰色 */
-            transform: scale(1.02); /* 稍微放大 */
+            background-color: #e0e0e0 !important;
+            transform: scale(1.02);
         }
 
         /* 編輯模式 */
@@ -228,9 +344,8 @@
             border: 2px dashed #ccc; border-radius: 10px;
             text-align: center; cursor: pointer; font-weight: bold;
         }
-        /* 編輯模式下顯示刪除與新增按鈕 */
-        .sheet-content.editing .delete-btn { display: block; animation: fadeIn 0.3s; }
-        .sheet-content.editing .add-item-btn { display: block; animation: fadeIn 0.3s; }
+        .view-section.editing .delete-btn { display: block; animation: fadeIn 0.3s; }
+        .view-section.editing .add-item-btn { display: block; animation: fadeIn 0.3s; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.8); }
@@ -253,7 +368,7 @@
             <div class="action-btn close-sidebar-btn" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></div>
         </div>
         <div class="sidebar-content">
-            <a href="new-trip.html" class="new-trip-btn">
+            <a onclick="navigateToSetup()" class="new-trip-btn">
                 <i class="far fa-square-plus"></i>
                 <span>開啟新行程</span>
             </a>
@@ -293,7 +408,7 @@
         <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
 
         <div class="fab-group" id="fabGroup">
-            <a href="chat.html" class="fab"><i class="fas fa-robot"></i></a>
+            <div class="fab" onclick="toggleChatMode()" id="robotFab"><i class="fas fa-robot"></i></div>
             <div class="fab" onclick="toggleEditMode()" id="editFab"><i class="fas fa-pen"></i></div>
         </div>
 
@@ -308,56 +423,68 @@
 
             <div class="sheet-content" id="sheetContent">
                 
-                <div id="timelineList">
-                    <div class="timeline-item">
-                        <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                        <div class="timeline-left">
-                            <div class="location-img"><i class="far fa-image"></i></div>
-                            <div class="timeline-connector"></div>
-                        </div>
-                        <div class="timeline-right">
-                            <div class="timeline-title">
-                                大阪城
-                                <span class="time-badge">20分鐘</span>
-                            </div>
-                            <div class="timeline-desc">參觀歷史名城，拍攝天守閣美景。</div>
-                        </div>
-                    </div>
-
-                    <div class="timeline-item">
-                        <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                        <div class="timeline-left">
-                            <div class="location-img"><i class="far fa-image"></i></div>
-                        </div>
-                        <div class="timeline-right">
-                            <div class="timeline-title">
-                                道頓堀
-                                <span class="time-badge">1小時</span>
-                            </div>
-                            <div class="timeline-desc">享受大阪美食，固力果跑跑人打卡。</div>
-                        </div>
-                    </div>
-                    
-                    <div class="timeline-item">
-                        <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                        <div class="timeline-left">
-                            <div class="location-img"><i class="far fa-image"></i></div>
-                            <div class="timeline-connector"></div>
-                        </div>
-                        <div class="timeline-right">
-                            <div class="timeline-title">
-                                心齋橋商店街
-                                <span class="time-badge">2小時</span>
-                            </div>
-                            <div class="timeline-desc">藥妝店購物，伴手禮採買。</div>
-                        </div>
+                <!-- 聊天視圖 -->
+                <div id="chatView" class="view-section">
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-bar">
+                        <input type="text" class="chat-input-field" id="chatInput" placeholder="輸入需求...">
+                        <button class="chat-send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
-                <div class="add-item-btn" onclick="addItem()">
-                    <i class="fas fa-plus"></i> 新增行程
+
+                <!-- 原本的行程表視圖 -->
+                <div id="timelineView" class="view-section active">
+                    <div id="timelineList">
+                        <div class="timeline-item">
+                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+                            <div class="timeline-left">
+                                <div class="location-img"><i class="far fa-image"></i></div>
+                                <div class="timeline-connector"></div>
+                            </div>
+                            <div class="timeline-right">
+                                <div class="timeline-title">
+                                    大阪城
+                                    <span class="time-badge">20分鐘</span>
+                                </div>
+                                <div class="timeline-desc">參觀歷史名城，拍攝天守閣美景。</div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+                            <div class="timeline-left">
+                                <div class="location-img"><i class="far fa-image"></i></div>
+                            </div>
+                            <div class="timeline-right">
+                                <div class="timeline-title">
+                                    道頓堀
+                                    <span class="time-badge">1小時</span>
+                                </div>
+                                <div class="timeline-desc">享受大阪美食，固力果跑跑人打卡。</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+                            <div class="timeline-left">
+                                <div class="location-img"><i class="far fa-image"></i></div>
+                                <div class="timeline-connector"></div>
+                            </div>
+                            <div class="timeline-right">
+                                <div class="timeline-title">
+                                    心齋橋商店街
+                                    <span class="time-badge">2小時</span>
+                                </div>
+                                <div class="timeline-desc">藥妝店購物，伴手禮採買。</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="add-item-btn" onclick="addItem()">
+                        <i class="fas fa-plus"></i> 新增行程
+                    </div>
+                    <div style="height: 20px;"></div>
                 </div>
 
-                <div style="height: 20px;"></div>
             </div>
         </div>
     </div>
@@ -372,22 +499,101 @@
         const dragHeader = document.getElementById('dragHeader');
         
         let isEditMode = false;
-        const sheetContent = document.getElementById('sheetContent');
+        let isChatMode = false;
+        const timelineView = document.getElementById('timelineView');
+        const chatView = document.getElementById('chatView');
         const editFab = document.getElementById('editFab').querySelector('i');
+        const robotFabIcon = document.getElementById('robotFab').querySelector('i');
 
         // --- SortableJS 設定 (拖拽功能) ---
-        // 取得列表容器
         const timelineList = document.getElementById('timelineList');
         
-        // 初始化 Sortable
         let sortable = new Sortable(timelineList, {
-            animation: 150,       // 動畫時間
-            disabled: true,       // 預設關閉 (只有編輯模式開啟)
-            delay: 400,           // 手機長按 400ms 後才能拖拽
-            delayOnTouchOnly: true, // 只在觸控裝置啟用長按
-            ghostClass: 'sortable-ghost', // 拖拽時留下的影子樣式
-            dragClass: 'sortable-drag',   // 正在被拖拽的項目樣式
+            animation: 150,
+            disabled: true,
+            delay: 400,
+            delayOnTouchOnly: true,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
         });
+
+        // 初始化聊天
+        window.onload = function() {
+            appendMsg('測試訊息', 'bot');
+        };
+
+        // 切換聊天模式
+        function toggleChatMode() {
+            isChatMode = !isChatMode;
+            
+            if (isChatMode) {
+                // 進入聊天模式
+                timelineView.classList.remove('active');
+                chatView.classList.add('active');
+                openSheet();
+                fabGroup.classList.add('horizontal');
+                document.getElementById('editFab').style.display = 'none';
+                
+                // 改變圖示：機器人 → 列表
+                robotFabIcon.classList.remove('fa-robot');
+                robotFabIcon.classList.add('fa-list-ul');
+                
+                setTimeout(() => document.getElementById('chatInput').focus(), 300);
+            } else {
+                // 回到行程表模式
+                chatView.classList.remove('active');
+                timelineView.classList.add('active');
+                sheet.classList.remove('expanded');
+                sheet.classList.remove('half');
+                fabGroup.classList.remove('horizontal');
+                fabGroup.classList.remove('half-mode');
+                document.getElementById('editFab').style.display = 'flex';
+                
+                // 恢復圖示：列表 → 機器人
+                robotFabIcon.classList.remove('fa-list-ul');
+                robotFabIcon.classList.add('fa-robot');
+            }
+        }
+
+        // 發送訊息
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendMsg(text, 'user');
+            input.value = '';
+
+            const loadingId = 'loading-' + Date.now();
+            document.getElementById('chatMessages').insertAdjacentHTML('beforeend', 
+                `<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`);
+            scrollToBottom();
+
+            setTimeout(() => {
+                document.getElementById(loadingId).remove();
+
+                setTimeout(() => {
+                    appendMsg('測試訊息', 'bot');
+                    sheet.classList.remove('expanded');
+                    sheet.classList.add('half');
+                    fabGroup.classList.remove('horizontal');
+                    fabGroup.classList.add('half-mode');
+                }, 1000);
+            }, 1500);
+        }
+
+        function appendMsg(text, type) {
+            const div = document.createElement('div');
+            div.className = `chat-msg ${type}`;
+            div.textContent = text;
+            document.getElementById('chatMessages').appendChild(div);
+            scrollToBottom();
+        }
+        
+        function scrollToBottom() {
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
 
         // 編輯模式切換
         function toggleEditMode() {
@@ -395,21 +601,15 @@
             isEditMode = !isEditMode;
 
             if (isEditMode) {
-                // 進入編輯模式
-                sheetContent.classList.add('editing');
+                timelineView.classList.add('editing');
                 editFab.classList.remove('fa-pen');
                 editFab.classList.add('fa-check');
                 openSheet();
-                
-                // 啟用拖拽功能
                 sortable.option("disabled", false);
             } else {
-                // 退出編輯模式
-                sheetContent.classList.remove('editing');
+                timelineView.classList.remove('editing');
                 editFab.classList.remove('fa-check');
                 editFab.classList.add('fa-pen');
-                
-                // 停用拖拽功能
                 sortable.option("disabled", true);
             }
         }
@@ -440,11 +640,8 @@
             const div = document.createElement('div');
             div.className = 'timeline-item';
             div.innerHTML = newItemHTML;
-            
-            // 加入到列表容器中 (timelineList)
             timelineList.appendChild(div);
             
-            // 滾動到底部
             const addButton = document.querySelector('.add-item-btn');
             addButton.scrollIntoView({ behavior: 'smooth' });
         }
@@ -511,6 +708,36 @@
         function downloadPDF() {
             alert('正在下載行程 PDF 檔案...');
         }
+
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function navigateToSetup() {
+            sessionStorage.setItem('navigationType', 'forward');
+            window.location.href = 'setup.html';
+        }
+
+        // 處理鍵盤彈出時的視窗大小變化
+        window.visualViewport.addEventListener('resize', function() {
+            const inputBar = document.querySelector('.chat-input-bar');
+            if (inputBar && isChatMode) {
+                // 鍵盤彈出時，調整輸入框位置
+                const keyboardHeight = window.innerHeight - window.visualViewport.height;
+                inputBar.style.bottom = keyboardHeight + 'px';
+            }
+        });
+
+        // 鍵盤收起時恢復位置
+        window.visualViewport.addEventListener('scroll', function() {
+            const inputBar = document.querySelector('.chat-input-bar');
+            if (inputBar && window.visualViewport.height === window.innerHeight) {
+                inputBar.style.bottom = '0px';
+            }
+        });
     </script>
 </body>
 </html>

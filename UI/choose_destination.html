@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header class="header">
-            <button class="back-btn" onclick="history.back()">‹ 返回</button>
+            <button class="back-btn" onclick="goBackWithTransition('setup.html')">‹ 返回</button>
             <h1>選擇目的地</h1>
         </header>
 
@@ -27,11 +27,6 @@
         </div>
 
         <!-- 地區分類 -->
-        <div class="region-tabs">
-            <button class="tab-btn active" onclick="filterRegion('all')">全部</button>
-            <button class="tab-btn" onclick="filterRegion('taiwan')">台灣</button>
-            <button class="tab-btn" onclick="filterRegion('japan')">日本</button>
-        </div>
 
         <!-- 城市列表 -->
         <div class="destination-list" id="destination-list">
@@ -44,6 +39,7 @@
         </button>
     </div>
 
+    <script src="js/page_transition.js"></script>
     <script src="js/choose_destination.js"></script>
 </body>
 </html>

@@ -17,7 +17,17 @@ let scrollEndTimeout;
 // 跳轉頁面
 function goToDestinationPage() {
     const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    window.location.href = basePath + 'choose_destination.html';
+    navigateWithTransition(basePath + 'choose_destination.html');
+}
+
+// 跳轉到出發地選擇頁面
+function goToDeparturePage() {
+    const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    navigateWithTransition(basePath + 'choose_departure.html');
+}
+
+function goBack() {
+    goBackWithTransition();
 }
 
 // 那個像 iOS 的滾輪天數選取器
@@ -172,10 +182,9 @@ window.onload = function() {
     // 回填之前選過的出發地、天數、旅伴等資料
     const tripSetup = loadTripSetup();
 
-    // 回填出發地
-    const departureSelect = document.getElementById('departure');
-    if (tripSetup.departure) {
-        departureSelect.value = tripSetup.departure;
+    // 回填出發地（從 choose_departure 存來的）
+    if (tripSetup.departureLabel) {
+        document.getElementById('selected-departure').textContent = tripSetup.departureLabel;
     }
 
     // 回填天數
@@ -183,12 +192,12 @@ window.onload = function() {
         document.getElementById('selected-days').textContent = tripSetup.daysLabel;
     }
 
-    // 回填旅伴（卡片式）
+    // 回填旅伴
     if (tripSetup.companionLabel) {
         document.getElementById('selected-companion').textContent = tripSetup.companionLabel;
     }
 
-    // 回填旅遊類型（卡片式）
+    // 回填旅遊類型
     if (tripSetup.travelTypeLabel) {
         document.getElementById('selected-travel-type').textContent = tripSetup.travelTypeLabel;
     }
@@ -434,19 +443,17 @@ function hideAIRecommendButton() {
 
 // 按下「AI 推薦行程」後，確認資料格式並準備送到後端
 function submitAIRecommendation() {
-    // 從 localStorage 拿完整的 tripSetup
     const tripSetup = loadTripSetup();
-    
-    // 從 localStorage 拿目的地清單
     const destinationsRaw = localStorage.getItem('selectedDestinations');
     const destinations = destinationsRaw ? JSON.parse(destinationsRaw) : [];
     
-    // 合併成完整的資料格式
     const fullData = {
         ...tripSetup,
         destinations: destinations
     };
     
+    console.log('準備傳送給 AI 的資料:', fullData);
     
-    // TODO: 呼叫後端 API 產生行程
+    const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+    navigateWithTransition(basePath + 'index.html');
 }
