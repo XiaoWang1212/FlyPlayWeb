@@ -17,17 +17,17 @@ let scrollEndTimeout;
 // 跳轉頁面
 function goToDestinationPage() {
     const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    window.location.href = basePath + 'choose_destination.html';
+    navigateWithTransition(basePath + 'choose_destination.html');
 }
 
 // 跳轉到出發地選擇頁面
 function goToDeparturePage() {
     const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    window.location.href = basePath + 'choose_departure.html';
+    navigateWithTransition(basePath + 'choose_departure.html');
 }
 
 function goBack() {
-    window.history.back();
+    goBackWithTransition();
 }
 
 // 那個像 iOS 的滾輪天數選取器
@@ -443,14 +443,10 @@ function hideAIRecommendButton() {
 
 // 按下「AI 推薦行程」後，確認資料格式並準備送到後端
 function submitAIRecommendation() {
-    // 從 localStorage 拿完整的 tripSetup
     const tripSetup = loadTripSetup();
-    
-    // 從 localStorage 拿目的地清單
     const destinationsRaw = localStorage.getItem('selectedDestinations');
     const destinations = destinationsRaw ? JSON.parse(destinationsRaw) : [];
     
-    // 合併成完整的資料格式
     const fullData = {
         ...tripSetup,
         destinations: destinations
@@ -458,7 +454,6 @@ function submitAIRecommendation() {
     
     console.log('準備傳送給 AI 的資料:', fullData);
     
-    // 暫時先直接跳轉到聊天頁面
     const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-    window.location.href = basePath + 'index.html';
+    navigateWithTransition(basePath + 'index.html');
 }
