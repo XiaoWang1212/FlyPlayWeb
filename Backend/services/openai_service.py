@@ -33,9 +33,15 @@ class ChatGPTService:
                 response_format={"type": "json_object"},
                 max_tokens=1500
             )
+            raw_content = response.choices[0].message.content
+            parsed_json = json.loads(raw_content)
+
             return {
                 'success': True,
-                'data': json.loads(response.choices[0].message.content)
+                'data': {
+                    'raw_output': raw_content,
+                    'parsed': parsed_json
+                }
             }
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
@@ -114,10 +120,15 @@ class ChatGPTService:
                 response_format={"type": "json_object"},
                 max_tokens=2500
             )
-            
+            raw_content = response.choices[0].message.content
+            parsed_json = json.loads(raw_content)
+
             return {
                 'success': True,
-                'data': json.loads(response.choices[0].message.content)
+                'data': {
+                    'raw_output': raw_content,
+                    'parsed': parsed_json
+                }
             }
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
@@ -141,10 +152,15 @@ class ChatGPTService:
                 response_format={"type": "json_object"},
                 max_tokens=2500
             )
-            
+            raw_content = response.choices[0].message.content
+            parsed_json = json.loads(raw_content)
+
             return {
                 'success': True,
-                'data': json.loads(response.choices[0].message.content)
+                'data': {
+                    'raw_output': raw_content,
+                    'parsed': parsed_json
+                }
             }
         except Exception as e:
             return {'success': False, 'error': f"行程優化失敗: {str(e)}"}
@@ -176,10 +192,15 @@ class ChatGPTService:
                 response_format={"type": "json_object"},
                 max_tokens=1500
             )
-            
+            raw_content = response.choices[0].message.content
+            parsed_json = json.loads(raw_content)
+
             return {
                 'success': True,
-                'data': json.loads(response.choices[0].message.content)
+                'data': {
+                    'raw_output': raw_content,
+                    'parsed': parsed_json
+                }
             }
         except Exception as e:
             return {'success': False, 'error': f"提示獲取失敗: {str(e)}"}
