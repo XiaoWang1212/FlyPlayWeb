@@ -13,35 +13,12 @@
             </button>
             <h1>旅程規劃</h1>
             <div class="form-group">
-                <label for="departure">出發地</label> 
-                <!-- TODO: 應該做台灣就好？-->
+                <label>出發地</label>
                 <div class="select-wrapper">
-                    <select id="departure" class="select-input">
-                        <option value="">請選擇出發地</option>
-                        <option value="taipei">台北</option>
-                        <option value="newtaipei">新北</option>
-                        <option value="taoyuan">桃園</option>
-                        <option value="taichung">台中</option>
-                        <option value="tainan">台南</option>
-                        <option value="kaohsiung">高雄</option>
-                        <option value="keelung">基隆</option>
-                        <option value="hsinchu">新竹</option>
-                        <option value="hsinchu-county">新竹縣</option>
-                        <option value="miaoli">苗栗</option>
-                        <option value="changhua">彰化</option>
-                        <option value="nantou">南投</option>
-                        <option value="yunlin">雲林</option>
-                        <option value="chiayi">嘉義</option>
-                        <option value="chiayi-county">嘉義縣</option>
-                        <option value="pingtung">屏東</option>
-                        <option value="yilan">宜蘭</option>
-                        <option value="hualien">花蓮</option>
-                        <option value="taitung">台東</option>
-                        <option value="penghu">澎湖</option>
-                        <option value="kinmen">金門</option>
-                        <option value="lienchiang">連江</option>
-                    </select>
-                    <span class="arrow-icon">›</span>
+                    <button class="destination-btn" onclick="goToDeparturePage()">
+                        <span id="selected-departure">請選擇出發地</span>
+                        <span class="arrow-icon">›</span>
+                    </button>
                 </div>
             </div>
 

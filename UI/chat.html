@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI 助手對話</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- CSS 變數定義 --- */
+        :root {
+            --bg-color-main: #b0b0b0;
+            --bg-color-light: #e0e0e0;
+            --bg-color-white: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* --- 基礎與佈局 --- */
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--bg-color-main);
+            font-family: -apple-system, system-ui, sans-serif;
+            overscroll-behavior: none;
+        }
+
+        #viewport-app {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color-main);
+        }
+
+        /* --- Header --- */
+        .chat-header {
+            flex: 0 0 auto;
+            height: calc(var(--safe-area-top) + 60px);
+            padding-top: var(--safe-area-top);
+            background-color: var(--bg-color-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 10px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            z-index: 10;
+            position: relative;
+        }
+
+        .robot-icon {
+            font-size: 32px;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            bottom: 12px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        /* --- 聊天內容區域 --- */
+        .chat-container {
+            flex: 1 1 auto;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .bot-msg {
+            background-color: var(--bg-color-white);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .user-msg {
+            background-color: var(--bg-color-light);
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        /* --- AI 正在輸入動畫--- */
+        .typing-indicator {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 20px;
+            background-color: var(--bg-color-white);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .typing-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #b0b0b0;
+            animation: typingPulse 1.5s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes typingPulse {
+            0%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* --- 輸入區域 --- */
+        .input-area {
+            flex: 0 0 auto;
+            background-color: var(--bg-color-main);
+            padding: 10px 20px;
+            padding-bottom: calc(10px + var(--safe-area-bottom));
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .chat-input {
+            flex: 1;
+            height: 45px;
+            padding: 0 20px;
+            background-color: var(--bg-color-light);
+            border: none;
+            border-radius: 22.5px;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .send-btn {
+            width: 45px;
+            height: 45px;
+            background-color: var(--bg-color-white);
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .chat-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="viewport-app">
+        <header class="chat-header">
+            <button class="back-btn" onclick="history.back()" aria-label="返回">
+                <img src="assets/icons/back-arrow.svg" alt="Back" style="width: 20px; height: 20px;">
+            </button>
+            <div class="robot-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+        </header>
+
+        <main class="chat-container" id="chatContainer">
+            <!-- 初始訊息會由 JavaScript 動態載入 -->
+        </main>
+
+        <footer class="input-area" id="inputArea">
+            <input type="text" class="chat-input" id="userInput" placeholder="輸入文字..." autocomplete="off">
+            <button class="send-btn" id="sendButton" aria-label="發送">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="#333"/>
+                </svg>
+            </button>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewportApp = document.getElementById('viewport-app');
+            const inputArea = document.getElementById('inputArea');
+            const chatContainer = document.getElementById('chatContainer');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+
+            // 對話歷史紀錄，用於送給 AI API
+            let conversationHistory = [];
+
+
+            const handleViewportChange = () => {
+                if (!window.visualViewport) return;
+
+                const viewport = window.visualViewport;
+                viewportApp.style.height = `${viewport.height}px`;
+
+                if (window.scrollY !== 0) {
+                    window.scrollTo(0, 0);
+                }
+
+                const isKeyboardVisible = viewport.height < window.innerHeight;
+                inputArea.style.paddingBottom = isKeyboardVisible 
+                    ? '10px' 
+                    : 'calc(10px + var(--safe-area-bottom))';
+
+                scrollToBottom();
+            };
+
+            const initializeLayout = () => {
+                if (window.visualViewport) {
+                    handleViewportChange();
+                } else {
+                    viewportApp.style.height = `${window.innerHeight}px`;
+                }
+                scrollToBottom();
+            };
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', handleViewportChange);
+                window.visualViewport.addEventListener('scroll', handleViewportChange);
+            } else {
+                window.addEventListener('resize', initializeLayout);
+            }
+            
+            setTimeout(initializeLayout, 100);
+            
+    
+            async function callAIAPI(userMessage, history) {
+                // TODO: AI API 呼叫
+                
+                // 暫時返回模擬回應
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve('這是 AI 的模擬回應');
+                    }, 1500);
+                });
+            }
+
+            /**
+             * 從 localStorage 讀取旅程設定資料
+             * @returns {Object} 旅程設定資料
+             */
+            function getTripSetupFromStorage() {
+                try {
+                    const tripSetup = localStorage.getItem('tripSetup');
+                    const destinations = localStorage.getItem('selectedDestinations');
+                    
+                    return {
+                        ...(tripSetup ? JSON.parse(tripSetup) : {}),
+                        destinations: destinations ? JSON.parse(destinations) : []
+                    };
+                } catch (error) {
+                    console.error('讀取旅程資料時發生錯誤:', error);
+                    return {};
+                }
+            }
+
+            // ==================================================
+            // 聊天功能
+            // ==================================================
+            
+            const showTypingIndicator = () => {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.id = 'typingIndicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'typing-dot';
+                    typingDiv.appendChild(dot);
+                }
+                
+                chatContainer.appendChild(typingDiv);
+                scrollToBottom();
+            };
+
+            const hideTypingIndicator = () => {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            };
+
+            const appendMessage = (text, className) => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${className}`;
+                msgDiv.textContent = text;
+                chatContainer.appendChild(msgDiv);
+                scrollToBottom();
+            };
+
+            const sendMessage = async () => {
+                const text = userInput.value.trim();
+                if (!text) return;
+
+                // 禁用發送按鈕，防止重複發送
+                sendButton.disabled = true;
+
+                // 1. 顯示使用者訊息
+                appendMessage(text, 'user-msg');
+                
+                // 2. 將使用者訊息加入對話歷史
+                conversationHistory.push({
+                    role: 'user',
+                    content: text
+                });
+                
+                // 3. 清空輸入框
+                userInput.value = '';
+                userInput.focus();
+
+                // 4. 顯示「正在輸入」動畫
+                showTypingIndicator();
+
+                try {
+                    // 5. 呼叫 AI API
+                    const aiResponse = await callAIAPI(text, conversationHistory);
+                    
+                    // 6. 隱藏「正在輸入」動畫
+                    hideTypingIndicator();
+                    
+                    // 7. 顯示 AI 回應
+                    appendMessage(aiResponse, 'bot-msg');
+                    
+                    // 8. 將 AI 回應加入對話歷史
+                    conversationHistory.push({
+                        role: 'assistant',
+                        content: aiResponse
+                    });
+                    
+                } catch (error) {
+                    hideTypingIndicator();
+                    appendMessage('抱歉，發生了一些錯誤，請稍後再試。', 'bot-msg');
+                    console.error('發送訊息時發生錯誤:', error);
+                } finally {
+                    // 重新啟用發送按鈕
+                    sendButton.disabled = false;
+                    userInput.focus();
+                }
+            };
+
+            const scrollToBottom = () => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
+
+            // ==================================================
+            // 初始化對話
+            // ==================================================
+            function initializeChat() {
+                // AI 的第一句問候
+                const welcomeMessage = '你好！有什麼我可以幫你的嗎？';
+                appendMessage(welcomeMessage, 'bot-msg');
+                
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: welcomeMessage
+                });
+            }
+
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            userInput.addEventListener('focus', () => setTimeout(handleViewportChange, 150));
+
+            // 初始化對話
+            initializeChat();
+        });
+    </script>
+</body>
+</html>

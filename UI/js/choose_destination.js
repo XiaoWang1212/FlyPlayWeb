@@ -7,22 +7,9 @@
 
 /**
  * 目的地資料陣列
- * TODO: 目前先做日本跟台灣
  */
 const destinations = [
-	// 台灣地區
-	{ city: "台北", country: "台灣", region: "taiwan" },
-	{ city: "新北", country: "台灣", region: "taiwan" },
-	{ city: "桃園", country: "台灣", region: "taiwan" },
-	{ city: "台中", country: "台灣", region: "taiwan" },
-	{ city: "台南", country: "台灣", region: "taiwan" },
-	{ city: "高雄", country: "台灣", region: "taiwan" },
-	{ city: "花蓮", country: "台灣", region: "taiwan" },
-	{ city: "台東", country: "台灣", region: "taiwan" },
-	{ city: "墾丁", country: "台灣", region: "taiwan" },
-	{ city: "日月潭", country: "台灣", region: "taiwan" },
-
-	// 日本地區（先亂放圖片）
+    // 日本地區（先亂放圖片）
     { city: "東京", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop" },
     { city: "大阪", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1589452271712-64b8a66c7b71?w=400&h=300&fit=crop" },
     { city: "京都", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=300&fit=crop" },
@@ -146,24 +133,24 @@ function renderDestinations() {
  * @param {HTMLElement} itemElement - 對應的 DOM 元素
  */
 function toggleDestination(dest, itemElement) {
-	// 在已選擇陣列中尋找此目的地
-	const index = selectedDestinations.findIndex(
-		(selected) =>
-			selected.city === dest.city && selected.country === dest.country
-	);
+    // 在已選擇陣列中尋找此目的地
+    const index = selectedDestinations.findIndex(
+        (selected) =>
+            selected.city === dest.city && selected.country === dest.country
+    );
 
-	if (index > -1) {
-		// 已選擇 → 取消選擇
-		selectedDestinations.splice(index, 1);
-		itemElement.classList.remove("selected");
-	} else {
-		// 未選擇 → 加入選擇
-		selectedDestinations.push(dest);
-		itemElement.classList.add("selected");
-	}
+    if (index > -1) {
+        // 已選擇 → 取消選擇
+        selectedDestinations.splice(index, 1);
+        itemElement.classList.remove("selected");
+    } else {
+        // 未選擇 → 加入選擇
+        selectedDestinations.push(dest);
+        itemElement.classList.add("selected");
+    }
 
-	// 更新確認按鈕和已選擇區域
-	updateConfirmButton();
+    // 更新確認按鈕和已選擇區域
+    updateConfirmButton();
 }
 
 /**
@@ -173,28 +160,28 @@ function toggleDestination(dest, itemElement) {
  * @param {string} country - 國家名稱
  */
 function removeDestination(city, country) {
-	// 在已選擇陣列中尋找此目的地
-	const index = selectedDestinations.findIndex(
-		(selected) => selected.city === city && selected.country === country
-	);
+    // 在已選擇陣列中尋找此目的地
+    const index = selectedDestinations.findIndex(
+        (selected) => selected.city === city && selected.country === country
+    );
 
-	if (index > -1) {
-		// 從陣列中移除
-		selectedDestinations.splice(index, 1);
+    if (index > -1) {
+        // 從陣列中移除
+        selectedDestinations.splice(index, 1);
 
-		// 更新對應的 UI 項目，移除 selected 樣式
-		const items = document.querySelectorAll(".destination-item");
-		items.forEach((item) => {
-			const itemCity = item.querySelector(".city-name").textContent;
-			const itemCountry = item.querySelector(".country-name").textContent;
-			if (itemCity === city && itemCountry === country) {
-				item.classList.remove("selected");
-			}
-		});
+        // 更新對應的 UI 項目，移除 selected 樣式
+        const items = document.querySelectorAll(".destination-item");
+        items.forEach((item) => {
+            const itemCity = item.querySelector(".city-name").textContent;
+            const itemCountry = item.querySelector(".country-name").textContent;
+            if (itemCity === city && itemCountry === country) {
+                item.classList.remove("selected");
+            }
+        });
 
-		// 更新確認按鈕和已選擇區域
-		updateConfirmButton();
-	}
+        // 更新確認按鈕和已選擇區域
+        updateConfirmButton();
+    }
 }
 
 // ==================== UI 更新函數 ====================
@@ -204,43 +191,43 @@ function removeDestination(city, country) {
  * 當選擇狀態改變時調用
  */
 function updateConfirmButton() {
-	// 取得確認按鈕和已選擇列表元素
-	const confirmBtn = document.getElementById("confirm-btn");
-	const selectedList = document.getElementById("selected-list");
+    // 取得確認按鈕和已選擇列表元素
+    const confirmBtn = document.getElementById("confirm-btn");
+    const selectedList = document.getElementById("selected-list");
 
-	// === 更新確認按鈕 ===
-	if (confirmBtn) {
-		if (selectedDestinations.length > 0) {
-			// 有選擇：顯示數量並啟用按鈕
-			confirmBtn.textContent = `確認選擇 (${selectedDestinations.length})`;
-			confirmBtn.disabled = false;
-		} else {
-			// 無選擇：顯示提示並禁用按鈕
-			confirmBtn.textContent = "請選擇目的地";
-			confirmBtn.disabled = true;
-		}
-	}
+    // === 更新確認按鈕 ===
+    if (confirmBtn) {
+        if (selectedDestinations.length > 0) {
+            // 有選擇：顯示數量並啟用按鈕
+            confirmBtn.textContent = `確認選擇 (${selectedDestinations.length})`;
+            confirmBtn.disabled = false;
+        } else {
+            // 無選擇：顯示提示並禁用按鈕
+            confirmBtn.textContent = "請選擇目的地";
+            confirmBtn.disabled = true;
+        }
+    }
 
-	// === 更新已選擇列表 ===
-	if (selectedList) {
-		if (selectedDestinations.length > 0) {
-			// 清空列表
-			selectedList.innerHTML = "";
+    // === 更新已選擇列表 ===
+    if (selectedList) {
+        if (selectedDestinations.length > 0) {
+            // 清空列表
+            selectedList.innerHTML = "";
 
-			// 為每個已選擇的目的地建立標籤
-			selectedDestinations.forEach((dest) => {
-				const tag = document.createElement("span");
-				tag.className = "selected-tag";
-				// 顯示城市名稱和移除按鈕
-				tag.innerHTML = `${dest.city} <button class="remove-btn" onclick="removeDestination('${dest.city}', '${dest.country}')">×</button>`;
-				selectedList.appendChild(tag);
-			});
-		} else {
-			// 無選擇：顯示提示文字
-			selectedList.innerHTML =
-				'<span class="no-selection">尚未選擇</span>';
-		}
-	}
+            // 為每個已選擇的目的地建立標籤
+            selectedDestinations.forEach((dest) => {
+                const tag = document.createElement("span");
+                tag.className = "selected-tag";
+                // 顯示城市名稱和移除按鈕
+                tag.innerHTML = `${dest.city} <button class="remove-btn" onclick="removeDestination('${dest.city}', '${dest.country}')">×</button>`;
+                selectedList.appendChild(tag);
+            });
+        } else {
+            // 無選擇：顯示提示文字
+            selectedList.innerHTML =
+                '<span class="no-selection">尚未選擇</span>';
+        }
+    }
 }
 
 // ==================== 確認選擇函數 ====================
@@ -250,69 +237,68 @@ function updateConfirmButton() {
  * 將選擇結果儲存到 localStorage 並跳轉
  */
 function confirmSelection() {
-	// 驗證是否至少選擇一個目的地
-	if (selectedDestinations.length === 0) {
-		alert("請至少選擇一個目的地");
-		return;
-	}
+    // 驗證是否至少選擇一個目的地
+    if (selectedDestinations.length === 0) {
+        alert("請至少選擇一個目的地");
+        return;
+    }
 
-	// 將選擇儲存到 localStorage
-	localStorage.setItem(
-		"selectedDestinations",
-		JSON.stringify(selectedDestinations)
-	);
+    // 將選擇儲存到 localStorage
+    localStorage.setItem(
+        "selectedDestinations",
+        JSON.stringify(selectedDestinations)
+    );
 
-	// 計算返回路徑並跳轉
-	const basePath = window.location.href.substring(
-		0,
-		window.location.href.lastIndexOf("/") + 1
-	);
-	window.location.href = basePath + "setup.html";
+    // 計算返回路徑並跳轉
+    const basePath = window.location.href.substring(
+        0,
+        window.location.href.lastIndexOf("/") + 1
+    );
+    window.location.href = basePath + "setup.html";
 }
 
 // ==================== 篩選功能 ====================
 
 /**
  * 根據地區篩選目的地
- * @param {string} region - 地區代碼 ('all', 'taiwan', 'asia', 等)
+ * @param {string} region - 地區代碼 ('all', 'japan', 等)
  */
 function filterRegion(region) {
-	// 更新目前篩選的地區
-	currentRegion = region;
+    // 更新目前篩選的地區
+    currentRegion = region;
 
-	// === 更新地區按鈕的 active 狀態 ===
-	// 先移除所有按鈕的 active 樣式
-	document.querySelectorAll(".tab-btn").forEach((btn) => {
-		btn.classList.remove("active");
-	});
+    // === 更新地區按鈕的 active 狀態 ===
+    // 先移除所有按鈕的 active 樣式
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.remove("active");
+    });
 
-	// 找到對應的按鈕並設為 active
-	document.querySelectorAll(".tab-btn").forEach((btn) => {
-		// 根據按鈕文字判斷是否為目標按鈕
-		if (
-			(region === "all" && btn.textContent === "全部") ||
-			(region === "taiwan" && btn.textContent === "台灣") ||
-			(region === "japan" && btn.textContent === "日本")
-		) {
-			btn.classList.add("active");
-		}
-	});
+    // 找到對應的按鈕並設為 active
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+        // 根據按鈕文字判斷是否為目標按鈕
+        if (
+            (region === "all" && btn.textContent === "全部") ||
+            (region === "japan" && btn.textContent === "日本")
+        ) {
+            btn.classList.add("active");
+        }
+    });
 
-	// === 篩選目的地項目 ===
-	const items = document.querySelectorAll(".destination-item");
-	items.forEach((item) => {
-		// 取得項目的地區屬性
-		const itemRegion = item.getAttribute("data-region");
+    // === 篩選目的地項目 ===
+    const items = document.querySelectorAll(".destination-item");
+    items.forEach((item) => {
+        // 取得項目的地區屬性
+        const itemRegion = item.getAttribute("data-region");
 
-		// 判斷是否顯示此項目
-		if (region === "all" || itemRegion === region) {
-			// 符合篩選條件：顯示
-			item.classList.remove("hidden");
-		} else {
-			// 不符合篩選條件：隱藏
-			item.classList.add("hidden");
-		}
-	});
+        // 判斷是否顯示此項目
+        if (region === "all" || itemRegion === region) {
+            // 符合篩選條件：顯示
+            item.classList.remove("hidden");
+        } else {
+            // 不符合篩選條件：隱藏
+            item.classList.add("hidden");
+        }
+    });
 }
 
 // ==================== 搜尋功能 ====================
@@ -322,28 +308,28 @@ function filterRegion(region) {
  * 在搜尋框輸入時即時觸發
  */
 function searchDestination() {
-	// 取得搜尋框的文字並轉為小寫
-	const searchText = document
-		.getElementById("search-input")
-		.value.toLowerCase();
+    // 取得搜尋框的文字並轉為小寫
+    const searchText = document
+        .getElementById("search-input")
+        .value.toLowerCase();
 
-	// 取得所有目的地項目
-	const items = document.querySelectorAll(".destination-item");
+    // 取得所有目的地項目
+    const items = document.querySelectorAll(".destination-item");
 
-	// 遍歷每個項目進行比對
-	items.forEach((item) => {
-		// 取得項目的搜尋資料（城市+國家）
-		const searchData = item.getAttribute("data-search");
+    // 遍歷每個項目進行比對
+    items.forEach((item) => {
+        // 取得項目的搜尋資料（城市+國家）
+        const searchData = item.getAttribute("data-search");
 
-		// 判斷是否包含搜尋文字
-		if (searchData.includes(searchText)) {
-			// 符合：顯示
-			item.classList.remove("hidden");
-		} else {
-			// 不符合：隱藏
-			item.classList.add("hidden");
-		}
-	});
+        // 判斷是否包含搜尋文字
+        if (searchData.includes(searchText)) {
+            // 符合：顯示
+            item.classList.remove("hidden");
+        } else {
+            // 不符合：隱藏
+            item.classList.add("hidden");
+        }
+    });
 }
 
 // ==================== 滾動陰影效果 ====================
