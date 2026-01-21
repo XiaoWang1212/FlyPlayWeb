@@ -4,4 +4,16 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "authlib>=1.2",
+    "flask==2.3.3",
+    "flask-cors==4.0.0",
+    "google-cloud-core==2.5.0",
+    "google-cloud-firestore==2.22.0",
+    "itsdangerous>=2.1",
+    "openai>=0.27.0",
+    "pymongo>=4.5",
+    "python-dotenv==1.0.0",
+    "requests==2.31.0",
+    "werkzeug==2.3.7",
+]

@@ -13,3 +13,5 @@ google-cloud-core==2.5.0
 pymongo >= 4.5
 itsdangerous >= 2.1
 Authlib >= 1.2
+
+openai >= 0.27.0
