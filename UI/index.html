@@ -519,7 +519,7 @@
 
         // 初始化聊天
         window.onload = function() {
-            appendMsg('測試訊息', 'bot');
+            typeMessage('您好！我是飛遊 AI 助手。我可以幫您調整行程、推薦景點、規劃路線，或是回答旅遊相關問題。請告訴我您需要什麼協助？', 'bot');
         };
 
         // 切換聊天模式
@@ -538,7 +538,6 @@
                 robotFabIcon.classList.remove('fa-robot');
                 robotFabIcon.classList.add('fa-list-ul');
                 
-                setTimeout(() => document.getElementById('chatInput').focus(), 300);
             } else {
                 // 回到行程表模式
                 chatView.classList.remove('active');
@@ -572,14 +571,35 @@
             setTimeout(() => {
                 document.getElementById(loadingId).remove();
 
+                typeMessage('好的，我已經理解您的需求。根據您的行程安排，我建議可以在大阪城附近增加大阪歷史博物館，這樣可以更深入了解大阪的歷史文化。另外，從道頓堀到心齋橋的路線非常順暢，中間還可以順道逛逛美國村，那裡有很多特色小店和咖啡廳喔！', 'bot');
+
                 setTimeout(() => {
-                    appendMsg('測試訊息', 'bot');
                     sheet.classList.remove('expanded');
                     sheet.classList.add('half');
                     fabGroup.classList.remove('horizontal');
                     fabGroup.classList.add('half-mode');
                 }, 1000);
             }, 1500);
+        }
+
+        // 逐字顯示訊息（打字機效果）
+        function typeMessage(text, type, speed = 30) {
+            const div = document.createElement('div');
+            div.className = `chat-msg ${type}`;
+            document.getElementById('chatMessages').appendChild(div);
+            
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < text.length) {
+                    div.textContent += text[index];
+                    index++;
+                    scrollToBottom();
+                } else {
+                    clearInterval(interval);
+                }
+            }, speed);
+            
+            return div;
         }
 
         function appendMsg(text, type) {

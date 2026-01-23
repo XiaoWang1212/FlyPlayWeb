@@ -76,7 +76,7 @@ function toggleDaysPicker() {
     }
 }
 
-// 生成天數選項（1-15 天）
+// 生成天數選項（1-7 天）
 function generateDaysOptions(container) {
     container.innerHTML = '';
 
@@ -86,7 +86,7 @@ function generateDaysOptions(container) {
     anyDayItem.dataset.value = '0';
     container.appendChild(anyDayItem);
 
-    for (let i = 1; i <= 15; i++) {
+    for (let i = 1; i <= 7; i++) {
         const item = document.createElement('div');
         item.className = 'picker-item';
         item.textContent = `${i}`;
