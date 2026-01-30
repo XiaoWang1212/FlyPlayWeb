@@ -8,6 +8,7 @@
 /**
  * 目的地資料陣列
  */
+// TODO: 改圖片
 const destinations = [
     // 日本地區（先亂放圖片）
     { city: "東京", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop" },

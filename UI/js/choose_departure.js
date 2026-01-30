@@ -3,6 +3,7 @@
  * 單選出發地，存到 tripSetup（localStorage）
  */
 
+// TODO: 改圖片
 const departures = [
   { city: "東京", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop" },
   { city: "大阪", image: "https://images.unsplash.com/photo-1589452271712-64b8a66c7b71?w=400&h=300&fit=crop" },
