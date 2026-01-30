@@ -1,13 +1,46 @@
 import json
-from openai import AsyncOpenAI
+import google.generativeai as genai
 from config import Config
+import re
 
-class ChatGPTService:
+class GeminiService:
     def __init__(self):
-        self.client = AsyncOpenAI(api_key=Config.OPENAI_API_KEY)
-        self.model = "gpt-4o-mini"
+        genai.configure(api_key=Config.GEMINI_API_KEY)
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # 配置生成參數
+        self.generation_config = {
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": 8192,
+        }
     
-    async def get_travel_recommendation(self, location, days, transportation, preferences):
+    def _clean_json_response(self, response_text):
+        """清理和提取 JSON 內容"""
+        raw_text = response_text.strip()
+        
+        # 移除 markdown 代碼塊標記
+        if raw_text.startswith('```'):
+            # 找到第一個和最後一個 ```
+            parts = raw_text.split('```')
+            if len(parts) >= 3:
+                raw_text = parts[1]
+            else:
+                raw_text = parts[0] if len(parts) > 1 else raw_text
+        
+        # 移除 json 標籤
+        raw_text = raw_text.strip()
+        if raw_text.startswith('json'):
+            raw_text = raw_text[4:].strip()
+        
+        # 移除代碼塊結尾的 ```
+        if raw_text.endswith('```'):
+            raw_text = raw_text[:-3].strip()
+        
+        return raw_text
+    
+    def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
         try:
             prompt = f"""你是一個專業的旅遊顧問。請為使用者規劃前往{location}的{days}天行程。
@@ -24,17 +57,15 @@ class ChatGPTService:
             }}
             """
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "你是一個專業的旅遊顧問，僅以JSON格式回傳資料。"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=1500
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
             )
-            raw_content = response.choices[0].message.content
-            parsed_json = json.loads(raw_content)
+            
+            raw_content = response.text.strip()
+            # 使用新的清理函式
+            cleaned_json = self._clean_json_response(raw_content)
+            parsed_json = json.loads(cleaned_json)
 
             return {
                 'success': True,
@@ -46,31 +77,41 @@ class ChatGPTService:
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
     
-    async def chat_with_ai(self, message, conversation_history=[]):
+    def chat_with_ai(self, message, conversation_history=[]):
         """與 AI 進行對話"""
         try:
-            messages = [
-                {"role": "system", "content": "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"}
-            ] + conversation_history + [{"role": "user", "content": message}]
+            # 轉換為 Gemini 格式
+            chat = self.model.start_chat(history=[])
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=500
-            )
+            # 添加系统提示
+            system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
             
-            ai_content = response.choices[0].message.content
+            # 構建完整訊息
+            full_message = f"{system_prompt}\n\n用户消息: {message}"
+            
+            if conversation_history:
+                # 重建對話歷史
+                for msg in conversation_history:
+                    if msg['role'] == 'user':
+                        chat.send_message(msg['content'])
+            
+            response = chat.send_message(full_message)
+            ai_content = response.text
+            
             return {
                 'success': True,
                 'data': {
                     'response': ai_content,
-                    'history': messages + [{"role": "assistant", "content": ai_content}]
+                    'history': conversation_history + [
+                        {"role": "user", "content": message},
+                        {"role": "assistant", "content": ai_content}
+                    ]
                 }
             }
         except Exception as e:
             return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
     
-    async def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
+    def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
         """生成完整詳細行程 (結構化輸出)"""
         try:
             interests_str = ', '.join(interests) if interests else '通用興趣'
@@ -109,19 +150,19 @@ class ChatGPTService:
                 ],
                 "transport_tips": "交通建議"
             }}
+            
+            只回傳純 JSON，不要包含任何 markdown 標記。
             """
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "你是專業旅遊規劃師，只回傳符合 Schema 的 JSON 資料。"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=2500
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
             )
-            raw_content = response.choices[0].message.content
-            parsed_json = json.loads(raw_content)
+            
+            raw_content = response.text.strip()
+            # 使用新的清理函式
+            cleaned_json = self._clean_json_response(raw_content)
+            parsed_json = json.loads(cleaned_json)
 
             return {
                 'success': True,
@@ -133,7 +174,7 @@ class ChatGPTService:
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
     
-    async def refine_itinerary(self, itinerary, feedback):
+    def refine_itinerary(self, itinerary, feedback):
         """根據用戶反饋優化行程"""
         try:
             prompt = f"""根據以下反饋優化旅遊行程。
@@ -141,31 +182,30 @@ class ChatGPTService:
             用戶反饋: {feedback}
             
             請保持與原始行程完全相同的 JSON 結構 (包括 weekday 欄位) 進行修改並回傳。
+            只回傳純 JSON，不要包含任何 markdown 標記。
             """
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "你是專業旅遊規劃師，根據反饋優化行程，保持 JSON 結構一致。"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=2500
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
             )
-            raw_content = response.choices[0].message.content
-            parsed_json = json.loads(raw_content)
+            
+            raw_content = response.text.strip()
+            # 使用新的清理函式
+            cleaned_json = self._clean_json_response(raw_content)
+            parsed_json = json.loads(cleaned_json)
 
             return {
                 'success': True,
                 'data': {
-                    'raw_output': raw_content,
+                    'raw_output': cleaned_json,
                     'parsed': parsed_json
                 }
             }
         except Exception as e:
             return {'success': False, 'error': f"行程優化失敗: {str(e)}"}
     
-    async def get_travel_tips(self, location, travel_time=None):
+    def get_travel_tips(self, location, travel_time=None):
         """獲取目的地旅遊提示"""
         try:
             time_info = f"旅遊時間: {travel_time}" if travel_time else ""
@@ -181,24 +221,24 @@ class ChatGPTService:
                 "transportation_guide": "當地交通建議",
                 "must_visit_spots": ["景點1", "景點2"]
             }}
+            
+            只回傳純 JSON，不要包含任何 markdown 標記。
             """
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "你是旅遊專家，只回傳 JSON 格式的提示。"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=1500
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
             )
-            raw_content = response.choices[0].message.content
-            parsed_json = json.loads(raw_content)
+            
+            raw_content = response.text.strip()
+            # 使用新的清理函式
+            cleaned_json = self._clean_json_response(raw_content)
+            parsed_json = json.loads(cleaned_json)
 
             return {
                 'success': True,
                 'data': {
-                    'raw_output': raw_content,
+                    'raw_output': cleaned_json,
                     'parsed': parsed_json
                 }
             }
