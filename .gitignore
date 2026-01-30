@@ -8,3 +8,5 @@ Backend/venv/
 
 .env
 *.pyc
+
+.venv
