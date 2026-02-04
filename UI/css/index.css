@@ -1,0 +1,342 @@
+:root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --header-height: 50px;
+            --sidebar-width: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        html {
+            background-color: #f0f0f0;
+            overflow: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            height: 100vh;
+            height: 100dvh; /* 動態視窗高度，鍵盤彈出時不會改變 */
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overscroll-behavior-y: none;
+            -webkit-user-select: none;
+            user-select: none;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        /* Header */
+        header {
+            background-color: #333;
+            color: white;
+            height: calc(var(--header-height) + var(--safe-top));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--safe-top) 15px 0 15px;
+            z-index: 2000;
+            position: sticky;
+            top: 0;
+            flex-shrink: 0;
+            width: 100%;
+        }
+
+        .header-title { font-size: 18px; font-weight: 500; }
+        
+        .menu-btn, .action-btn { 
+            cursor: pointer; 
+            font-size: 20px; 
+            padding: 10px; 
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        .menu-btn:active, .action-btn:active { opacity: 0.6; transform: scale(0.96); }
+
+        /* Sidebar */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2001;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+        }
+        .sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: 85%; max-width: var(--sidebar-width); height: 100%;
+            background: white; z-index: 2002;
+            transform: translateX(-100%); transition: transform 0.3s ease-in-out;
+            display: flex; flex-direction: column;
+            padding-top: var(--safe-top);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar.active { transform: translateX(0); }
+
+        .sidebar-header { 
+            padding: 20px; 
+            display: flex; justify-content: flex-end; align-items: center; 
+        }
+        
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 0 20px; }
+        
+        .new-trip-btn { 
+            display: flex; align-items: center; margin-bottom: 20px; cursor: pointer; 
+            color: #333; 
+        }
+        .new-trip-btn i { margin-right: 10px; }
+        
+        .sidebar-divider { border: 0; border-top: 1px solid #eee; margin-bottom: 15px; }
+        
+        .trip-item { 
+            display: flex; justify-content: flex-start; align-items: center; 
+            padding: 15px 0; cursor: pointer; 
+        }
+        .trip-info { display: flex; align-items: center; flex: 1; }
+        .trip-text { display: flex; flex-direction: column; margin-left: 10px; }
+        .trip-text h4 { font-size: 16px; margin-bottom: 4px; font-weight: normal; }
+        .trip-text span { font-size: 12px; color: #888; }
+        
+        .bookmark-icon { padding: 5px; color: #333; transition: transform 0.2s; }
+        .bookmark-icon:active { transform: scale(1.2); }
+
+        /* Map */
+        .map-container {
+            flex: 1; position: relative; width: 100%;
+            background-color: #e5e3df;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/OpenStreetMap_Logo_2011.svg/1024px-OpenStreetMap_Logo_2011.svg.png');
+            background-size: cover; background-position: center;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .map-pin { position: absolute; color: #ff4d4f; font-size: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .pin-1 { top: 40%; left: 30%; }
+        .pin-2 { top: 50%; left: 60%; }
+
+        /* --- FAB (懸浮按鈕群組) --- */
+        .fab-group {
+            position: absolute; 
+            right: 15px; 
+            bottom: 220px;
+            display: flex; 
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+            z-index: 1500; 
+        }
+
+        .fab {
+            width: 45px; height: 45px; background: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 20px; color: #333; cursor: pointer;
+        }
+
+        .fab-group.horizontal {
+            bottom: auto;
+            top: calc(var(--header-height) + var(--safe-top) + 50px); 
+            right: 15px;
+            flex-direction: row;
+        }
+        
+        .fab-group.half-mode {
+            bottom: 55%;
+        }
+
+        /* Bottom Sheet */
+        .bottom-sheet {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: white;
+            border-top-left-radius: 20px; border-top-right-radius: 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease-in-out;
+            height: 200px;
+            display: flex; flex-direction: column;
+            z-index: 500;
+        }
+        .bottom-sheet.expanded { height: 75%; }
+        .bottom-sheet.half { height: 50%; }
+
+        .sheet-handle-bar { width: 100%; padding: 15px 0 5px 0; display: flex; justify-content: center; cursor: pointer; touch-action: none; }
+        .sheet-handle { width: 40px; height: 5px; background: #ddd; border-radius: 5px; }
+        
+        .sheet-header { 
+            padding: 0 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            flex-shrink: 0; cursor: pointer; touch-action: none; height: 50px; 
+        }
+
+        .sheet-content {
+            flex: 1; overflow-y: hidden; padding: 0;
+            position: relative;
+        }
+
+        /* 視圖切換 */
+        .view-section {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px 20px;
+            padding-bottom: calc(20px + var(--safe-bottom)); 
+        }
+        .view-section.active {
+            display: flex;
+        }
+
+        /* 聊天室樣式 */
+        #chatView {
+            padding: 0;
+            background: #f9f9f9;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: calc(80px + var(--safe-bottom)); /* 增加底部空間 */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .chat-msg {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        .chat-msg.bot {
+            background: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .chat-msg.user {
+            background: #333;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-input-bar {
+            position: fixed; /* 改為 fixed，讓它固定在視窗底部 */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            padding-bottom: calc(10px + var(--safe-bottom));
+            z-index: 600; /* 確保在 bottom-sheet 之上 */
+        }
+        .chat-input-field {
+            flex: 1;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            padding: 0 15px;
+            height: 40px;
+            font-size: 15px;
+            outline: none;
+        }
+        .chat-send-btn {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 15px;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #aaa;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Timeline UI (完全保持原樣) */
+        .timeline-item { 
+            display: flex; margin-bottom: 20px; position: relative; transition: background 0.2s; 
+            background: #fff;
+            border-radius: 8px;
+        }
+        .timeline-left { display: flex; flex-direction: column; align-items: center; margin-right: 15px; width: 60px; }
+        .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; }
+        .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; }
+        .timeline-transit { display: flex; align-items: center; justify-content: center; margin: 10px 0; color: #999; font-size: 12px; }
+        .timeline-transit i { margin-right: 5px; }
+        .timeline-right { flex: 1; padding-top: 5px; }
+        .timeline-title { font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+        .timeline-desc { font-size: 12px; color: #999; margin-top: 5px; line-height: 1.4; }
+        .time-badge { font-size: 10px; background: #f0f0f0; padding: 2px 6px; border-radius: 10px; color: #666; font-weight: normal; }
+        .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
+
+        .sortable-ghost { opacity: 0.4; background: #f0f0f0; }
+        .sortable-drag { opacity: 1; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .sortable-chosen {
+            background-color: #e0e0e0 !important;
+            transform: scale(1.02);
+        }
+
+        /* 編輯模式 */
+        .delete-btn {
+            display: none;
+            position: absolute; right: -10px; top: 0;
+            background: #ff4d4f; color: white;
+            width: 25px; height: 25px; border-radius: 50%;
+            text-align: center; line-height: 25px;
+            cursor: pointer; font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
+        }
+        .add-item-btn {
+            display: none;
+            width: 100%; padding: 12px; margin-top: 10px;
+            background-color: #f0f0f0; color: #333;
+            border: 2px dashed #ccc; border-radius: 10px;
+            text-align: center; cursor: pointer; font-weight: bold;
+        }
+        .view-section.editing .delete-btn { display: block; animation: fadeIn 0.3s; }
+        .view-section.editing .add-item-btn { display: block; animation: fadeIn 0.3s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
