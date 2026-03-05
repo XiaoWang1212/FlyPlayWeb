@@ -20,7 +20,7 @@ docker compose up --build
 
 ### 常見問題
 
-- 若遇到 port 衝突，請確認沒有其他 container 佔用 5000 port。
+- 若遇到 port 衝突，請確認沒有其他 container 佔用 5001 port。
 - 若要停止服務，按下 Ctrl+C 或執行：
 
 ```bash
