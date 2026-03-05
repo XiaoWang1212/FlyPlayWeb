@@ -1,376 +1,422 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>飛遊 App Prototype</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/index.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/index.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
-        #map {
+      #map {
         height: 100%;
         width: 100%;
       }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <header>
-        <div class="menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></div>
-        <div class="header-title">飛遊</div>
-        <div class="action-btn" onclick="downloadPDF()"><i class="fas fa-download"></i></div>
+      <div class="menu-btn" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </div>
+      <div class="header-title">飛遊</div>
+      <div class="action-btn" onclick="downloadPDF()">
+        <i class="fas fa-download"></i>
+      </div>
     </header>
 
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="action-btn close-sidebar-btn" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></div>
+      <div class="sidebar-header">
+        <div class="action-btn close-sidebar-btn" onclick="toggleSidebar()">
+          <i class="fas fa-chevron-left"></i>
         </div>
-        <div class="sidebar-content">
-            <a onclick="navigateToSetup()" class="new-trip-btn">
-                <i class="far fa-square-plus"></i>
-                <span>開啟新行程</span>
-            </a>
-            <hr class="sidebar-divider">
-            <div class="trip-item">
-                <div class="trip-info">
-                    <i class="fas fa-bookmark bookmark-icon" onclick="toggleBookmark(this)"></i>
-                    <div class="trip-text">
-                        <h4>東京三日遊</h4>
-                        <span>2025/01/10</span>
-                    </div>
-                </div>
+      </div>
+      <div class="sidebar-content">
+        <a onclick="navigateToSetup()" class="new-trip-btn">
+          <i class="far fa-square-plus"></i>
+          <span>開啟新行程</span>
+        </a>
+        <hr class="sidebar-divider" />
+        <div class="trip-item">
+          <div class="trip-info">
+            <i
+              class="fas fa-bookmark bookmark-icon"
+              onclick="toggleBookmark(this)"
+            ></i>
+            <div class="trip-text">
+              <h4>東京三日遊</h4>
+              <span>2025/01/10</span>
             </div>
-            <div class="trip-item">
-                <div class="trip-info">
-                    <i class="far fa-bookmark bookmark-icon" onclick="toggleBookmark(this)"></i>
-                    <div class="trip-text">
-                        <h4>大阪當天來回</h4>
-                        <span>2024/12/20</span>
-                    </div>
-                </div>
-            </div>
-            <div class="trip-item">
-                <div class="trip-info">
-                    <i class="fas fa-bookmark bookmark-icon" onclick="toggleBookmark(this)"></i>
-                    <div class="trip-text">
-                        <h4>北海道滑雪</h4>
-                        <span>2024/02/01</span>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
+        <div class="trip-item">
+          <div class="trip-info">
+            <i
+              class="far fa-bookmark bookmark-icon"
+              onclick="toggleBookmark(this)"
+            ></i>
+            <div class="trip-text">
+              <h4>大阪當天來回</h4>
+              <span>2024/12/20</span>
+            </div>
+          </div>
+        </div>
+        <div class="trip-item">
+          <div class="trip-info">
+            <i
+              class="fas fa-bookmark bookmark-icon"
+              onclick="toggleBookmark(this)"
+            ></i>
+            <div class="trip-text">
+              <h4>北海道滑雪</h4>
+              <span>2024/02/01</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="map-container" id="mapContainer">
-        <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
-        <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
-        <div id="map">
-            <!-- 這裡會放置地圖 -->
-             
+      <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
+      <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
+      <div id="map">
+        <!-- 這裡會放置地圖 -->
+      </div>
+      <div class="fab-group" id="fabGroup">
+        <div class="fab" onclick="toggleChatMode()" id="robotFab">
+          <i class="fas fa-robot"></i>
         </div>
-        <div class="fab-group" id="fabGroup">
-            <div class="fab" onclick="toggleChatMode()" id="robotFab"><i class="fas fa-robot"></i></div>
-            <div class="fab" onclick="toggleEditMode()" id="editFab"><i class="fas fa-pen"></i></div>
+        <div class="fab" onclick="toggleEditMode()" id="editFab">
+          <i class="fas fa-pen"></i>
+        </div>
+      </div>
+
+      <div class="bottom-sheet" id="bottomSheet">
+        <div class="sheet-handle-bar" id="dragHandle">
+          <div class="sheet-handle"></div>
         </div>
 
-        <div class="bottom-sheet" id="bottomSheet">
-            <div class="sheet-handle-bar" id="dragHandle">
-                <div class="sheet-handle"></div>
-            </div>
+        <div class="sheet-header" id="dragHeader">
+          <h3>第一日行程</h3>
+        </div>
 
-            <div class="sheet-header" id="dragHeader">
-                <h3>第一日行程</h3>
+        <div class="sheet-content" id="sheetContent">
+          <!-- 聊天視圖 -->
+          <div id="chatView" class="view-section">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-bar">
+              <input
+                type="text"
+                class="chat-input-field"
+                id="chatInput"
+                placeholder="輸入需求..."
+              />
+              <button class="chat-send-btn" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+              </button>
             </div>
+          </div>
 
-            <div class="sheet-content" id="sheetContent">
-                
-                <!-- 聊天視圖 -->
-                <div id="chatView" class="view-section">
-                    <div class="chat-messages" id="chatMessages"></div>
-                    <div class="chat-input-bar">
-                        <input type="text" class="chat-input-field" id="chatInput" placeholder="輸入需求...">
-                        <button class="chat-send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
-                    </div>
+          <!-- 原本的行程表視圖 -->
+          <div id="timelineView" class="view-section active">
+            <div id="timelineList">
+              <div class="timeline-item">
+                <div class="delete-btn" onclick="deleteItem(this)">
+                  <i class="fas fa-trash"></i>
                 </div>
-
-                <!-- 原本的行程表視圖 -->
-                <div id="timelineView" class="view-section active">
-                    <div id="timelineList">
-                        <div class="timeline-item">
-                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                            <div class="timeline-left">
-                                <div class="location-img"><i class="far fa-image"></i></div>
-                                <div class="timeline-connector"></div>
-                            </div>
-                            <div class="timeline-right">
-                                <div class="timeline-title">
-                                    大阪城
-                                    <span class="time-badge">20分鐘</span>
-                                </div>
-                                <div class="timeline-desc">參觀歷史名城，拍攝天守閣美景。</div>
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                            <div class="timeline-left">
-                                <div class="location-img"><i class="far fa-image"></i></div>
-                            </div>
-                            <div class="timeline-right">
-                                <div class="timeline-title">
-                                    道頓堀
-                                    <span class="time-badge">1小時</span>
-                                </div>
-                                <div class="timeline-desc">享受大阪美食，固力果跑跑人打卡。</div>
-                            </div>
-                        </div>
-                        
-                        <div class="timeline-item">
-                            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                            <div class="timeline-left">
-                                <div class="location-img"><i class="far fa-image"></i></div>
-                                <div class="timeline-connector"></div>
-                            </div>
-                            <div class="timeline-right">
-                                <div class="timeline-title">
-                                    心齋橋商店街
-                                    <span class="time-badge">2小時</span>
-                                </div>
-                                <div class="timeline-desc">藥妝店購物，伴手禮採買。</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="add-item-btn" onclick="addItem()">
-                        <i class="fas fa-plus"></i> 新增行程
-                    </div>
-                    <div style="height: 20px;"></div>
+                <div class="timeline-left">
+                  <div class="location-img"><i class="far fa-image"></i></div>
+                  <div class="timeline-connector"></div>
                 </div>
+                <div class="timeline-right">
+                  <div class="timeline-title">
+                    大阪城
+                    <span class="time-badge">20分鐘</span>
+                  </div>
+                  <div class="timeline-desc">
+                    參觀歷史名城，拍攝天守閣美景。
+                  </div>
+                </div>
+              </div>
 
+              <div class="timeline-item">
+                <div class="delete-btn" onclick="deleteItem(this)">
+                  <i class="fas fa-trash"></i>
+                </div>
+                <div class="timeline-left">
+                  <div class="location-img"><i class="far fa-image"></i></div>
+                </div>
+                <div class="timeline-right">
+                  <div class="timeline-title">
+                    道頓堀
+                    <span class="time-badge">1小時</span>
+                  </div>
+                  <div class="timeline-desc">
+                    享受大阪美食，固力果跑跑人打卡。
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="delete-btn" onclick="deleteItem(this)">
+                  <i class="fas fa-trash"></i>
+                </div>
+                <div class="timeline-left">
+                  <div class="location-img"><i class="far fa-image"></i></div>
+                  <div class="timeline-connector"></div>
+                </div>
+                <div class="timeline-right">
+                  <div class="timeline-title">
+                    心齋橋商店街
+                    <span class="time-badge">2小時</span>
+                  </div>
+                  <div class="timeline-desc">藥妝店購物，伴手禮採買。</div>
+                </div>
+              </div>
             </div>
+            <div class="add-item-btn" onclick="addItem()">
+              <i class="fas fa-plus"></i> 新增行程
+            </div>
+            <div style="height: 20px"></div>
+          </div>
         </div>
+      </div>
     </div>
 
     <script>
-        let map;
+      let map;
+      const API_BASE = "http://127.0.0.1:5001";
 
-        async function initMap() {
-            try {
-                // 取得行程資料
-                const response = await fetch('/api/itinerary');
-                const result = await response.json();
-                const activities = result.data.days[0].activities;
+      async function initMap() {
+        try {
+          const response = await fetch(`${API_BASE}/api/itinerary`);
 
-                if (!activities || activities.length < 2) {
-                    console.error("活動數量不足，無法規劃路線");
-                    return;
-                }
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`itinerary API ${response.status}: ${text}`);
+          }
 
-                // 載入 Google Maps Library
-                const { Map } = await google.maps.importLibrary("maps");
+          const result = await response.json();
+          const activities = result.data.days[0].activities;
 
-                // 建立地圖
-                map = new Map(document.getElementById("map"), {
-                    zoom: 13,
-                    center: activities[0].location,
-                    mapId: "DEMO_MAP_ID"
-                });
+          if (!activities || activities.length < 2) {
+            console.error("活動數量不足，無法規劃路線");
+            return;
+          }
 
-                // 建立 Directions 服務
-                const directionsService = new google.maps.DirectionsService();
-                const directionsRenderer = new google.maps.DirectionsRenderer({
-                    map: map, //前端的各位這裡可以調顏色等東東
-                    suppressMarkers: false ,//要自訂marker把這改成true，然後自己用AdvancedMarkerElement
-                    polylineOptions: {
-                        strokeColor: getColorByDay(0),   
-                        strokeWeight: 7,          
-                        strokeOpacity: 0.9       
-                    }
-                });
-                function getColorByDay(dayIndex) {
-                    const colors = ["#2962FF", "#34A853", "#EA4335"];
-                    return colors[dayIndex % colors.length];
-                }
-                const origin = activities[0].location;
-                const destination = activities[activities.length - 1].location;
-                const waypoints = activities.slice(1, -1).map(act => ({
-                    location: act.location,
-                    stopover: true
-                }));
+          const { Map } = await google.maps.importLibrary("maps");
+          map = new Map(document.getElementById("map"), {
+            zoom: 13,
+            center: activities[0].location,
+            mapId: "DEMO_MAP_ID",
+          });
 
-                // 發送路線請求
-                directionsService.route(
-                    {
-                        origin: origin,
-                        destination: destination,
-                        waypoints: waypoints,
-                        optimizeWaypoints: false, // true = 自動最佳化順序
-                        travelMode: google.maps.TravelMode.DRIVING
-                    },
-                    (result, status) => {
-                        if (status === "OK") {
-                            directionsRenderer.setDirections(result);
-                            console.log("路線規劃成功！");
-                        } else {
-                            console.error("路線規劃失敗:", status);
-                        }
-                    }
-                );
+          // 建立 Directions 服務
+          const directionsService = new google.maps.DirectionsService();
+          const directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map, //前端的各位這裡可以調顏色等東東
+            suppressMarkers: false, //要自訂marker把這改成true，然後自己用AdvancedMarkerElement
+            polylineOptions: {
+              strokeColor: getColorByDay(0),
+              strokeWeight: 7,
+              strokeOpacity: 0.9,
+            },
+          });
+          function getColorByDay(dayIndex) {
+            const colors = ["#2962FF", "#34A853", "#EA4335"];
+            return colors[dayIndex % colors.length];
+          }
+          const origin = activities[0].location;
+          const destination = activities[activities.length - 1].location;
+          const waypoints = activities.slice(1, -1).map((act) => ({
+            location: act.location,
+            stopover: true,
+          }));
 
-            } catch (error) {
-                console.error("初始化地圖失敗：", error);
-            }
+          // 發送路線請求
+          directionsService.route(
+            {
+              origin: origin,
+              destination: destination,
+              waypoints: waypoints,
+              optimizeWaypoints: false, // true = 自動最佳化順序
+              travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+              if (status === "OK") {
+                directionsRenderer.setDirections(result);
+                console.log("路線規劃成功！");
+              } else {
+                console.error("路線規劃失敗:", status);
+              }
+            },
+          );
+        } catch (error) {
+          console.error("初始化地圖失敗：", error);
         }
+      }
 
-        // Google Maps API
-        fetch("http://localhost:5000/api/google-key")
-            .then(res => res.json())
-            .then(data => {
-                const script = document.createElement("script");
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&callback=initMap&libraries=routes`;
-                script.async = true;
-                document.head.appendChild(script);
-            });
+      fetch(`${API_BASE}/api/google-key`)
+        .then((res) => res.json())
+        .then((data) => {
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&callback=initMap&libraries=routes&loading=async`;
+          script.async = true;
+          document.head.appendChild(script);
+        });
     </script>
 
-
     <script>
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.querySelector('.sidebar-overlay');
-        const sheet = document.getElementById('bottomSheet');
-        const fabGroup = document.getElementById('fabGroup');
-        const mapContainer = document.getElementById('mapContainer');
-        const dragHandle = document.getElementById('dragHandle');
-        const dragHeader = document.getElementById('dragHeader');
-        
-        let isEditMode = false;
-        let isChatMode = false;
-        const timelineView = document.getElementById('timelineView');
-        const chatView = document.getElementById('chatView');
-        const editFab = document.getElementById('editFab').querySelector('i');
-        const robotFabIcon = document.getElementById('robotFab').querySelector('i');
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.querySelector(".sidebar-overlay");
+      const sheet = document.getElementById("bottomSheet");
+      const fabGroup = document.getElementById("fabGroup");
+      const mapContainer = document.getElementById("mapContainer");
+      const dragHandle = document.getElementById("dragHandle");
+      const dragHeader = document.getElementById("dragHeader");
 
-        // --- SortableJS 設定 (拖拽功能) ---
-        const timelineList = document.getElementById('timelineList');
-        
-        let sortable = new Sortable(timelineList, {
-            animation: 150,
-            disabled: true,
-            delay: 400,
-            delayOnTouchOnly: true,
-            ghostClass: 'sortable-ghost',
-            dragClass: 'sortable-drag',
-        });
+      let isEditMode = false;
+      let isChatMode = false;
+      const timelineView = document.getElementById("timelineView");
+      const chatView = document.getElementById("chatView");
+      const editFab = document.getElementById("editFab").querySelector("i");
+      const robotFabIcon = document
+        .getElementById("robotFab")
+        .querySelector("i");
 
-        // 初始化聊天
-        window.onload = function() {
-            appendMsg('測試訊息', 'bot');
-        };
+      // --- SortableJS 設定 (拖拽功能) ---
+      const timelineList = document.getElementById("timelineList");
 
-        // 切換聊天模式
-        function toggleChatMode() {
-            isChatMode = !isChatMode;
-            
-            if (isChatMode) {
-                // 進入聊天模式
-                timelineView.classList.remove('active');
-                chatView.classList.add('active');
-                openSheet();
-                fabGroup.classList.add('horizontal');
-                document.getElementById('editFab').style.display = 'none';
-                
-                // 改變圖示：機器人 → 列表
-                robotFabIcon.classList.remove('fa-robot');
-                robotFabIcon.classList.add('fa-list-ul');
-                
-                setTimeout(() => document.getElementById('chatInput').focus(), 300);
-            } else {
-                // 回到行程表模式
-                chatView.classList.remove('active');
-                timelineView.classList.add('active');
-                sheet.classList.remove('expanded');
-                sheet.classList.remove('half');
-                fabGroup.classList.remove('horizontal');
-                fabGroup.classList.remove('half-mode');
-                document.getElementById('editFab').style.display = 'flex';
-                
-                // 恢復圖示：列表 → 機器人
-                robotFabIcon.classList.remove('fa-list-ul');
-                robotFabIcon.classList.add('fa-robot');
-            }
+      let sortable = new Sortable(timelineList, {
+        animation: 150,
+        disabled: true,
+        delay: 400,
+        delayOnTouchOnly: true,
+        ghostClass: "sortable-ghost",
+        dragClass: "sortable-drag",
+      });
+
+      // 初始化聊天
+      window.onload = function () {
+        appendMsg("測試訊息", "bot");
+      };
+
+      // 切換聊天模式
+      function toggleChatMode() {
+        isChatMode = !isChatMode;
+
+        if (isChatMode) {
+          // 進入聊天模式
+          timelineView.classList.remove("active");
+          chatView.classList.add("active");
+          openSheet();
+          fabGroup.classList.add("horizontal");
+          document.getElementById("editFab").style.display = "none";
+
+          // 改變圖示：機器人 → 列表
+          robotFabIcon.classList.remove("fa-robot");
+          robotFabIcon.classList.add("fa-list-ul");
+
+          setTimeout(() => document.getElementById("chatInput").focus(), 300);
+        } else {
+          // 回到行程表模式
+          chatView.classList.remove("active");
+          timelineView.classList.add("active");
+          sheet.classList.remove("expanded");
+          sheet.classList.remove("half");
+          fabGroup.classList.remove("horizontal");
+          fabGroup.classList.remove("half-mode");
+          document.getElementById("editFab").style.display = "flex";
+
+          // 恢復圖示：列表 → 機器人
+          robotFabIcon.classList.remove("fa-list-ul");
+          robotFabIcon.classList.add("fa-robot");
         }
+      }
 
-        // 發送訊息
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
+      // 發送訊息
+      function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const text = input.value.trim();
+        if (!text) return;
 
-            appendMsg(text, 'user');
-            input.value = '';
+        appendMsg(text, "user");
+        input.value = "";
 
-            const loadingId = 'loading-' + Date.now();
-            document.getElementById('chatMessages').insertAdjacentHTML('beforeend', 
-                `<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`);
-            scrollToBottom();
+        const loadingId = "loading-" + Date.now();
+        document
+          .getElementById("chatMessages")
+          .insertAdjacentHTML(
+            "beforeend",
+            `<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
+          );
+        scrollToBottom();
 
-            setTimeout(() => {
-                document.getElementById(loadingId).remove();
+        setTimeout(() => {
+          document.getElementById(loadingId).remove();
 
-                setTimeout(() => {
-                    appendMsg('測試訊息', 'bot');
-                    sheet.classList.remove('expanded');
-                    sheet.classList.add('half');
-                    fabGroup.classList.remove('horizontal');
-                    fabGroup.classList.add('half-mode');
-                }, 1000);
-            }, 1500);
+          setTimeout(() => {
+            appendMsg("測試訊息", "bot");
+            sheet.classList.remove("expanded");
+            sheet.classList.add("half");
+            fabGroup.classList.remove("horizontal");
+            fabGroup.classList.add("half-mode");
+          }, 1000);
+        }, 1500);
+      }
+
+      function appendMsg(text, type) {
+        const div = document.createElement("div");
+        div.className = `chat-msg ${type}`;
+        div.textContent = text;
+        document.getElementById("chatMessages").appendChild(div);
+        scrollToBottom();
+      }
+
+      function scrollToBottom() {
+        const container = document.getElementById("chatMessages");
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // 編輯模式切換
+      function toggleEditMode() {
+        event.stopPropagation();
+        isEditMode = !isEditMode;
+
+        if (isEditMode) {
+          timelineView.classList.add("editing");
+          editFab.classList.remove("fa-pen");
+          editFab.classList.add("fa-check");
+          openSheet();
+          sortable.option("disabled", false);
+        } else {
+          timelineView.classList.remove("editing");
+          editFab.classList.remove("fa-check");
+          editFab.classList.add("fa-pen");
+          sortable.option("disabled", true);
         }
+      }
 
-        function appendMsg(text, type) {
-            const div = document.createElement('div');
-            div.className = `chat-msg ${type}`;
-            div.textContent = text;
-            document.getElementById('chatMessages').appendChild(div);
-            scrollToBottom();
+      function deleteItem(btnElement) {
+        const item = btnElement.closest(".timeline-item");
+        if (item) {
+          item.style.opacity = "0";
+          item.style.transform = "translateX(-20px)";
+          setTimeout(() => {
+            item.remove();
+          }, 300);
         }
-        
-        function scrollToBottom() {
-            const container = document.getElementById('chatMessages');
-            container.scrollTop = container.scrollHeight;
-        }
+      }
 
-        // 編輯模式切換
-        function toggleEditMode() {
-            event.stopPropagation();
-            isEditMode = !isEditMode;
-
-            if (isEditMode) {
-                timelineView.classList.add('editing');
-                editFab.classList.remove('fa-pen');
-                editFab.classList.add('fa-check');
-                openSheet();
-                sortable.option("disabled", false);
-            } else {
-                timelineView.classList.remove('editing');
-                editFab.classList.remove('fa-check');
-                editFab.classList.add('fa-pen');
-                sortable.option("disabled", true);
-            }
-        }
-
-        function deleteItem(btnElement) {
-            const item = btnElement.closest('.timeline-item');
-            if (item) {
-                item.style.opacity = '0';
-                item.style.transform = 'translateX(-20px)';
-                setTimeout(() => { item.remove(); }, 300);
-            }
-        }
-
-        function addItem() {
-            const newItemHTML = `
+      function addItem() {
+        const newItemHTML = `
                 <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
                 <div class="timeline-left">
                     <div class="location-img"><i class="far fa-image"></i></div>
@@ -383,107 +429,120 @@
                     <div class="timeline-desc">點擊以編輯詳細資訊...</div>
                 </div>
             `;
-            const div = document.createElement('div');
-            div.className = 'timeline-item';
-            div.innerHTML = newItemHTML;
-            timelineList.appendChild(div);
-            
-            const addButton = document.querySelector('.add-item-btn');
-            addButton.scrollIntoView({ behavior: 'smooth' });
+        const div = document.createElement("div");
+        div.className = "timeline-item";
+        div.innerHTML = newItemHTML;
+        timelineList.appendChild(div);
+
+        const addButton = document.querySelector(".add-item-btn");
+        addButton.scrollIntoView({ behavior: "smooth" });
+      }
+
+      function toggleSidebar() {
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      }
+
+      function toggleBookmark(iconElement) {
+        event.stopPropagation();
+        if (iconElement.classList.contains("fas")) {
+          iconElement.classList.remove("fas");
+          iconElement.classList.add("far");
+        } else {
+          iconElement.classList.remove("far");
+          iconElement.classList.add("fas");
         }
+      }
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
+      function openSheet() {
+        sheet.classList.add("expanded");
+        fabGroup.classList.add("horizontal");
+      }
+
+      function closeSheet() {
+        if (isEditMode) toggleEditMode();
+        sheet.classList.remove("expanded");
+        fabGroup.classList.remove("horizontal");
+      }
+
+      function toggleBottomSheet() {
+        if (sheet.classList.contains("expanded")) {
+          closeSheet();
+        } else {
+          openSheet();
         }
+      }
 
-        function toggleBookmark(iconElement) {
-            event.stopPropagation();
-            if (iconElement.classList.contains('fas')) {
-                iconElement.classList.remove('fas');
-                iconElement.classList.add('far');
-            } else {
-                iconElement.classList.remove('far');
-                iconElement.classList.add('fas');
-            }
+      dragHandle.addEventListener("click", toggleBottomSheet);
+      dragHeader.addEventListener("click", toggleBottomSheet);
+
+      let startY = 0;
+      const threshold = 50;
+      function handleTouchStart(e) {
+        startY = e.touches[0].clientY;
+      }
+      function handleTouchEnd(e) {
+        let endY = e.changedTouches[0].clientY;
+        let distance = startY - endY;
+        if (distance > threshold) openSheet();
+        else if (distance < -threshold) closeSheet();
+      }
+
+      dragHandle.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+      });
+      dragHandle.addEventListener("touchend", handleTouchEnd);
+      dragHeader.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+      });
+      dragHeader.addEventListener("touchend", handleTouchEnd);
+
+      mapContainer.addEventListener("click", function (e) {
+        if (
+          !sheet.contains(e.target) &&
+          !fabGroup.contains(e.target) &&
+          sheet.classList.contains("expanded")
+        ) {
+          closeSheet();
         }
+      });
 
-        function openSheet() {
-            sheet.classList.add('expanded');
-            fabGroup.classList.add('horizontal');
-        }
+      function downloadPDF() {
+        alert("正在下載行程 PDF 檔案...");
+      }
 
-        function closeSheet() {
-            if (isEditMode) toggleEditMode(); 
-            sheet.classList.remove('expanded');
-            fabGroup.classList.remove('horizontal');
-        }
-
-        function toggleBottomSheet() {
-            if (sheet.classList.contains('expanded')) {
-                closeSheet();
-            } else {
-                openSheet();
-            }
-        }
-        
-        dragHandle.addEventListener('click', toggleBottomSheet);
-        dragHeader.addEventListener('click', toggleBottomSheet);
-
-        let startY = 0;
-        const threshold = 50;
-        function handleTouchStart(e) { startY = e.touches[0].clientY; }
-        function handleTouchEnd(e) {
-            let endY = e.changedTouches[0].clientY;
-            let distance = startY - endY;
-            if (distance > threshold) openSheet();
-            else if (distance < -threshold) closeSheet();
-        }
-
-        dragHandle.addEventListener('touchstart', handleTouchStart, {passive: true});
-        dragHandle.addEventListener('touchend', handleTouchEnd);
-        dragHeader.addEventListener('touchstart', handleTouchStart, {passive: true});
-        dragHeader.addEventListener('touchend', handleTouchEnd);
-
-        mapContainer.addEventListener('click', function(e) {
-            if (!sheet.contains(e.target) && !fabGroup.contains(e.target) && sheet.classList.contains('expanded')) {
-                closeSheet();
-            }
+      document
+        .getElementById("chatInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+          }
         });
 
-        function downloadPDF() {
-            alert('正在下載行程 PDF 檔案...');
+      function navigateToSetup() {
+        sessionStorage.setItem("navigationType", "forward");
+        window.location.href = "setup.html";
+      }
+
+      // 處理鍵盤彈出時的視窗大小變化
+      window.visualViewport.addEventListener("resize", function () {
+        const inputBar = document.querySelector(".chat-input-bar");
+        if (inputBar && isChatMode) {
+          // 鍵盤彈出時，調整輸入框位置
+          const keyboardHeight =
+            window.innerHeight - window.visualViewport.height;
+          inputBar.style.bottom = keyboardHeight + "px";
         }
+      });
 
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        function navigateToSetup() {
-            sessionStorage.setItem('navigationType', 'forward');
-            window.location.href = 'setup.html';
+      // 鍵盤收起時恢復位置
+      window.visualViewport.addEventListener("scroll", function () {
+        const inputBar = document.querySelector(".chat-input-bar");
+        if (inputBar && window.visualViewport.height === window.innerHeight) {
+          inputBar.style.bottom = "0px";
         }
-
-        // 處理鍵盤彈出時的視窗大小變化
-        window.visualViewport.addEventListener('resize', function() {
-            const inputBar = document.querySelector('.chat-input-bar');
-            if (inputBar && isChatMode) {
-                // 鍵盤彈出時，調整輸入框位置
-                const keyboardHeight = window.innerHeight - window.visualViewport.height;
-                inputBar.style.bottom = keyboardHeight + 'px';
-            }
-        });
-
-        // 鍵盤收起時恢復位置
-        window.visualViewport.addEventListener('scroll', function() {
-            const inputBar = document.querySelector('.chat-input-bar');
-            if (inputBar && window.visualViewport.height === window.innerHeight) {
-                inputBar.style.bottom = '0px';
-            }
-        });
+      });
     </script>
-</body>
+  </body>
 </html>
