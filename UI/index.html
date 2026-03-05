@@ -7,8 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/index.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    
-    
+    <style>
+        #map {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
 </head>
 <body>
 
@@ -62,7 +66,10 @@
     <div class="map-container" id="mapContainer">
         <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
         <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
-
+        <div id="map">
+            <!-- 這裡會放置地圖 -->
+             
+        </div>
         <div class="fab-group" id="fabGroup">
             <div class="fab" onclick="toggleChatMode()" id="robotFab"><i class="fas fa-robot"></i></div>
             <div class="fab" onclick="toggleEditMode()" id="editFab"><i class="fas fa-pen"></i></div>
@@ -144,6 +151,89 @@
             </div>
         </div>
     </div>
+
+    <script>
+        let map;
+
+        async function initMap() {
+            try {
+                // 取得行程資料
+                const response = await fetch('/api/itinerary');
+                const result = await response.json();
+                const activities = result.data.days[0].activities;
+
+                if (!activities || activities.length < 2) {
+                    console.error("活動數量不足，無法規劃路線");
+                    return;
+                }
+
+                // 載入 Google Maps Library
+                const { Map } = await google.maps.importLibrary("maps");
+
+                // 建立地圖
+                map = new Map(document.getElementById("map"), {
+                    zoom: 13,
+                    center: activities[0].location,
+                    mapId: "DEMO_MAP_ID"
+                });
+
+                // 建立 Directions 服務
+                const directionsService = new google.maps.DirectionsService();
+                const directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: map, //前端的各位這裡可以調顏色等東東
+                    suppressMarkers: false ,//要自訂marker把這改成true，然後自己用AdvancedMarkerElement
+                    polylineOptions: {
+                        strokeColor: getColorByDay(0),   
+                        strokeWeight: 7,          
+                        strokeOpacity: 0.9       
+                    }
+                });
+                function getColorByDay(dayIndex) {
+                    const colors = ["#2962FF", "#34A853", "#EA4335"];
+                    return colors[dayIndex % colors.length];
+                }
+                const origin = activities[0].location;
+                const destination = activities[activities.length - 1].location;
+                const waypoints = activities.slice(1, -1).map(act => ({
+                    location: act.location,
+                    stopover: true
+                }));
+
+                // 發送路線請求
+                directionsService.route(
+                    {
+                        origin: origin,
+                        destination: destination,
+                        waypoints: waypoints,
+                        optimizeWaypoints: false, // true = 自動最佳化順序
+                        travelMode: google.maps.TravelMode.DRIVING
+                    },
+                    (result, status) => {
+                        if (status === "OK") {
+                            directionsRenderer.setDirections(result);
+                            console.log("路線規劃成功！");
+                        } else {
+                            console.error("路線規劃失敗:", status);
+                        }
+                    }
+                );
+
+            } catch (error) {
+                console.error("初始化地圖失敗：", error);
+            }
+        }
+
+        // Google Maps API
+        fetch("http://localhost:5000/api/google-key")
+            .then(res => res.json())
+            .then(data => {
+                const script = document.createElement("script");
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&callback=initMap&libraries=routes`;
+                script.async = true;
+                document.head.appendChild(script);
+            });
+    </script>
+
 
     <script>
         const sidebar = document.getElementById('sidebar');
