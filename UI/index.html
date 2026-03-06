@@ -304,8 +304,40 @@
       });
 
       // 初始化聊天
+      function showGeneratedRawOutputInChat() {
+        const raw = localStorage.getItem("last_itinerary_response");
+        if (!raw) return;
+
+        try {
+          const payload = JSON.parse(raw);
+          const rawOutput = payload?.data?.raw_output;
+
+          if (!rawOutput) return;
+
+          // 自動切到聊天視圖
+          if (!isChatMode) {
+            toggleChatMode();
+          }
+
+          // 顯示 raw_output（可讀格式）
+          let displayText = rawOutput;
+          try {
+            const obj = JSON.parse(rawOutput);
+            displayText = JSON.stringify(obj, null, 2);
+          } catch (_) {}
+
+          appendMsg(displayText, "bot");
+
+          // 避免重整一直重複顯示
+          localStorage.removeItem("last_itinerary_response");
+        } catch (e) {
+          console.error("讀取行程回應失敗:", e);
+        }
+      }
+
+      // 初始化聊天（原本的測試訊息請移除）
       window.onload = function () {
-        appendMsg("測試訊息", "bot");
+        showGeneratedRawOutputInChat();
       };
 
       // 切換聊天模式
