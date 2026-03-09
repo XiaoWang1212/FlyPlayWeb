@@ -42,19 +42,6 @@ def create_app():
     app.register_blueprint(map_bp, url_prefix='/api/maps')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
 
-    # 添加靜態文件路由
-    @app.route('/css/<path:filename>')
-    def serve_css(filename):
-        return send_from_directory(os.path.join(ui_path, 'css'), filename)
-    
-    @app.route('/js/<path:filename>')
-    def serve_js(filename):
-        return send_from_directory(os.path.join(ui_path, 'js'), filename)
-    
-    @app.route('/assets/<path:filename>')
-    def serve_assets(filename):
-        return send_from_directory(os.path.join(ui_path, 'assets'), filename)
-
     @app.route('/map')
     def map_page():
         return render_template('index.html')

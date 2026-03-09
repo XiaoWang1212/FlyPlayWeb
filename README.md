@@ -18,6 +18,18 @@ docker compose up
 docker compose up --build
 ```
 
+啟動後服務：
+
+- Backend API: `http://localhost:5001`
+- PostgreSQL: `localhost:5432`
+  PostgreSQL 連線資訊：
+
+- Host: `postgres`
+- Port: `5432`
+- Database: `flyplay`
+- Username: `flyplay`
+- Password: `flyplay`
+
 ### 常見問題
 
 - 若遇到 port 衝突，請確認沒有其他 container 佔用 5001 port。
