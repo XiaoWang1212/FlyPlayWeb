@@ -79,17 +79,34 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- AI 推薦行程按鈕（預設隱藏，選完旅遊類型才出現） -->
-        <button id="ai-recommend-btn" class="ai-recommend-btn" onclick="submitAIRecommendation()">
-            AI 推薦行程
-        </button>
-        
-        <!-- 提示缺少欄位 -->
-        <div id="missing-field-hint" class="missing-field-hint"></div>
+            <!-- 預算選擇器（新增） -->
+            <div class="form-group card-picker-group" id="budget-picker-group">
+                <div class="picker-header" onclick="toggleBudgetPicker()">
+                    <label>預算</label>
+                    <div class="picker-display">
+                        <span id="selected-budget">中等</span>
+                        <span class="arrow-icon">›</span>
+                    </div>
+                </div>
+                <div class="card-picker-body">
+                    <div class="card-picker-grid" id="budget-cards">
+                        <button type="button" class="picker-card active" data-budget="經濟">經濟</button>
+                        <button type="button" class="picker-card" data-budget="中等">中等</button>
+                        <button type="button" class="picker-card" data-budget="高級">高級</button>
+                    </div>
+                </div>
+            </div>
 
-        <script src="js/page_transition.js"></script>
-        <script src="js/setup.js"></script>
-    </body>
-</html>
+            <!-- AI 推薦行程按鈕（預設隱藏，選完旅遊類型才出現） -->
+            <button id="ai-recommend-btn" class="ai-recommend-btn" onclick="submitAIRecommendation()">
+                AI 推薦行程
+            </button>
+            
+            <!-- 提示缺少欄位 -->
+            <div id="missing-field-hint" class="missing-field-hint"></div>
+
+            <script src="js/page_transition.js"></script>
+            <script src="js/setup.js"></script>
+        </body>
+    </html>
