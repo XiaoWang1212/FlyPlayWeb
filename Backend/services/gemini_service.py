@@ -190,7 +190,7 @@ class GeminiService:
                 generation_config=self.generation_config
             )
             
-            raw_content = response.text.strip()
+            raw_content = response.text.strip()ㄕ
             # 使用新的清理函式
             cleaned_json = self._clean_json_response(raw_content)
             parsed_json = json.loads(cleaned_json)
