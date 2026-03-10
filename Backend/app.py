@@ -3,6 +3,7 @@ from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
 from routes.chat_routes import chat_bp
+from models.plan_model import init_plan_tables
 import os
 import traceback
 
@@ -36,6 +37,8 @@ def create_app():
     
     app = Flask(__name__, template_folder=ui_path)
     app.config.from_object(Config)
+
+    init_plan_tables()
     
     CORS(app)
     

@@ -11,8 +11,8 @@ docker compose up
 ```
 
 - 第一次執行會自動 build 環境並啟動服務。
-- 以後每次只要這一行即可。
-- 若有原始碼或 Dockerfile 變動，建議加 `--build`：
+- 以後每次只要這一行即可
+- 若有 requirements.txt 或 Dockerfile 變動，要加 `--build`：
 
 ```bash
 docker compose up --build
