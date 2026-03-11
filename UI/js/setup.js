@@ -197,8 +197,11 @@ window.onload = function() {
         document.getElementById('selected-companion').textContent = tripSetup.companionLabel;
     }
 
-    // 回填旅遊類型
-    if (tripSetup.travelTypeLabel) {
+    // 回填旅遊類型（支援多選）
+    if (tripSetup.travelTypeLabels && tripSetup.travelTypeLabels.length > 0) {
+        document.getElementById('selected-travel-type').textContent = tripSetup.travelTypeLabels.join('、');
+    } else if (tripSetup.travelTypeLabel) {
+        // 相容舊版單選資料
         document.getElementById('selected-travel-type').textContent = tripSetup.travelTypeLabel;
     }
 
@@ -324,15 +327,53 @@ function generateTravelTypeCards(container) {
         card.dataset.label = opt.label;
 
         card.addEventListener('click', () => {
-            container.querySelectorAll('.picker-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-
-            document.getElementById('selected-travel-type').textContent = opt.label;
-
-            saveTripSetup({
-                travelType: opt.value,
-                travelTypeLabel: opt.label,
-            });
+            // 如果點擊「任何類型」，則清除其他所有選項
+            if (opt.value === '') {
+                container.querySelectorAll('.picker-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                document.getElementById('selected-travel-type').textContent = opt.label;
+                
+                saveTripSetup({
+                    travelTypes: [],
+                    travelTypeLabels: [],
+                });
+            } else {
+                // 點擊具體類型時，先取消「任何類型」的選中狀態
+                const anyTypeCard = container.querySelector('[data-value=""]');
+                if (anyTypeCard) anyTypeCard.classList.remove('selected');
+                
+                // 切換當前卡片的選中狀態（多選）
+                card.classList.toggle('selected');
+                
+                // 收集所有已選中的項目
+                const selectedCards = container.querySelectorAll('.picker-card.selected');
+                const selectedValues = [];
+                const selectedLabels = [];
+                
+                selectedCards.forEach(c => {
+                    const val = c.dataset.value;
+                    const lbl = c.dataset.label;
+                    if (val !== '') {
+                        selectedValues.push(val);
+                        selectedLabels.push(lbl);
+                    }
+                });
+                
+                // 更新顯示文字
+                if (selectedLabels.length === 0) {
+                    // 沒有選任何類型時，顯示「任何類型」
+                    document.getElementById('selected-travel-type').textContent = '任何類型';
+                    if (anyTypeCard) anyTypeCard.classList.add('selected');
+                } else {
+                    document.getElementById('selected-travel-type').textContent = selectedLabels.join('、');
+                }
+                
+                saveTripSetup({
+                    travelTypes: selectedValues,
+                    travelTypeLabels: selectedLabels,
+                });
+            }
 
             showAIRecommendButton();
         });
@@ -342,9 +383,20 @@ function generateTravelTypeCards(container) {
 
     // 回填已選項目
     const tripSetup = loadTripSetup();
-    if (tripSetup.travelType) {
+    if (tripSetup.travelTypes && tripSetup.travelTypes.length > 0) {
+        // 多選模式：回填多個選項
+        tripSetup.travelTypes.forEach(value => {
+            const selectedCard = container.querySelector(`[data-value="${value}"]`);
+            if (selectedCard) selectedCard.classList.add('selected');
+        });
+    } else if (tripSetup.travelType) {
+        // 相容舊版單選資料
         const selectedCard = container.querySelector(`[data-value="${tripSetup.travelType}"]`);
         if (selectedCard) selectedCard.classList.add('selected');
+    } else {
+        // 預設選中「任何類型」
+        const anyTypeCard = container.querySelector('[data-value=""]');
+        if (anyTypeCard) anyTypeCard.classList.add('selected');
     }
 }
 
