@@ -3,6 +3,7 @@ from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
 from routes.chat_routes import chat_bp
+from models.plan_model import init_plan_tables
 import os
 import traceback
 import json
@@ -32,12 +33,20 @@ def create_app():
     
     app = Flask(__name__, template_folder=ui_path)
     app.config.from_object(Config)
+
+    init_plan_tables()
     
     CORS(app)
     
     app.register_blueprint(map_bp, url_prefix='/api/maps')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
 
+    @app.route('/api/google-key')
+    def get_key():
+        return jsonify({
+        "key": app.config.get("GOOGLE_MAPS_API_KEY")
+    })
+        
     @app.route('/')
     def index():
         return jsonify({

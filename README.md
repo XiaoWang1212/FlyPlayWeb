@@ -11,12 +11,24 @@ docker compose up
 ```
 
 - 第一次執行會自動 build 環境並啟動服務。
-- 以後每次只要這一行即可。
-- 若有原始碼或 Dockerfile 變動，建議加 `--build`：
+- 以後每次只要這一行即可
+- 若有 requirements.txt 或 Dockerfile 變動，要加 `--build`：
 
 ```bash
 docker compose up --build
 ```
+
+啟動後服務：
+
+- Backend API: `http://localhost:5001`
+- PostgreSQL: `localhost:5432`
+  PostgreSQL 連線資訊：
+
+- Host: `postgres`
+- Port: `5432`
+- Database: `flyplay`
+- Username: `flyplay`
+- Password: `flyplay`
 
 ### 常見問題
 

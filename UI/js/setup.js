@@ -232,7 +232,7 @@ window.onload = function () {
 const companionOptions = [
   { value: "", label: "任何旅伴" },
   { value: "solo", label: "個人" },
-  { value: "couple", label: "約會" },
+  { value: "couple", label: "伴侶" },
   { value: "family", label: "家庭" },
   { value: "friends", label: "朋友" },
 ];
