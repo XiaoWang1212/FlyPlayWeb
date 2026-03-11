@@ -104,7 +104,6 @@
         </div>
 
         <div class="sheet-header" id="dragHeader">
-          <h3>第一日行程</h3>
         </div>
 
         <div class="sheet-content" id="sheetContent">
@@ -127,59 +126,7 @@
           <!-- 原本的行程表視圖 -->
           <div id="timelineView" class="view-section active">
             <div id="timelineList">
-              <div class="timeline-item">
-                <div class="delete-btn" onclick="deleteItem(this)">
-                  <i class="fas fa-trash"></i>
-                </div>
-                <div class="timeline-left">
-                  <div class="location-img"><i class="far fa-image"></i></div>
-                  <div class="timeline-connector"></div>
-                </div>
-                <div class="timeline-right">
-                  <div class="timeline-title">
-                    大阪城
-                    <span class="time-badge">20分鐘</span>
-                  </div>
-                  <div class="timeline-desc">
-                    參觀歷史名城，拍攝天守閣美景。
-                  </div>
-                </div>
-              </div>
-
-              <div class="timeline-item">
-                <div class="delete-btn" onclick="deleteItem(this)">
-                  <i class="fas fa-trash"></i>
-                </div>
-                <div class="timeline-left">
-                  <div class="location-img"><i class="far fa-image"></i></div>
-                </div>
-                <div class="timeline-right">
-                  <div class="timeline-title">
-                    道頓堀
-                    <span class="time-badge">1小時</span>
-                  </div>
-                  <div class="timeline-desc">
-                    享受大阪美食，固力果跑跑人打卡。
-                  </div>
-                </div>
-              </div>
-
-              <div class="timeline-item">
-                <div class="delete-btn" onclick="deleteItem(this)">
-                  <i class="fas fa-trash"></i>
-                </div>
-                <div class="timeline-left">
-                  <div class="location-img"><i class="far fa-image"></i></div>
-                  <div class="timeline-connector"></div>
-                </div>
-                <div class="timeline-right">
-                  <div class="timeline-title">
-                    心齋橋商店街
-                    <span class="time-badge">2小時</span>
-                  </div>
-                  <div class="timeline-desc">藥妝店購物，伴手禮採買。</div>
-                </div>
-              </div>
+              <!-- 行程項目會動態生成在這裡 -->
             </div>
             <div class="add-item-btn" onclick="addItem()">
               <i class="fas fa-plus"></i> 新增行程
@@ -192,47 +139,180 @@
 
     <script>
       let map;
+      let allDays = [];
+      let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
 
-      async function initMap() {
-        try {
-          const response = await fetch(`${API_BASE}/api/itinerary`);
+      // 根據日期索引獲取顏色
+      function getColorByDay(dayIndex) {
+        const colors = ["#2962FF", "#34A853", "#EA4335", "#FBBC04", "#9C27B0"];
+        return colors[dayIndex % colors.length];
+      }
 
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`itinerary API ${response.status}: ${text}`);
-          }
+      // 創建日期按鈕
+      function createDayButtons() {
+        const timelineView = document.getElementById("timelineView");
+        const buttonContainer = document.createElement("div");
+        buttonContainer.id="dayButtonContainer";
 
-          const result = await response.json();
-          const activities = result.data.days[0].activities;
+        allDays.forEach((day, index) => {
+          const btn = document.createElement("button");
+          btn.textContent = `第 ${day.day} 天`;
+          btn.setAttribute('data-day-index', index);
+          btn.onclick = () => switchDay(index, btn);
+          buttonContainer.appendChild(btn);
+        });
 
-          if (!activities || activities.length < 2) {
-            console.error("活動數量不足，無法規劃路線");
+        timelineView.insertBefore(buttonContainer, timelineView.firstChild);
+      }
+
+      // 添加自定義標記
+      function addCustomMarkers(dayActivitiesArray, dayIndex) {
+        const { AdvancedMarkerElement } = google.maps;
+        const color = getColorByDay(dayIndex);
+
+        dayActivitiesArray.forEach(activities => {
+          activities.forEach((activity) => {
+            const markerDiv = document.createElement("div");
+            markerDiv.classList.add("custom-marker");
+            markerDiv.style.backgroundColor = color;
+            markerDiv.textContent = `D${dayIndex + 1}`;
+
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div style="padding: 10px;">
+                  <strong>${activity.place_name}</strong><br>
+                  時間: ${activity.time}<br>
+                  類型: ${activity.type}<br>
+                  ${activity.cost ? `費用: ${activity.cost}<br>` : ''}
+                  描述: ${activity.description}
+                </div>
+              `,
+            });
+
+            const marker = new AdvancedMarkerElement({
+              map: map,
+              position: activity.location,
+              content: markerDiv,
+              title: activity.place_name,
+            });
+
+            marker.addListener("click", () => {
+              infoWindow.open(map, marker);
+            });
+          });
+        });
+      }
+
+      // 載入單天時間線
+      function loadSingleDayTimeline(day, dayIndex) {
+        const timelineList = document.getElementById("timelineList");
+        
+        // 移除舊的日期標題和活動
+        const oldDayTitles = timelineList.querySelectorAll('[data-day-title]');
+        const oldItems = timelineList.querySelectorAll('.timeline-item');
+        
+        oldDayTitles.forEach(el => el.remove());
+        oldItems.forEach(el => el.remove());
+
+        // 添加該天的日期標題
+        const dayTitle = document.createElement("div");
+        dayTitle.setAttribute('data-day-title', 'true');
+        dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
+        timelineList.appendChild(dayTitle);
+
+        // 添加該天的所有活動
+        day.activities.forEach((activity, actIndex) => {
+          const isLast = actIndex === day.activities.length - 1;
+          const newItemHTML = `
+            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+            <div class="timeline-left">
+              <div class="location-img"><i class="far fa-image"></i></div>
+              ${!isLast ? '<div class="timeline-connector"></div>' : ''}
+            </div>
+            <div class="timeline-right">
+              <div class="timeline-title">
+                ${activity.place_name}
+                <span class="time-badge">${activity.time}</span>
+              </div>
+              <div class="timeline-desc">${activity.description}</div>
+              ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ''}
+            </div>
+          `;
+          
+          const div = document.createElement("div");
+          div.className = "timeline-item";
+          div.innerHTML = newItemHTML;
+          timelineList.appendChild(div);
+        });
+      }
+
+      // 載入所有活動的時間線
+      function loadAllTimelineActivities() {
+        const timelineList = document.getElementById("timelineList");
+        
+        // 移除舊的日期標題和活動
+        const oldDayTitles = timelineList.querySelectorAll('[data-day-title]');
+        const oldItems = timelineList.querySelectorAll('.timeline-item');
+        
+        oldDayTitles.forEach(el => el.remove());
+        oldItems.forEach(el => el.remove());
+
+        allDays.forEach((day, dayIndex) => {
+          const dayTitle = document.createElement("div");
+          dayTitle.setAttribute('data-day-title', 'true');
+          dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
+          timelineList.appendChild(dayTitle);
+
+          day.activities.forEach((activity, actIndex) => {
+            const isLast = actIndex === day.activities.length - 1;
+            const newItemHTML = `
+              <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+              <div class="timeline-left">
+                <div class="location-img"><i class="far fa-image"></i></div>
+                ${!isLast ? '<div class="timeline-connector"></div>' : ''}
+              </div>
+              <div class="timeline-right">
+                <div class="timeline-title">
+                  ${activity.place_name}
+                  <span class="time-badge">${activity.time}</span>
+                </div>
+                <div class="timeline-desc">${activity.description}</div>
+                ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ''}
+              </div>
+            `;
+            
+            const div = document.createElement("div");
+            div.className = "timeline-item";
+            div.innerHTML = newItemHTML;
+            timelineList.appendChild(div);
+          });
+        });
+      }
+
+      // 顯示所有天的行程
+      function displayAllDays() {
+        const { DirectionsService, DirectionsRenderer } = google.maps;
+
+        allDays.forEach((day, dayIndex) => {
+          if (!day || !day.activities || day.activities.length < 2) {
+            console.warn(`第 ${dayIndex + 1} 天沒有足夠的活動`);
             return;
           }
 
-          const { Map } = await google.maps.importLibrary("maps");
-          map = new Map(document.getElementById("map"), {
-            zoom: 13,
-            center: activities[0].location,
-            mapId: "DEMO_MAP_ID",
-          });
-
-          // 建立 Directions 服務
-          const directionsService = new google.maps.DirectionsService();
-          const directionsRenderer = new google.maps.DirectionsRenderer({
-            map: map, //前端的各位這裡可以調顏色等東東
-            suppressMarkers: false, //要自訂marker把這改成true，然後自己用AdvancedMarkerElement
+          const activities = day.activities;
+          const directionsService = new DirectionsService();
+          
+          const directionsRenderer = new DirectionsRenderer({
+            map: map,
+            suppressMarkers: false,
             polylineOptions: {
-              strokeColor: getColorByDay(0),
+              strokeColor: getColorByDay(dayIndex),
               strokeWeight: 7,
-              strokeOpacity: 0.9,
+              strokeOpacity: 0.6,
             },
           });
-          function getColorByDay(dayIndex) {
-            const colors = ["#2962FF", "#34A853", "#EA4335"];
-            return colors[dayIndex % colors.length];
-          }
+
           const origin = activities[0].location;
           const destination = activities[activities.length - 1].location;
           const waypoints = activities.slice(1, -1).map((act) => ({
@@ -240,24 +320,133 @@
             stopover: true,
           }));
 
-          // 發送路線請求
           directionsService.route(
             {
               origin: origin,
               destination: destination,
               waypoints: waypoints,
-              optimizeWaypoints: false, // true = 自動最佳化順序
+              optimizeWaypoints: false,
               travelMode: google.maps.TravelMode.DRIVING,
             },
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
-                console.log("路線規劃成功！");
               } else {
-                console.error("路線規劃失敗:", status);
+                console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
               }
-            },
+            }
           );
+        });
+
+        loadAllTimelineActivities();
+      }
+
+      // 顯示單一天的行程
+      function displayDay(dayIndex) {
+        const day = allDays[dayIndex];
+        
+        if (!day || !day.activities || day.activities.length < 2) {
+          console.error("該日期沒有足夠的活動");
+          return;
+        }
+
+        const activities = day.activities;
+        const { DirectionsService, DirectionsRenderer } = google.maps;
+
+        const directionsService = new DirectionsService();
+        const directionsRenderer = new DirectionsRenderer({
+          map: map,
+          suppressMarkers: false,
+          polylineOptions: {
+            strokeColor: getColorByDay(dayIndex),
+            strokeWeight: 7,
+            strokeOpacity: 0.9,
+          },
+        });
+
+        const origin = activities[0].location;
+        const destination = activities[activities.length - 1].location;
+        const waypoints = activities.slice(1, -1).map((act) => ({
+          location: act.location,
+          stopover: true,
+        }));
+
+        directionsService.route(
+          {
+            origin: origin,
+            destination: destination,
+            waypoints: waypoints,
+            optimizeWaypoints: false,
+            travelMode: google.maps.TravelMode.DRIVING,
+          },
+          (result, status) => {
+            if (status === "OK") {
+              directionsRenderer.setDirections(result);
+              // 載入該天的時間線
+              loadSingleDayTimeline(day, dayIndex);
+            } else {
+              console.error("路線規劃失敗:", status);
+            }
+          }
+        );
+      }
+
+      // 切換日期
+      function switchDay(dayIndex, clickedBtn) {
+        currentDayIndex = dayIndex;
+
+        // 更新按鈕樣式
+        const allBtns = document.querySelectorAll("#dayButtonContainer button");
+        allBtns.forEach((btn, index) => {
+          if (index === dayIndex) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+
+        displayDay(dayIndex);
+      }
+
+      async function initMap() {
+        try {
+          const response = await fetch(`${API_BASE}/api/itinerary`);
+
+          if (!response.ok) {
+            throw new Error(`itinerary API ${response.status}`);
+          }
+
+          const result = await response.json();
+          allDays = result.data.days;
+
+          // 計算所有景點的平均座標
+          let totalLat = 0;
+          let totalLng = 0;
+          let pointCount = 0;
+
+          allDays.forEach(day => {
+            day.activities.forEach(activity => {
+              if (activity.location && activity.location.lat && activity.location.lng) {
+                totalLat += activity.location.lat;
+                totalLng += activity.location.lng;
+                pointCount++;
+              }
+            });
+          });
+
+          const avgLat = pointCount > 0 ? totalLat / pointCount : 35.6762;
+          const avgLng = pointCount > 0 ? totalLng / pointCount : 139.6503;
+
+          const { Map } = await google.maps.importLibrary("maps");
+          map = new Map(document.getElementById("map"), {
+            zoom: 8.5,
+            center: { lat: avgLat, lng: avgLng },
+            mapId: "DEMO_MAP_ID",
+          });
+
+          createDayButtons();
+          displayAllDays();
+
         } catch (error) {
           console.error("初始化地圖失敗：", error);
         }

@@ -6,15 +6,11 @@ from routes.chat_routes import chat_bp
 from models.plan_model import init_plan_tables
 import os
 import traceback
+import json
 
-if Config.GOOGLE_APPLICATION_CREDENTIALS:
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = Config.GOOGLE_APPLICATION_CREDENTIALS
+with open('response.json', 'r', encoding='utf-8') as f:
+    test_data = json.load(f)
 
-if Config.OPENAI_API_KEY:
-    os.environ['OPENAI_API_KEY'] = Config.OPENAI_API_KEY
-
-if Config.GOOGLE_MAPS_API_KEY:
-    os.environ['GOOGLE_MAPS_API_KEY'] = Config.GOOGLE_MAPS_API_KEY
 
 ITINERARY_DATA = {
     "data": {
@@ -23,8 +19,8 @@ ITINERARY_DATA = {
                 "activities": [
                     {"place_name": "秋葉原", "location": {"lat": 35.6994, "lng": 139.7739}},
                     {"place_name": "淺草寺", "location": {"lat": 35.7148, "lng": 139.7967}},
-                    {"place_name": "東京塔", "location": {"lat": 35.6586, "lng": 139.7454}},
-                    {"place_name": "新宿御苑", "location": {"lat": 35.6852, "lng": 139.7100}}
+                    {"place_name": "東京塔", "location": {"lat": 35.6586, "lng": 139.7454}}
+                    
                 ]
             }
         ]
@@ -45,16 +41,12 @@ def create_app():
     app.register_blueprint(map_bp, url_prefix='/api/maps')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
 
-    @app.route('/map')
-    def map_page():
-        return render_template('index.html')
-    
     @app.route('/api/google-key')
     def get_key():
         return jsonify({
         "key": app.config.get("GOOGLE_MAPS_API_KEY")
     })
-
+        
     @app.route('/')
     def index():
         return jsonify({
@@ -88,9 +80,68 @@ def create_app():
             'error': f'未預期的錯誤: {str(error)}'
         }), 500
 
-    @app.route('/api/itinerary')
-    def get_itinerary_api():
-        return jsonify(ITINERARY_DATA)
+    
+    # @app.route('/api/itinerary')
+    # def get_itinerary_api():
+    #     return jsonify(ITINERARY_DATA)
+    @app.route('/api/itinerary', methods=['GET'])  
+    def parse_itinerary():
+        """返回修正好的行程 JSON"""
+        try:
+            data = test_data
+            
+            if not data or 'data' not in data:
+                return jsonify({
+                    'success': False,
+                    'error': '無效的請求格式'
+                }), 400
+            
+            parsed_data = data.get('data', {})
+            days = parsed_data.get('parsed', {}).get('days', [])
+            
+            # 修改和驗證數據
+            modified_days = []
+            for day in days:
+                modified_day = {
+                    'day': day.get('day'),
+                    'weekday': day.get('weekday', ''),
+                    'activities': []
+                }
+                
+                # 修改每個活動
+                activities = day.get('activities', [])
+                for activity in activities:
+                    modified_activity = {
+                        'place_name': activity.get('place_name', '未命名'),
+                        'time': activity.get('time', ''),
+                        'description': activity.get('description', ''),
+                        'location': activity.get('location', {'lat': 0, 'lng': 0}),
+                        'type': activity.get('type', ''),
+                        'cost': activity.get('cost', '')
+                    }
+                    
+                    # 驗證 location 是否有效
+                    if not modified_activity['location'] or 'lat' not in modified_activity['location']:
+                        modified_activity['location'] = {'lat': 0, 'lng': 0}
+                    
+                    modified_day['activities'].append(modified_activity)
+                
+                modified_days.append(modified_day)
+            print("修改後的行程數據:", modified_days)  # 調試輸出
+            # 返回修改後的數據
+            return jsonify({
+                'data': {
+                    'days': modified_days
+                }
+            }), 200
+            
+        except Exception as e:
+            print(f"行程解析錯誤: {e}")
+            print(traceback.format_exc())
+            return jsonify({
+                'success': False,
+                'error': f'行程解析失敗: {str(e)}'
+            }), 500
     
     return app
 

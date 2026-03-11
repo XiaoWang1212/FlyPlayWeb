@@ -340,3 +340,111 @@
             from { opacity: 0; transform: scale(0.8); }
             to { opacity: 1; transform: scale(1); }
         }
+
+        /* --- 日期選擇按鈕容器 --- */
+        #dayButtonContainer {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        #dayButtonContainer button {
+            padding: 8px 20px;
+            border: 2px solid #999;
+            background: white;
+            color: #333;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        #dayButtonContainer button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #dayButtonContainer button:active {
+            transform: translateY(0);
+            opacity: 0.8;
+        }
+
+        /* 被選中的按鈕樣式 - 針對不同天數的顏色 */
+        #dayButtonContainer button:nth-child(1).active {
+            background: #2962FF;
+            color: white;
+            border-color: #2962FF;
+        }
+
+        #dayButtonContainer button:nth-child(2).active {
+            background: #34A853;
+            color: white;
+            border-color: #34A853;
+        }
+
+        #dayButtonContainer button:nth-child(3).active {
+            background: #EA4335;
+            color: white;
+            border-color: #EA4335;
+        }
+
+        #dayButtonContainer button:nth-child(4).active {
+            background: #FBBC04;
+            color: white;
+            border-color: #FBBC04;
+        }
+
+        #dayButtonContainer button:nth-child(5).active {
+            background: #9C27B0;
+            color: white;
+            border-color: #9C27B0;
+        }
+
+        /* 日期標題樣式 */
+        [data-day-title] {
+            padding: 15px;
+            background-color: #0f1a3a;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            margin-left: -20px;
+            margin-right: -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        [data-day-title]:first-of-type {
+            margin-top: 0;
+        }
+
+        /* 活動費用樣式 */
+        .activity-cost {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+        }
+
+        /* 自定義地圖標記樣式 */
+        .custom-marker {
+          width: 35px;
+          height: 35px;
+          border: 3px solid white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+          cursor: pointer;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
