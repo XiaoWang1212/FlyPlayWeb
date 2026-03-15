@@ -3,6 +3,27 @@
     -webkit-tap-highlight-color: transparent;  /* 停用點擊高亮效果 */
 }
 
+:root {
+    /* 核心配色 */
+    --color-primary: #ffe966;           /* 主按鈕、高亮元素 (黃色) */
+    --color-primary-content: #8a4700;   /* 主按鈕上的文字 (深褐橙) */
+    
+    --color-secondary: #0b559e;         /* Header、導航列、重要標題 (深藍) */
+    --color-secondary-content: #f1f8ff; /* Header 上的文字 (極淺藍) */
+    
+    --color-accent: #aadbf2;            /* 次要按鈕、裝飾區塊背景 (淺藍) */
+    --color-accent-content: #005786;    /* 次要按鈕上的文字 (深藍) */
+    
+    /* 背景色處理 */
+    --bg-base: #ffffff;                 /* 卡片、內容區塊的最底層背景 */
+    --bg-overlay: #aadbf24d;            /* 頁面大背景 (在白色底層上疊加 30% accent) */
+    
+    /* 文字顏色 */
+    --text-main: #0b559e;               /* 主要文字 (使用 Secondary 深藍色取代純黑) */
+    --text-sub: #5c7c91;                /* 次要文字/描述 */
+    --input-bg: #fff;                /* 輸入框背景 */
+}
+
 body,
 html {
     margin: 0;
@@ -36,7 +57,7 @@ html {
 .back-btn {
     background: transparent;
     border: none;
-    color: #333;  
+    color: var(--text-sub);  
     font-size: 18px;
     padding: 5px 0;
     margin-bottom: 10px;
@@ -55,7 +76,7 @@ h1 {
     font-size: 24px;
     font-weight: 500;
     margin: 0;
-    color: #222;  
+    color: var(--text-main);  
 }
 
 /* 搜尋框 */
@@ -67,8 +88,8 @@ h1 {
 .search-box input {
     width: 100%;
     padding: 12px 15px;
-    background-color: #fff;  
-    border: 1px solid #ddd; 
+    background-color: var(--input-bg);  
+    border: 1px solid var(--text-sub); 
     border-radius: 8px;
     color: #333;
     font-size: 16px;
@@ -80,7 +101,7 @@ h1 {
 }
 
 .search-box input:focus {
-    border-color: #999; 
+    border-color: var(--text-main); 
 }
 
 /* 地區分類標籤 */
@@ -151,7 +172,7 @@ h1 {
 
 .departure-item {
     padding: 12px;
-    background-color: #fff;
+    background-color: var(--input-bg);
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     text-align: center;
@@ -201,7 +222,7 @@ h1 {
 
 /* 選中狀態 */
 .departure-item.selected {
-    border-color: #333;
+    border-color: var(--color-secondary);
     border-width: 2px;
 }
 
@@ -229,8 +250,8 @@ h1 {
 .confirm-btn {
     width: 100%;
     padding: 15px;
-    background-color: #333; 
-    color: #fff;
+    background-color: var(--color-secondary); 
+    color: var(--color-secondary-content);
     border: none;
     border-radius: 8px;
     font-size: 16px;

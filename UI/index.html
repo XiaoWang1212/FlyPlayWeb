@@ -103,8 +103,7 @@
           <div class="sheet-handle"></div>
         </div>
 
-        <div class="sheet-header" id="dragHeader">
-        </div>
+        <div class="sheet-header" id="dragHeader"></div>
 
         <div class="sheet-content" id="sheetContent">
           <!-- 聊天視圖 -->
@@ -153,16 +152,54 @@
       function createDayButtons() {
         const timelineView = document.getElementById("timelineView");
         const buttonContainer = document.createElement("div");
-        buttonContainer.id="dayButtonContainer";
+        buttonContainer.id = "dayButtonContainer";
 
         allDays.forEach((day, index) => {
           const btn = document.createElement("button");
           btn.textContent = `第 ${day.day} 天`;
-          btn.setAttribute('data-day-index', index);
+          btn.setAttribute("data-day-index", index);
           btn.onclick = () => switchDay(index, btn);
           buttonContainer.appendChild(btn);
         });
 
+        // 初始化聊天
+        window.onload = function () {
+          typeMessage(
+            "您好！我是飛遊 AI 助手。我可以幫您調整行程、推薦景點、規劃路線，或是回答旅遊相關問題。請告訴我您需要什麼協助？",
+            "bot",
+          );
+        };
+
+        // 切換聊天模式
+        function toggleChatMode() {
+          isChatMode = !isChatMode;
+
+          if (isChatMode) {
+            // 進入聊天模式
+            timelineView.classList.remove("active");
+            chatView.classList.add("active");
+            openSheet();
+            fabGroup.classList.add("horizontal");
+            document.getElementById("editFab").style.display = "none";
+
+            // 改變圖示：機器人 → 列表
+            robotFabIcon.classList.remove("fa-robot");
+            robotFabIcon.classList.add("fa-list-ul");
+          } else {
+            // 回到行程表模式
+            chatView.classList.remove("active");
+            timelineView.classList.add("active");
+            sheet.classList.remove("expanded");
+            sheet.classList.remove("half");
+            fabGroup.classList.remove("horizontal");
+            fabGroup.classList.remove("half-mode");
+            document.getElementById("editFab").style.display = "flex";
+
+            // 恢復圖示：列表 → 機器人
+            robotFabIcon.classList.remove("fa-list-ul");
+            robotFabIcon.classList.add("fa-robot");
+          }
+        }
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
@@ -171,7 +208,7 @@
         const { AdvancedMarkerElement } = google.maps;
         const color = getColorByDay(dayIndex);
 
-        dayActivitiesArray.forEach(activities => {
+        dayActivitiesArray.forEach((activities) => {
           activities.forEach((activity) => {
             const markerDiv = document.createElement("div");
             markerDiv.classList.add("custom-marker");
@@ -184,7 +221,7 @@
                   <strong>${activity.place_name}</strong><br>
                   時間: ${activity.time}<br>
                   類型: ${activity.type}<br>
-                  ${activity.cost ? `費用: ${activity.cost}<br>` : ''}
+                  ${activity.cost ? `費用: ${activity.cost}<br>` : ""}
                   描述: ${activity.description}
                 </div>
               `,
@@ -204,20 +241,59 @@
         });
       }
 
+      typeMessage(
+        "好的，我已經理解您的需求。根據您的行程安排，我建議可以在大阪城附近增加大阪歷史博物館，這樣可以更深入了解大阪的歷史文化。另外，從道頓堀到心齋橋的路線非常順暢，中間還可以順道逛逛美國村，那裡有很多特色小店和咖啡廳喔！",
+        "bot",
+      );
+
+      setTimeout(() => {
+        sheet.classList.remove("expanded");
+        sheet.classList.add("half");
+        fabGroup.classList.remove("horizontal");
+        fabGroup.classList.add("half-mode");
+      }, 1000);
+
+      // 逐字顯示訊息（打字機效果）
+      function typeMessage(text, type, speed = 30) {
+        const div = document.createElement("div");
+        div.className = `chat-msg ${type}`;
+        document.getElementById("chatMessages").appendChild(div);
+
+        let index = 0;
+        const interval = setInterval(() => {
+          if (index < text.length) {
+            div.textContent += text[index];
+            index++;
+            scrollToBottom();
+          } else {
+            clearInterval(interval);
+          }
+        }, speed);
+
+        return div;
+      }
+
+      function appendMsg(text, type) {
+        const div = document.createElement("div");
+        div.className = `chat-msg ${type}`;
+        div.textContent = text;
+        document.getElementById("chatMessages").appendChild(div);
+        scrollToBottom();
+      }
       // 載入單天時間線
       function loadSingleDayTimeline(day, dayIndex) {
         const timelineList = document.getElementById("timelineList");
-        
+
         // 移除舊的日期標題和活動
-        const oldDayTitles = timelineList.querySelectorAll('[data-day-title]');
-        const oldItems = timelineList.querySelectorAll('.timeline-item');
-        
-        oldDayTitles.forEach(el => el.remove());
-        oldItems.forEach(el => el.remove());
+        const oldDayTitles = timelineList.querySelectorAll("[data-day-title]");
+        const oldItems = timelineList.querySelectorAll(".timeline-item");
+
+        oldDayTitles.forEach((el) => el.remove());
+        oldItems.forEach((el) => el.remove());
 
         // 添加該天的日期標題
         const dayTitle = document.createElement("div");
-        dayTitle.setAttribute('data-day-title', 'true');
+        dayTitle.setAttribute("data-day-title", "true");
         dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
         timelineList.appendChild(dayTitle);
 
@@ -240,10 +316,10 @@
                 <span class="time-badge">${activity.time}</span>
               </div>
               <div class="timeline-desc">${activity.description}</div>
-              ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ''}
+              ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
             </div>
           `;
-          
+
           const div = document.createElement("div");
           div.className = "timeline-item";
           div.innerHTML = newItemHTML;
@@ -254,17 +330,17 @@
       // 載入所有活動的時間線
       function loadAllTimelineActivities() {
         const timelineList = document.getElementById("timelineList");
-        
+
         // 移除舊的日期標題和活動
-        const oldDayTitles = timelineList.querySelectorAll('[data-day-title]');
-        const oldItems = timelineList.querySelectorAll('.timeline-item');
-        
-        oldDayTitles.forEach(el => el.remove());
-        oldItems.forEach(el => el.remove());
+        const oldDayTitles = timelineList.querySelectorAll("[data-day-title]");
+        const oldItems = timelineList.querySelectorAll(".timeline-item");
+
+        oldDayTitles.forEach((el) => el.remove());
+        oldItems.forEach((el) => el.remove());
 
         allDays.forEach((day, dayIndex) => {
           const dayTitle = document.createElement("div");
-          dayTitle.setAttribute('data-day-title', 'true');
+          dayTitle.setAttribute("data-day-title", "true");
           dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
           timelineList.appendChild(dayTitle);
 
@@ -286,10 +362,10 @@
                   <span class="time-badge">${activity.time}</span>
                 </div>
                 <div class="timeline-desc">${activity.description}</div>
-                ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ''}
+                ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
               </div>
             `;
-            
+
             const div = document.createElement("div");
             div.className = "timeline-item";
             div.innerHTML = newItemHTML;
@@ -310,7 +386,7 @@
 
           const activities = day.activities;
           const directionsService = new DirectionsService();
-          
+
           const directionsRenderer = new DirectionsRenderer({
             map: map,
             suppressMarkers: false,
@@ -342,7 +418,7 @@
               } else {
                 console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
               }
-            }
+            },
           );
         });
 
@@ -352,7 +428,7 @@
       // 顯示單一天的行程
       function displayDay(dayIndex) {
         const day = allDays[dayIndex];
-        
+
         if (!day || !day.activities || day.activities.length < 2) {
           console.error("該日期沒有足夠的活動");
           return;
@@ -395,7 +471,7 @@
             } else {
               console.error("路線規劃失敗:", status);
             }
-          }
+          },
         );
       }
 
@@ -407,9 +483,9 @@
         const allBtns = document.querySelectorAll("#dayButtonContainer button");
         allBtns.forEach((btn, index) => {
           if (index === dayIndex) {
-            btn.classList.add('active');
+            btn.classList.add("active");
           } else {
-            btn.classList.remove('active');
+            btn.classList.remove("active");
           }
         });
 
@@ -432,9 +508,13 @@
           let totalLng = 0;
           let pointCount = 0;
 
-          allDays.forEach(day => {
-            day.activities.forEach(activity => {
-              if (activity.location && activity.location.lat && activity.location.lng) {
+          allDays.forEach((day) => {
+            day.activities.forEach((activity) => {
+              if (
+                activity.location &&
+                activity.location.lat &&
+                activity.location.lng
+              ) {
                 totalLat += activity.location.lat;
                 totalLng += activity.location.lng;
                 pointCount++;
@@ -454,7 +534,6 @@
 
           createDayButtons();
           displayAllDays();
-
         } catch (error) {
           console.error("初始化地圖失敗：", error);
         }
@@ -685,7 +764,9 @@
 
       function openSheet() {
         sheet.classList.add("expanded");
+        sheet.classList.remove("half", "half-mode");
         fabGroup.classList.add("horizontal");
+        fabGroup.classList.remove("half-mode");
       }
 
       function closeSheet() {

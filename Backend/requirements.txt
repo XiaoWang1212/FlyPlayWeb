@@ -7,11 +7,10 @@ python-dotenv==1.0.0
 
 Werkzeug==2.3.7
 
-pymongo >= 4.5
 itsdangerous >= 2.1
 Authlib >= 1.2
 
 openai >= 0.27.0
-
-google-generativeai>=0.3.0
-nest_asyncio>=1.5.0
+psycopg2-binary==2.9.9
+google-generativeai>=0.8.5
+nest-asyncio>=1.6.0

@@ -6,6 +6,9 @@ from ..services.OAuth_service import OAuthService
 def register_oauth_routes(app):
     @app.get("/login/google")
     def google_login():
+       if not current_app.config.get("GOOGLE_OAUTH_ENABLED", False):
+           flash("Google 登入未啟用：請先設定 GOOGLE_CLIENT_ID 與 GOOGLE_CLIENT_SECRET")
+           return redirect(url_for("login"))
        redirect_uri = url_for("google_callback", _external=True)
        return oauth.google.authorize_redirect(redirect_uri)
 

@@ -9,9 +9,10 @@ class OAuthService:
         
         existing = self.user_repo.find_by_email(email)
         if existing:
-            self.user_repo.users.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {"google_id": google_id, "thumbnail": thumbnail, "verified": True}}
+            self.user_repo.link_google_to_existing_user(
+                user_id=existing["_id"],
+                google_id=google_id,
+                thumbnail=thumbnail,
             )
             return self.user_repo.find_by_email(email)
         
