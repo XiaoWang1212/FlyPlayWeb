@@ -224,10 +224,14 @@
         // 添加該天的所有活動
         day.activities.forEach((activity, actIndex) => {
           const isLast = actIndex === day.activities.length - 1;
+          const photoUrl = activity.photos && activity.photos[0] 
+            ? activity.photos[0].photo_url
+            : '';
+          
           const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
             <div class="timeline-left">
-              <div class="location-img"><i class="far fa-image"></i></div>
+              <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
               ${!isLast ? '<div class="timeline-connector"></div>' : ''}
             </div>
             <div class="timeline-right">
@@ -266,10 +270,14 @@
 
           day.activities.forEach((activity, actIndex) => {
             const isLast = actIndex === day.activities.length - 1;
+            const photoUrl = activity.photos && activity.photos[0] 
+              ? activity.photos[0].photo_url
+              : '';
+            
             const newItemHTML = `
               <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
               <div class="timeline-left">
-                <div class="location-img"><i class="far fa-image"></i></div>
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
                 ${!isLast ? '<div class="timeline-connector"></div>' : ''}
               </div>
               <div class="timeline-right">

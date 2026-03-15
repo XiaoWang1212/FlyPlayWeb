@@ -46,3 +46,9 @@ class PlaceCache:
                 (place_id, json.dumps(result), datetime.utcnow().isoformat())
             )
             conn.commit()
+            
+    def clear_all(self):
+        """清除所有快取"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute('DELETE FROM places')
+            conn.commit()
