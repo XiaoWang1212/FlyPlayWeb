@@ -35,7 +35,7 @@ def register_auth_routes(app):
             return redirect(url_for("login"))
         except Exception as e:
             msg = str(e)
-            if "E11000" in msg and "email" in msg:
+            if ("E11000" in msg and "email" in msg) or ("UNIQUE constraint failed" in msg and "users.email" in msg):
                 flash("此Eail已被註冊")
             else:
                 flash(msg)
