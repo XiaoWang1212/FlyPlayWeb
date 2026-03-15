@@ -1,7 +1,6 @@
 import json
 import google.generativeai as genai
 from config import Config
-import re
 
 class GeminiService:
     def __init__(self):
@@ -39,6 +38,13 @@ class GeminiService:
             raw_text = raw_text[:-3].strip()
         
         return raw_text
+
+    def _parse_response_json(self, response):
+        """統一處理 Gemini 回傳文字並解析為 JSON。"""
+        raw_content = response.text.strip()
+        cleaned_json = self._clean_json_response(raw_content)
+        parsed_json = json.loads(cleaned_json)
+        return raw_content, cleaned_json, parsed_json
     
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
@@ -61,17 +67,14 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+
+            raw_content, _, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': raw_content,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
                 }
             }
         except Exception as e:
@@ -123,7 +126,7 @@ class GeminiService:
             興趣: {interests_str}
             {date_info}
             
-            請嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
+            嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "trip_title": "行程標題 (例如：京都古韻三日遊)",
                 "overview": "行程總覽描述",
@@ -139,8 +142,7 @@ class GeminiService:
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",
-                                "cost": "預估費用",
-                                "location": {{ "lat": 0.0, "lng": 0.0 }}
+                                "cost": "預估費用"
                             }}
                         ]
                     }}
@@ -152,17 +154,16 @@ class GeminiService:
             }}
             
             只回傳純 JSON，不要包含任何 markdown 標記。
+            不要生成經緯度，座標由系統用 Google Maps API 補齊。
+            僅可輸出上述欄位，不可新增任何欄位。
             """
             
             response = self.model.generate_content(
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+
+            raw_content, _, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
@@ -189,11 +190,8 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()ㄕ
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+
+            _, cleaned_json, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
@@ -229,17 +227,13 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+
+            _, cleaned_json, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
-                    'parsed': parsed_json
                 }
             }
         except Exception as e:
