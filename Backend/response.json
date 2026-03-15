@@ -1,0 +1,385 @@
+{
+  "code": 200,
+  "data": {
+    "parsed": {
+      "days": [
+        {
+          "activities": [
+            {
+              "cost": "10,000 JPY (\u8a08\u7a0b\u8eca) / 6,000 JPY (\u5df4\u58eb\uff0c\u5169\u4eba)",
+              "description": "\u62b5\u9054\u6771\u4eac\uff0c\u642d\u4e58\u8c6a\u83ef\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u524d\u5f80\u9152\u5e97\u3002",
+              "location": {
+                "lat": 35.7647,
+                "lng": 140.3863
+              },
+              "place_name": "\u6210\u7530\u570b\u969b\u6a5f\u5834 (NRT) \u6216 \u7fbd\u7530\u570b\u969b\u6a5f\u5834 (HND)",
+              "time": "14:00",
+              "type": "\u4ea4\u901a"
+            },
+            {
+              "cost": "100,000 JPY - 150,000 JPY (\u6bcf\u665a)",
+              "description": "\u5165\u4f4f\u4f4d\u65bc\u65b0\u5bbf\u7684\u4e94\u661f\u7d1a\u9152\u5e97\uff0c\u4eab\u53d7\u5176\u6a19\u8a8c\u6027\u7684\u670d\u52d9\u8207\u57ce\u5e02\u666f\u89c0\u3002\u7a0d\u4f5c\u4f11\u606f\u3002",
+              "location": {
+                "lat": 35.6892,
+                "lng": 139.6922
+              },
+              "place_name": "\u6771\u4eac\u67cf\u6085\u9152\u5e97 (Park Hyatt Tokyo)",
+              "time": "16:00",
+              "type": "\u4f4f\u5bbf"
+            },
+            {
+              "cost": "0 JPY",
+              "description": "\u524d\u5f80\u9152\u5e97\u9644\u8fd1\u7684\u6771\u4eac\u90fd\u5ef3\uff0c\u514d\u8cbb\u767b\u4e0a\u5c55\u671b\u5ba4\uff0c\u98fd\u89bd\u6771\u4eac\u7684\u58ef\u9e97\u65e5\u843d\u8207\u591c\u666f\u3002",
+              "location": {
+                "lat": 35.6897,
+                "lng": 139.692
+              },
+              "place_name": "\u6771\u4eac\u90fd\u5ef3\u5c55\u671b\u5ba4",
+              "time": "17:30",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "30,000 JPY - 50,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u65b0\u5bbf\u4eab\u7528\u9802\u7d1a\u548c\u725b\u71d2\u8089\u665a\u9910\uff0c\u9ad4\u9a57\u65e5\u672cA5\u548c\u725b\u7684\u6975\u81f4\u7f8e\u5473\u3002",
+              "location": {
+                "lat": 35.6908,
+                "lng": 139.7
+              },
+              "place_name": "Shinjuku Wagyu Kaga (\u65b0\u5bbf \u548c\u725b \u304b\u304c)",
+              "time": "19:30",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "10,000 JPY - 20,000 JPY (\u5169\u4eba)",
+              "description": "\u56de\u5230\u9152\u5e97\uff0c\u5728\u300a\u8ff7\u5931\u6771\u4eac\u300b\u53d6\u666f\u5730New York Bar\u4eab\u53d7\u73fe\u5834\u7235\u58eb\u6a02\u8207\u96de\u5c3e\u9152\uff0c\u7d50\u675f\u6d6a\u6f2b\u7684\u4e00\u5929\u3002",
+              "location": {
+                "lat": 35.6892,
+                "lng": 139.6922
+              },
+              "place_name": "New York Bar (\u6771\u4eac\u67cf\u6085\u9152\u5e97)",
+              "time": "21:30",
+              "type": "\u7f8e\u98df"
+            }
+          ],
+          "date_title": "\u62b5\u9054\u8207\u65b0\u5bbf\u5962\u83ef\u4e4b\u591c",
+          "day": 1,
+          "weekday": "\u661f\u671f\u516d"
+        },
+        {
+          "activities": [
+            {
+              "cost": "0 JPY",
+              "description": "\u6f2b\u6b65\u65bc\u5e7d\u975c\u7684\u53c3\u9053\uff0c\u53c3\u62dc\u660e\u6cbb\u795e\u5bae\uff0c\u611f\u53d7\u6771\u4eac\u5e02\u4e2d\u5fc3\u7684\u838a\u56b4\u8207\u5be7\u975c\u3002",
+              "location": {
+                "lat": 35.6763,
+                "lng": 139.6993
+              },
+              "place_name": "\u660e\u6cbb\u795e\u5bae",
+              "time": "09:00",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "5,000 JPY - 20,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)",
+              "description": "\u9ad4\u9a57\u539f\u5bbf\u7684\u9752\u6625\u6d3b\u529b\uff0c\u901b\u901b\u7af9\u4e0b\u901a\u7368\u7279\u7684\u6f6e\u6d41\u5c0f\u5e97\uff0c\u4e26\u63a2\u7d22\u88cf\u539f\u5bbf\u7684\u8a2d\u8a08\u5e2b\u54c1\u724c\u3002",
+              "location": {
+                "lat": 35.6723,
+                "lng": 139.7032
+              },
+              "place_name": "\u7af9\u4e0b\u901a\u8207\u88cf\u539f\u5bbf",
+              "time": "11:00",
+              "type": "\u8cfc\u7269"
+            },
+            {
+              "cost": "5,000 JPY - 8,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u8868\u53c3\u9053\u627e\u4e00\u5bb6\u6642\u5c1a\u5496\u5561\u5ef3\u4eab\u7528\u8f15\u5348\u9910\u6216\u7cbe\u7dfb\u751c\u9ede\uff0c\u611f\u53d7\u60a0\u9592\u7684\u6c1b\u570d\u3002",
+              "location": {
+                "lat": 35.6675,
+                "lng": 139.7093
+              },
+              "place_name": "\u8868\u53c3\u9053\u5496\u5561\u5ef3 (\u4f8b\u5982\uff1aBlue Bottle Coffee \u6216 L'Occitane Caf\u00e9)",
+              "time": "12:30",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "50,000 JPY - 200,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)",
+              "description": "\u5728\u8868\u53c3\u9053\u548c\u9752\u5c71\u5730\u5340\u7684\u570b\u969b\u7cbe\u54c1\u5e97\u548c\u65e5\u672c\u8a2d\u8a08\u5e2b\u54c1\u724c\u5e97\u76e1\u60c5\u8cfc\u7269\u3002",
+              "location": {
+                "lat": 35.6668,
+                "lng": 139.7118
+              },
+              "place_name": "\u8868\u53c3\u9053\u8207\u9752\u5c71\u7cbe\u54c1\u8cfc\u7269",
+              "time": "14:00",
+              "type": "\u8cfc\u7269"
+            },
+            {
+              "cost": "0 JPY",
+              "description": "\u9ad4\u9a57\u4e16\u754c\u6700\u7e41\u5fd9\u7684\u6f80\u8c37\u4ea4\u53c9\u8def\u53e3\uff0c\u4e26\u8207\u5fe0\u72ac\u516b\u516c\u50cf\u5408\u5f71\u7559\u5ff5\u3002",
+              "location": {
+                "lat": 35.6591,
+                "lng": 139.7004
+              },
+              "place_name": "\u6f80\u8c37\u4ea4\u53c9\u8def\u53e3\u8207\u5fe0\u72ac\u516b\u516c\u50cf",
+              "time": "17:00",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "60,000 JPY - 100,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u516d\u672c\u6728\u4eab\u7528\u7c73\u5176\u6797\u661f\u7d1a\u58fd\u53f8\u665a\u9910\uff0c\u54c1\u5690\u7531\u9802\u7d1a\u58fd\u53f8\u5e2b\u5085\u88fd\u4f5c\u7684\u7cbe\u7dfb\u63e1\u58fd\u53f8\u3002",
+              "location": {
+                "lat": 35.6669,
+                "lng": 139.7313
+              },
+              "place_name": "Sukiyabashi Jiro Roppongi (\u6578\u5bc4\u5c4b\u6a4b\u6b21\u90ce \u516d\u672c\u6728\u5e97) \u6216 \u985e\u4f3c\u9ad8\u7d1a\u58fd\u53f8",
+              "time": "19:00",
+              "type": "\u7f8e\u98df"
+            }
+          ],
+          "date_title": "\u539f\u5bbf\u3001\u6f80\u8c37\u6f6e\u6d41\u8207\u85dd\u8853\u63a2\u7d22",
+          "day": 2,
+          "weekday": "\u661f\u671f\u65e5"
+        },
+        {
+          "activities": [
+            {
+              "cost": "3,000 JPY - 10,000 JPY (\u5c0f\u5403\u8207\u7d00\u5ff5\u54c1)",
+              "description": "\u53c3\u89c0\u6771\u4eac\u6700\u53e4\u8001\u7684\u5bfa\u5edf\u6dfa\u8349\u5bfa\uff0c\u6f2b\u6b65\u65bc\u4ef2\u898b\u4e16\u5546\u5e97\u8857\uff0c\u54c1\u5690\u50b3\u7d71\u5c0f\u5403\u4e26\u9078\u8cfc\u7d00\u5ff5\u54c1\u3002",
+              "location": {
+                "lat": 35.7148,
+                "lng": 139.7967
+              },
+              "place_name": "\u6dfa\u8349\u5bfa\u8207\u4ef2\u898b\u4e16\u5546\u5e97\u8857",
+              "time": "09:30",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "15,000 JPY - 25,000 JPY (\u5169\u4eba)",
+              "description": "\u60c5\u4fb6\u4e00\u540c\u79df\u501f\u548c\u670d\uff0c\u5728\u6dfa\u8349\u7684\u50b3\u7d71\u8857\u666f\u4e2d\u7559\u4e0b\u7f8e\u9e97\u7684\u5408\u5f71\u3002",
+              "location": {
+                "lat": 35.7127,
+                "lng": 139.7958
+              },
+              "place_name": "\u548c\u670d\u79df\u8cc3\u9ad4\u9a57 (\u6dfa\u8349\u611b\u548c\u670d)",
+              "time": "11:30",
+              "type": "\u6587\u5316\u9ad4\u9a57"
+            },
+            {
+              "cost": "20,000 JPY - 40,000 JPY (\u5169\u4eba)",
+              "description": "\u54c1\u5690\u8457\u540d\u7684\u58fd\u559c\u71d2\u6216\u6dae\u6dae\u934b\uff0c\u9ad4\u9a57\u65e5\u672c\u50b3\u7d71\u7684\u9802\u7d1a\u8089\u54c1\u6599\u7406\u3002",
+              "location": {
+                "lat": 35.7142,
+                "lng": 139.7981
+              },
+              "place_name": "\u6dfa\u8349\u4eca\u534a (\u570b\u969b\u901a\u672c\u5e97)",
+              "time": "13:00",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "2,000 JPY (\u9580\u7968\uff0c\u5169\u4eba)",
+              "description": "\u524d\u5f80\u4e0a\u91ce\u516c\u5712\uff0c\u53c3\u89c0\u6771\u4eac\u570b\u7acb\u535a\u7269\u9928\uff0c\u6df1\u5165\u4e86\u89e3\u65e5\u672c\u8c50\u5bcc\u7684\u6b77\u53f2\u8207\u85dd\u8853\u3002",
+              "location": {
+                "lat": 35.7147,
+                "lng": 139.7738
+              },
+              "place_name": "\u4e0a\u91ce\u516c\u5712 (\u6771\u4eac\u570b\u7acb\u535a\u7269\u9928)",
+              "time": "15:00",
+              "type": "\u6587\u5316\u9ad4\u9a57"
+            },
+            {
+              "cost": "5,000 JPY - 15,000 JPY (\u55ae\u5e55\u5287\u9580\u7968\uff0c\u5169\u4eba)",
+              "description": "\u6b23\u8cde\u4e00\u5834\u6b4c\u821e\u4f0e\u8868\u6f14 (\u53ef\u9078\u64c7\u55ae\u5e55\u5287\uff0c\u6642\u9593\u8f03\u77ed)\uff0c\u9ad4\u9a57\u65e5\u672c\u50b3\u7d71\u6232\u5287\u85dd\u8853\u3002",
+              "location": {
+                "lat": 35.6738,
+                "lng": 139.7634
+              },
+              "place_name": "\u9280\u5ea7\u6b4c\u821e\u4f0e\u5ea7",
+              "time": "18:00",
+              "type": "\u6587\u5316\u9ad4\u9a57"
+            },
+            {
+              "cost": "80,000 JPY - 120,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u9280\u5ea7\u4eab\u7528\u7c73\u5176\u6797\u4e09\u661f\u7684\u61f7\u77f3\u6599\u7406\uff0c\u54c1\u5473\u5b63\u7bc0\u98df\u6750\u7684\u7cbe\u7dfb\u5448\u73fe\u3002",
+              "location": {
+                "lat": 35.672,
+                "lng": 139.763
+              },
+              "place_name": "Ginza Kojyu (\u9280\u5ea7 \u5c0f\u5341)",
+              "time": "20:00",
+              "type": "\u7f8e\u98df"
+            }
+          ],
+          "date_title": "\u6dfa\u8349\u50b3\u7d71\u8207\u4e0a\u91ce\u6587\u5316\u6d17\u79ae",
+          "day": 3,
+          "weekday": "\u661f\u671f\u4e00"
+        },
+        {
+          "activities": [
+            {
+              "cost": "8,000 JPY - 15,000 JPY (\u5169\u4eba)",
+              "description": "\u6e05\u6668\u524d\u5f80\u7bc9\u5730\u5834\u5916\u5e02\u5834\uff0c\u54c1\u5690\u65b0\u9bae\u7684\u6d77\u9bae\u4e3c\u3001\u7389\u5b50\u71d2\u7b49\u7279\u8272\u7f8e\u98df\u3002",
+              "location": {
+                "lat": 35.6657,
+                "lng": 139.7709
+              },
+              "place_name": "\u7bc9\u5730\u5834\u5916\u5e02\u5834",
+              "time": "08:00",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "50,000 JPY - 300,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)",
+              "description": "\u5728\u9280\u5ea7\u7684\u767e\u8ca8\u516c\u53f8 (\u5982\uff1a\u9280\u5ea7\u4e09\u8d8a\u3001\u548c\u5149\u767e\u8ca8) \u548c\u570b\u969b\u54c1\u724c\u65d7\u8266\u5e97\u76e1\u60c5\u8cfc\u7269\u3002",
+              "location": {
+                "lat": 35.672,
+                "lng": 139.764
+              },
+              "place_name": "\u9280\u5ea7\u7cbe\u54c1\u8cfc\u7269\u5340",
+              "time": "10:00",
+              "type": "\u8cfc\u7269"
+            },
+            {
+              "cost": "20,000 JPY - 35,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u7c73\u5176\u6797\u4e8c\u661f\u7684\u5929\u5a66\u7f85\u9910\u5ef3\u4eab\u7528\u5348\u9910\uff0c\u54c1\u5690\u7cbe\u7dfb\u7684\u73fe\u70b8\u5929\u5a66\u7f85\u3002",
+              "location": {
+                "lat": 35.6705,
+                "lng": 139.7635
+              },
+              "place_name": "Tempura Kondo (\u5929\u3077\u3089 \u8fd1\u85e4)",
+              "time": "13:00",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "0 JPY",
+              "description": "\u6f2b\u6b65\u65bc\u7687\u5c45\u6771\u5fa1\u82d1\uff0c\u611f\u53d7\u65e5\u672c\u7687\u5ba4\u7684\u6b77\u53f2\u6c1b\u570d\u8207\u7f8e\u9e97\u5ead\u5712\u3002",
+              "location": {
+                "lat": 35.6853,
+                "lng": 139.757
+              },
+              "place_name": "\u7687\u5c45\u6771\u5fa1\u82d1",
+              "time": "15:00",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "6,400 JPY (\u9580\u7968\uff0c\u5169\u4eba)",
+              "description": "\u524d\u5f80\u53f0\u5834\uff0c\u6c89\u6d78\u5728TeamLab Planets\u7684\u6578\u4f4d\u85dd\u8853\u4e16\u754c\uff0c\u9ad4\u9a57\u5149\u5f71\u4ea4\u7e54\u7684\u5922\u5e7b\u7a7a\u9593\u3002",
+              "location": {
+                "lat": 35.6611,
+                "lng": 139.782
+              },
+              "place_name": "TeamLab Planets TOKYO DMM",
+              "time": "17:00",
+              "type": "\u666f\u9ede"
+            },
+            {
+              "cost": "15,000 JPY - 30,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u53f0\u5834\u7684\u666f\u89c0\u9910\u5ef3\u4eab\u7528\u665a\u9910\uff0c\u6b23\u8cde\u5f69\u8679\u5927\u6a4b\u548c\u6771\u4eac\u7063\u7684\u8ff7\u4eba\u591c\u666f\u3002",
+              "location": {
+                "lat": 35.6288,
+                "lng": 139.777
+              },
+              "place_name": "\u53f0\u5834\u666f\u89c0\u9910\u5ef3 (\u4f8b\u5982\uff1aKing Of The Pirates \u6216 Grand Pacific Le Daiba)",
+              "time": "19:30",
+              "type": "\u7f8e\u98df"
+            }
+          ],
+          "date_title": "\u7bc9\u5730\u6d77\u9bae\u8207\u9280\u5ea7\u5962\u83ef\u8cfc\u7269",
+          "day": 4,
+          "weekday": "\u661f\u671f\u4e8c"
+        },
+        {
+          "activities": [
+            {
+              "cost": "0 JPY (\u5df2\u542b\u5728\u623f\u8cbb\u6216\u984d\u5916\u65e9\u9910\u8cbb)",
+              "description": "\u5728\u9152\u5e97\u4eab\u7528\u8c50\u76db\u7684\u65e9\u9910\uff0c\u6216\u5229\u7528\u9152\u5e97\u8a2d\u65bd (\u5982\u5065\u8eab\u623f\u3001\u6cf3\u6c60)\u3002",
+              "location": {
+                "lat": 35.6892,
+                "lng": 139.6922
+              },
+              "place_name": "\u9152\u5e97\u5167\u81ea\u7531\u6d3b\u52d5",
+              "time": "09:00",
+              "type": "\u4f4f\u5bbf"
+            },
+            {
+              "cost": "5,000 JPY - 50,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)",
+              "description": "\u524d\u5f80\u516d\u672c\u6728\uff0c\u901b\u901b\u6771\u4eac\u7684\u73fe\u4ee3\u85dd\u8853\u8207\u8a2d\u8a08\u4e2d\u5fc3\uff0c\u9032\u884c\u6700\u5f8c\u7684\u7d00\u5ff5\u54c1\u8cfc\u7269\u6216\u6b23\u8cde\u57ce\u5e02\u666f\u89c0\u3002",
+              "location": {
+                "lat": 35.6606,
+                "lng": 139.729
+              },
+              "place_name": "\u516d\u672c\u6728\u4e4b\u4e18 (Roppongi Hills) \u6216 \u6771\u4eac\u4e2d\u57ce (Tokyo Midtown)",
+              "time": "10:30",
+              "type": "\u8cfc\u7269"
+            },
+            {
+              "cost": "8,000 JPY - 15,000 JPY (\u5169\u4eba)",
+              "description": "\u5728\u516d\u672c\u6728\u5730\u5340\u9078\u64c7\u4e00\u5bb6\u6642\u5c1a\u9910\u5ef3\u4eab\u7528\u5348\u9910\uff0c\u70ba\u65c5\u7a0b\u756b\u4e0a\u53e5\u9ede\u3002",
+              "location": {
+                "lat": 35.6657,
+                "lng": 139.7289
+              },
+              "place_name": "\u6771\u4eac\u4e2d\u57ce\u6216\u516d\u672c\u6728\u5348\u9910",
+              "time": "12:30",
+              "type": "\u7f8e\u98df"
+            },
+            {
+              "cost": "2,000 JPY - 5,000 JPY",
+              "description": "\u642d\u4e58\u8a08\u7a0b\u8eca\u6216\u5730\u9435\u8fd4\u56de\u9152\u5e97\uff0c\u6e96\u5099\u524d\u5f80\u6a5f\u5834\u3002",
+              "location": {
+                "lat": 35.6892,
+                "lng": 139.6922
+              },
+              "place_name": "\u8fd4\u56de\u9152\u5e97\u53d6\u884c\u674e",
+              "time": "14:30",
+              "type": "\u4ea4\u901a"
+            },
+            {
+              "cost": "10,000 JPY (\u8a08\u7a0b\u8eca) / 6,000 JPY (\u5df4\u58eb\uff0c\u5169\u4eba)",
+              "description": "\u642d\u4e58\u8c6a\u83ef\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u524d\u5f80\u6a5f\u5834\uff0c\u6e96\u5099\u642d\u6a5f\u8fd4\u5bb6\u3002",
+              "location": {
+                "lat": 35.5494,
+                "lng": 139.7798
+              },
+              "place_name": "\u6210\u7530\u570b\u969b\u6a5f\u5834 (NRT) \u6216 \u7fbd\u7530\u570b\u969b\u6a5f\u5834 (HND)",
+              "time": "16:00",
+              "type": "\u4ea4\u901a"
+            }
+          ],
+          "date_title": "\u81ea\u7531\u63a2\u7d22\u8207\u6eab\u99a8\u8fd4\u7a0b",
+          "day": 5,
+          "weekday": "\u661f\u671f\u4e09"
+        }
+      ],
+      "dining_recommendations": [
+        {
+          "feature": "\u9802\u7d1aA5\u548c\u725b\u71d2\u8089\uff0c\u8089\u8cea\u9bae\u7f8e\uff0c\u5165\u53e3\u5373\u5316\u3002",
+          "name": "Shinjuku Wagyu Kaga (\u65b0\u5bbf \u548c\u725b \u304b\u304c)",
+          "price_range": "\u9ad8\u50f9\u4f4d (15,000 - 25,000 JPY/\u4eba)"
+        },
+        {
+          "feature": "\u7c73\u5176\u6797\u661f\u7d1a\u58fd\u53f8\uff0c\u58fd\u53f8\u4e4b\u795e\u5c0f\u91ce\u4e8c\u90ce\u7684\u50b3\u627f\uff0c\u9700\u63d0\u524d\u9810\u7d04\u3002",
+          "name": "Sukiyabashi Jiro (\u6578\u5bc4\u5c4b\u6a4b\u6b21\u90ce \u516d\u672c\u6728\u5e97)",
+          "price_range": "\u5962\u83ef (30,000 - 50,000 JPY/\u4eba)"
+        },
+        {
+          "feature": "\u7c73\u5176\u6797\u4e09\u661f\u61f7\u77f3\u6599\u7406\uff0c\u7cbe\u7dfb\u7684\u5b63\u7bc0\u6027\u83dc\u991a\uff0c\u5448\u73fe\u65e5\u672c\u6599\u7406\u7684\u85dd\u8853\u3002",
+          "name": "Ginza Kojyu (\u9280\u5ea7 \u5c0f\u5341)",
+          "price_range": "\u5962\u83ef (40,000 - 60,000 JPY/\u4eba)"
+        },
+        {
+          "feature": "\u7c73\u5176\u6797\u4e8c\u661f\u5929\u5a66\u7f85\uff0c\u4ee5\u65b0\u9bae\u98df\u6750\u548c\u7cbe\u6e5b\u70b8\u529f\u805e\u540d\uff0c\u7279\u5225\u662f\u852c\u83dc\u5929\u5a66\u7f85\u3002",
+          "name": "Tempura Kondo (\u5929\u3077\u3089 \u8fd1\u85e4)",
+          "price_range": "\u9ad8\u50f9\u4f4d (10,000 - 18,000 JPY/\u4eba)"
+        },
+        {
+          "feature": "\u767e\u5e74\u8001\u5e97\uff0c\u4ee5\u9802\u7d1a\u58fd\u559c\u71d2\u548c\u6dae\u6dae\u934b\u805e\u540d\uff0c\u9ad4\u9a57\u50b3\u7d71\u65e5\u5f0f\u98a8\u5473\u3002",
+          "name": "\u6dfa\u8349\u4eca\u534a (\u570b\u969b\u901a\u672c\u5e97)",
+          "price_range": "\u4e2d\u9ad8\u50f9\u4f4d (10,000 - 20,000 JPY/\u4eba)"
+        }
+      ],
+      "overview": "\u9019\u8d9f\u70ba\u671f\u4e94\u5929\u7684\u6771\u4eac\u4e4b\u65c5\u5c08\u70ba\u5c0b\u6c42\u9802\u7d1a\u9ad4\u9a57\u7684\u60c5\u4fb6\u8a2d\u8a08\u3002\u5f9e\u5962\u83ef\u4f4f\u5bbf\u5230\u7c73\u5176\u6797\u7f8e\u98df\uff0c\u5f9e\u6642\u5c1a\u8cfc\u7269\u5230\u6df1\u5ea6\u6587\u5316\u63a2\u7d22\uff0c\u6bcf\u500b\u74b0\u7bc0\u90fd\u7cbe\u5fc3\u5b89\u6392\uff0c\u78ba\u4fdd\u60a8\u80fd\u76e1\u60c5\u4eab\u53d7\u6771\u4eac\u7684\u9b45\u529b\u3002\u65c5\u7a0b\u6db5\u84cb\u4e86\u65b0\u5bbf\u7684\u73fe\u4ee3\u6469\u767b\u3001\u6f80\u8c37\u539f\u5bbf\u7684\u6f6e\u6d41\u8108\u52d5\u3001\u6dfa\u8349\u4e0a\u91ce\u7684\u50b3\u7d71\u98a8\u60c5\uff0c\u4ee5\u53ca\u9280\u5ea7\u7bc9\u5730\u7684\u7cbe\u7dfb\u54c1\u5473\uff0c\u4e26\u7a7f\u63d2\u7368\u7279\u7684\u85dd\u8853\u8207\u7f8e\u98df\u9ad4\u9a57\uff0c\u70ba\u60a8\u7684\u6d6a\u6f2b\u4e4b\u65c5\u589e\u6dfb\u96e3\u5fd8\u56de\u61b6\u3002",
+      "total_budget_estimate": "800,000 JPY - 1,500,000 JPY (\u7d04 5,500 - 10,000 USD\uff0c\u4e0d\u542b\u570b\u969b\u6a5f\u7968)",
+      "transport_tips": "\u6771\u4eac\u64c1\u6709\u5168\u7403\u6700\u4fbf\u6377\u9ad8\u6548\u7684\u516c\u5171\u4ea4\u901a\u7cfb\u7d71\u3002\u5efa\u8b70\u8cfc\u8cb7 Suica \u6216 Pasmo \u5132\u503c\u5361\uff0c\u53ef\u642d\u4e58\u5730\u9435 (Tokyo Metro \u53ca Toei Subway) \u548c JR \u7dda\u3002\u5c0d\u65bc\u9ad8\u9810\u7b97\u60c5\u4fb6\uff0c\u4e5f\u53ef\u9069\u6642\u5229\u7528\u8a08\u7a0b\u8eca\uff0c\u5c24\u5176\u662f\u5728\u591c\u9593\u6216\u884c\u7a0b\u4e2d\u9014\u9700\u8981\u5feb\u901f\u79fb\u52d5\u6642\u3002\u6a5f\u5834\u5f80\u8fd4\u9152\u5e97\u53ef\u9078\u64c7\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u3002\u8acb\u6ce8\u610f\uff0c\u6771\u4eac\u5730\u9435\u7dda\u8def\u773e\u591a\u4e14\u8907\u96dc\uff0c\u5efa\u8b70\u4f7f\u7528 Google Maps \u7b49\u5c0e\u822aApp\u898f\u5283\u8def\u7dda\u3002",
+      "trip_title": "\u6771\u4eac\u5962\u83ef\u6d6a\u6f2b\u4e94\u65e5\u904a\uff1a\u54c1\u5473\u3001\u8cfc\u7269\u8207\u6587\u5316\u9957\u5bb4"
+    },
+    "raw_output": "{\n\"trip_title\": \"\u6771\u4eac\u5962\u83ef\u6d6a\u6f2b\u4e94\u65e5\u904a\uff1a\u54c1\u5473\u3001\u8cfc\u7269\u8207\u6587\u5316\u9957\u5bb4\",\n\"overview\": \"\u9019\u8d9f\u70ba\u671f\u4e94\u5929\u7684\u6771\u4eac\u4e4b\u65c5\u5c08\u70ba\u5c0b\u6c42\u9802\u7d1a\u9ad4\u9a57\u7684\u60c5\u4fb6\u8a2d\u8a08\u3002\u5f9e\u5962\u83ef\u4f4f\u5bbf\u5230\u7c73\u5176\u6797\u7f8e\u98df\uff0c\u5f9e\u6642\u5c1a\u8cfc\u7269\u5230\u6df1\u5ea6\u6587\u5316\u63a2\u7d22\uff0c\u6bcf\u500b\u74b0\u7bc0\u90fd\u7cbe\u5fc3\u5b89\u6392\uff0c\u78ba\u4fdd\u60a8\u80fd\u76e1\u60c5\u4eab\u53d7\u6771\u4eac\u7684\u9b45\u529b\u3002\u65c5\u7a0b\u6db5\u84cb\u4e86\u65b0\u5bbf\u7684\u73fe\u4ee3\u6469\u767b\u3001\u6f80\u8c37\u539f\u5bbf\u7684\u6f6e\u6d41\u8108\u52d5\u3001\u6dfa\u8349\u4e0a\u91ce\u7684\u50b3\u7d71\u98a8\u60c5\uff0c\u4ee5\u53ca\u9280\u5ea7\u7bc9\u5730\u7684\u7cbe\u7dfb\u54c1\u5473\uff0c\u4e26\u7a7f\u63d2\u7368\u7279\u7684\u85dd\u8853\u8207\u7f8e\u98df\u9ad4\u9a57\uff0c\u70ba\u60a8\u7684\u6d6a\u6f2b\u4e4b\u65c5\u589e\u6dfb\u96e3\u5fd8\u56de\u61b6\u3002\",\n\"total_budget_estimate\": \"800,000 JPY - 1,500,000 JPY (\u7d04 5,500 - 10,000 USD\uff0c\u4e0d\u542b\u570b\u969b\u6a5f\u7968)\",\n\"days\": [\n{\n\"day\": 1,\n\"weekday\": \"\u661f\u671f\u516d\",\n\"date_title\": \"\u62b5\u9054\u8207\u65b0\u5bbf\u5962\u83ef\u4e4b\u591c\",\n\"activities\": [\n{\n\"time\": \"14:00\",\n\"place_name\": \"\u6210\u7530\u570b\u969b\u6a5f\u5834 (NRT) \u6216 \u7fbd\u7530\u570b\u969b\u6a5f\u5834 (HND)\",\n\"description\": \"\u62b5\u9054\u6771\u4eac\uff0c\u642d\u4e58\u8c6a\u83ef\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u524d\u5f80\u9152\u5e97\u3002\",\n\"type\": \"\u4ea4\u901a\",\n\"cost\": \"10,000 JPY (\u8a08\u7a0b\u8eca) / 6,000 JPY (\u5df4\u58eb\uff0c\u5169\u4eba)\",\n\"location\": { \"lat\": 35.7647, \"lng\": 140.3863 }\n},\n{\n\"time\": \"16:00\",\n\"place_name\": \"\u6771\u4eac\u67cf\u6085\u9152\u5e97 (Park Hyatt Tokyo)\",\n\"description\": \"\u5165\u4f4f\u4f4d\u65bc\u65b0\u5bbf\u7684\u4e94\u661f\u7d1a\u9152\u5e97\uff0c\u4eab\u53d7\u5176\u6a19\u8a8c\u6027\u7684\u670d\u52d9\u8207\u57ce\u5e02\u666f\u89c0\u3002\u7a0d\u4f5c\u4f11\u606f\u3002\",\n\"type\": \"\u4f4f\u5bbf\",\n\"cost\": \"100,000 JPY - 150,000 JPY (\u6bcf\u665a)\",\n\"location\": { \"lat\": 35.6892, \"lng\": 139.6922 }\n},\n{\n\"time\": \"17:30\",\n\"place_name\": \"\u6771\u4eac\u90fd\u5ef3\u5c55\u671b\u5ba4\",\n\"description\": \"\u524d\u5f80\u9152\u5e97\u9644\u8fd1\u7684\u6771\u4eac\u90fd\u5ef3\uff0c\u514d\u8cbb\u767b\u4e0a\u5c55\u671b\u5ba4\uff0c\u98fd\u89bd\u6771\u4eac\u7684\u58ef\u9e97\u65e5\u843d\u8207\u591c\u666f\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"0 JPY\",\n\"location\": { \"lat\": 35.6897, \"lng\": 139.6920 }\n},\n{\n\"time\": \"19:30\",\n\"place_name\": \"Shinjuku Wagyu Kaga (\u65b0\u5bbf \u548c\u725b \u304b\u304c)\",\n\"description\": \"\u5728\u65b0\u5bbf\u4eab\u7528\u9802\u7d1a\u548c\u725b\u71d2\u8089\u665a\u9910\uff0c\u9ad4\u9a57\u65e5\u672cA5\u548c\u725b\u7684\u6975\u81f4\u7f8e\u5473\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"30,000 JPY - 50,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6908, \"lng\": 139.7000 }\n},\n{\n\"time\": \"21:30\",\n\"place_name\": \"New York Bar (\u6771\u4eac\u67cf\u6085\u9152\u5e97)\",\n\"description\": \"\u56de\u5230\u9152\u5e97\uff0c\u5728\u300a\u8ff7\u5931\u6771\u4eac\u300b\u53d6\u666f\u5730New York Bar\u4eab\u53d7\u73fe\u5834\u7235\u58eb\u6a02\u8207\u96de\u5c3e\u9152\uff0c\u7d50\u675f\u6d6a\u6f2b\u7684\u4e00\u5929\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"10,000 JPY - 20,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6892, \"lng\": 139.6922 }\n}\n]\n},\n{\n\"day\": 2,\n\"weekday\": \"\u661f\u671f\u65e5\",\n\"date_title\": \"\u539f\u5bbf\u3001\u6f80\u8c37\u6f6e\u6d41\u8207\u85dd\u8853\u63a2\u7d22\",\n\"activities\": [\n{\n\"time\": \"09:00\",\n\"place_name\": \"\u660e\u6cbb\u795e\u5bae\",\n\"description\": \"\u6f2b\u6b65\u65bc\u5e7d\u975c\u7684\u53c3\u9053\uff0c\u53c3\u62dc\u660e\u6cbb\u795e\u5bae\uff0c\u611f\u53d7\u6771\u4eac\u5e02\u4e2d\u5fc3\u7684\u838a\u56b4\u8207\u5be7\u975c\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"0 JPY\",\n\"location\": { \"lat\": 35.6763, \"lng\": 139.6993 }\n},\n{\n\"time\": \"11:00\",\n\"place_name\": \"\u7af9\u4e0b\u901a\u8207\u88cf\u539f\u5bbf\",\n\"description\": \"\u9ad4\u9a57\u539f\u5bbf\u7684\u9752\u6625\u6d3b\u529b\uff0c\u901b\u901b\u7af9\u4e0b\u901a\u7368\u7279\u7684\u6f6e\u6d41\u5c0f\u5e97\uff0c\u4e26\u63a2\u7d22\u88cf\u539f\u5bbf\u7684\u8a2d\u8a08\u5e2b\u54c1\u724c\u3002\",\n\"type\": \"\u8cfc\u7269\",\n\"cost\": \"5,000 JPY - 20,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)\",\n\"location\": { \"lat\": 35.6723, \"lng\": 139.7032 }\n},\n{\n\"time\": \"12:30\",\n\"place_name\": \"\u8868\u53c3\u9053\u5496\u5561\u5ef3 (\u4f8b\u5982\uff1aBlue Bottle Coffee \u6216 L'Occitane Caf\u00e9)\",\n\"description\": \"\u5728\u8868\u53c3\u9053\u627e\u4e00\u5bb6\u6642\u5c1a\u5496\u5561\u5ef3\u4eab\u7528\u8f15\u5348\u9910\u6216\u7cbe\u7dfb\u751c\u9ede\uff0c\u611f\u53d7\u60a0\u9592\u7684\u6c1b\u570d\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"5,000 JPY - 8,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6675, \"lng\": 139.7093 }\n},\n{\n\"time\": \"14:00\",\n\"place_name\": \"\u8868\u53c3\u9053\u8207\u9752\u5c71\u7cbe\u54c1\u8cfc\u7269\",\n\"description\": \"\u5728\u8868\u53c3\u9053\u548c\u9752\u5c71\u5730\u5340\u7684\u570b\u969b\u7cbe\u54c1\u5e97\u548c\u65e5\u672c\u8a2d\u8a08\u5e2b\u54c1\u724c\u5e97\u76e1\u60c5\u8cfc\u7269\u3002\",\n\"type\": \"\u8cfc\u7269\",\n\"cost\": \"50,000 JPY - 200,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)\",\n\"location\": { \"lat\": 35.6668, \"lng\": 139.7118 }\n},\n{\n\"time\": \"17:00\",\n\"place_name\": \"\u6f80\u8c37\u4ea4\u53c9\u8def\u53e3\u8207\u5fe0\u72ac\u516b\u516c\u50cf\",\n\"description\": \"\u9ad4\u9a57\u4e16\u754c\u6700\u7e41\u5fd9\u7684\u6f80\u8c37\u4ea4\u53c9\u8def\u53e3\uff0c\u4e26\u8207\u5fe0\u72ac\u516b\u516c\u50cf\u5408\u5f71\u7559\u5ff5\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"0 JPY\",\n\"location\": { \"lat\": 35.6591, \"lng\": 139.7004 }\n},\n{\n\"time\": \"19:00\",\n\"place_name\": \"Sukiyabashi Jiro Roppongi (\u6578\u5bc4\u5c4b\u6a4b\u6b21\u90ce \u516d\u672c\u6728\u5e97) \u6216 \u985e\u4f3c\u9ad8\u7d1a\u58fd\u53f8\",\n\"description\": \"\u5728\u516d\u672c\u6728\u4eab\u7528\u7c73\u5176\u6797\u661f\u7d1a\u58fd\u53f8\u665a\u9910\uff0c\u54c1\u5690\u7531\u9802\u7d1a\u58fd\u53f8\u5e2b\u5085\u88fd\u4f5c\u7684\u7cbe\u7dfb\u63e1\u58fd\u53f8\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"60,000 JPY - 100,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6669, \"lng\": 139.7313 }\n}\n]\n},\n{\n\"day\": 3,\n\"weekday\": \"\u661f\u671f\u4e00\",\n\"date_title\": \"\u6dfa\u8349\u50b3\u7d71\u8207\u4e0a\u91ce\u6587\u5316\u6d17\u79ae\",\n\"activities\": [\n{\n\"time\": \"09:30\",\n\"place_name\": \"\u6dfa\u8349\u5bfa\u8207\u4ef2\u898b\u4e16\u5546\u5e97\u8857\",\n\"description\": \"\u53c3\u89c0\u6771\u4eac\u6700\u53e4\u8001\u7684\u5bfa\u5edf\u6dfa\u8349\u5bfa\uff0c\u6f2b\u6b65\u65bc\u4ef2\u898b\u4e16\u5546\u5e97\u8857\uff0c\u54c1\u5690\u50b3\u7d71\u5c0f\u5403\u4e26\u9078\u8cfc\u7d00\u5ff5\u54c1\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"3,000 JPY - 10,000 JPY (\u5c0f\u5403\u8207\u7d00\u5ff5\u54c1)\",\n\"location\": { \"lat\": 35.7148, \"lng\": 139.7967 }\n},\n{\n\"time\": \"11:30\",\n\"place_name\": \"\u548c\u670d\u79df\u8cc3\u9ad4\u9a57 (\u6dfa\u8349\u611b\u548c\u670d)\",\n\"description\": \"\u60c5\u4fb6\u4e00\u540c\u79df\u501f\u548c\u670d\uff0c\u5728\u6dfa\u8349\u7684\u50b3\u7d71\u8857\u666f\u4e2d\u7559\u4e0b\u7f8e\u9e97\u7684\u5408\u5f71\u3002\",\n\"type\": \"\u6587\u5316\u9ad4\u9a57\",\n\"cost\": \"15,000 JPY - 25,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.7127, \"lng\": 139.7958 }\n},\n{\n\"time\": \"13:00\",\n\"place_name\": \"\u6dfa\u8349\u4eca\u534a (\u570b\u969b\u901a\u672c\u5e97)\",\n\"description\": \"\u54c1\u5690\u8457\u540d\u7684\u58fd\u559c\u71d2\u6216\u6dae\u6dae\u934b\uff0c\u9ad4\u9a57\u65e5\u672c\u50b3\u7d71\u7684\u9802\u7d1a\u8089\u54c1\u6599\u7406\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"20,000 JPY - 40,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.7142, \"lng\": 139.7981 }\n},\n{\n\"time\": \"15:00\",\n\"place_name\": \"\u4e0a\u91ce\u516c\u5712 (\u6771\u4eac\u570b\u7acb\u535a\u7269\u9928)\",\n\"description\": \"\u524d\u5f80\u4e0a\u91ce\u516c\u5712\uff0c\u53c3\u89c0\u6771\u4eac\u570b\u7acb\u535a\u7269\u9928\uff0c\u6df1\u5165\u4e86\u89e3\u65e5\u672c\u8c50\u5bcc\u7684\u6b77\u53f2\u8207\u85dd\u8853\u3002\",\n\"type\": \"\u6587\u5316\u9ad4\u9a57\",\n\"cost\": \"2,000 JPY (\u9580\u7968\uff0c\u5169\u4eba)\",\n\"location\": { \"lat\": 35.7147, \"lng\": 139.7738 }\n},\n{\n\"time\": \"18:00\",\n\"place_name\": \"\u9280\u5ea7\u6b4c\u821e\u4f0e\u5ea7\",\n\"description\": \"\u6b23\u8cde\u4e00\u5834\u6b4c\u821e\u4f0e\u8868\u6f14 (\u53ef\u9078\u64c7\u55ae\u5e55\u5287\uff0c\u6642\u9593\u8f03\u77ed)\uff0c\u9ad4\u9a57\u65e5\u672c\u50b3\u7d71\u6232\u5287\u85dd\u8853\u3002\",\n\"type\": \"\u6587\u5316\u9ad4\u9a57\",\n\"cost\": \"5,000 JPY - 15,000 JPY (\u55ae\u5e55\u5287\u9580\u7968\uff0c\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6738, \"lng\": 139.7634 }\n},\n{\n\"time\": \"20:00\",\n\"place_name\": \"Ginza Kojyu (\u9280\u5ea7 \u5c0f\u5341)\",\n\"description\": \"\u5728\u9280\u5ea7\u4eab\u7528\u7c73\u5176\u6797\u4e09\u661f\u7684\u61f7\u77f3\u6599\u7406\uff0c\u54c1\u5473\u5b63\u7bc0\u98df\u6750\u7684\u7cbe\u7dfb\u5448\u73fe\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"80,000 JPY - 120,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6720, \"lng\": 139.7630 }\n}\n]\n},\n{\n\"day\": 4,\n\"weekday\": \"\u661f\u671f\u4e8c\",\n\"date_title\": \"\u7bc9\u5730\u6d77\u9bae\u8207\u9280\u5ea7\u5962\u83ef\u8cfc\u7269\",\n\"activities\": [\n{\n\"time\": \"08:00\",\n\"place_name\": \"\u7bc9\u5730\u5834\u5916\u5e02\u5834\",\n\"description\": \"\u6e05\u6668\u524d\u5f80\u7bc9\u5730\u5834\u5916\u5e02\u5834\uff0c\u54c1\u5690\u65b0\u9bae\u7684\u6d77\u9bae\u4e3c\u3001\u7389\u5b50\u71d2\u7b49\u7279\u8272\u7f8e\u98df\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"8,000 JPY - 15,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6657, \"lng\": 139.7709 }\n},\n{\n\"time\": \"10:00\",\n\"place_name\": \"\u9280\u5ea7\u7cbe\u54c1\u8cfc\u7269\u5340\",\n\"description\": \"\u5728\u9280\u5ea7\u7684\u767e\u8ca8\u516c\u53f8 (\u5982\uff1a\u9280\u5ea7\u4e09\u8d8a\u3001\u548c\u5149\u767e\u8ca8) \u548c\u570b\u969b\u54c1\u724c\u65d7\u8266\u5e97\u76e1\u60c5\u8cfc\u7269\u3002\",\n\"type\": \"\u8cfc\u7269\",\n\"cost\": \"50,000 JPY - 300,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)\",\n\"location\": { \"lat\": 35.6720, \"lng\": 139.7640 }\n},\n{\n\"time\": \"13:00\",\n\"place_name\": \"Tempura Kondo (\u5929\u3077\u3089 \u8fd1\u85e4)\",\n\"description\": \"\u5728\u7c73\u5176\u6797\u4e8c\u661f\u7684\u5929\u5a66\u7f85\u9910\u5ef3\u4eab\u7528\u5348\u9910\uff0c\u54c1\u5690\u7cbe\u7dfb\u7684\u73fe\u70b8\u5929\u5a66\u7f85\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"20,000 JPY - 35,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6705, \"lng\": 139.7635 }\n},\n{\n\"time\": \"15:00\",\n\"place_name\": \"\u7687\u5c45\u6771\u5fa1\u82d1\",\n\"description\": \"\u6f2b\u6b65\u65bc\u7687\u5c45\u6771\u5fa1\u82d1\uff0c\u611f\u53d7\u65e5\u672c\u7687\u5ba4\u7684\u6b77\u53f2\u6c1b\u570d\u8207\u7f8e\u9e97\u5ead\u5712\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"0 JPY\",\n\"location\": { \"lat\": 35.6853, \"lng\": 139.7570 }\n},\n{\n\"time\": \"17:00\",\n\"place_name\": \"TeamLab Planets TOKYO DMM\",\n\"description\": \"\u524d\u5f80\u53f0\u5834\uff0c\u6c89\u6d78\u5728TeamLab Planets\u7684\u6578\u4f4d\u85dd\u8853\u4e16\u754c\uff0c\u9ad4\u9a57\u5149\u5f71\u4ea4\u7e54\u7684\u5922\u5e7b\u7a7a\u9593\u3002\",\n\"type\": \"\u666f\u9ede\",\n\"cost\": \"6,400 JPY (\u9580\u7968\uff0c\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6611, \"lng\": 139.7820 }\n},\n{\n\"time\": \"19:30\",\n\"place_name\": \"\u53f0\u5834\u666f\u89c0\u9910\u5ef3 (\u4f8b\u5982\uff1aKing Of The Pirates \u6216 Grand Pacific Le Daiba)\",\n\"description\": \"\u5728\u53f0\u5834\u7684\u666f\u89c0\u9910\u5ef3\u4eab\u7528\u665a\u9910\uff0c\u6b23\u8cde\u5f69\u8679\u5927\u6a4b\u548c\u6771\u4eac\u7063\u7684\u8ff7\u4eba\u591c\u666f\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"15,000 JPY - 30,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6288, \"lng\": 139.7770 }\n}\n]\n},\n{\n\"day\": 5,\n\"weekday\": \"\u661f\u671f\u4e09\",\n\"date_title\": \"\u81ea\u7531\u63a2\u7d22\u8207\u6eab\u99a8\u8fd4\u7a0b\",\n\"activities\": [\n{\n\"time\": \"09:00\",\n\"place_name\": \"\u9152\u5e97\u5167\u81ea\u7531\u6d3b\u52d5\",\n\"description\": \"\u5728\u9152\u5e97\u4eab\u7528\u8c50\u76db\u7684\u65e9\u9910\uff0c\u6216\u5229\u7528\u9152\u5e97\u8a2d\u65bd (\u5982\u5065\u8eab\u623f\u3001\u6cf3\u6c60)\u3002\",\n\"type\": \"\u4f4f\u5bbf\",\n\"cost\": \"0 JPY (\u5df2\u542b\u5728\u623f\u8cbb\u6216\u984d\u5916\u65e9\u9910\u8cbb)\",\n\"location\": { \"lat\": 35.6892, \"lng\": 139.6922 }\n},\n{\n\"time\": \"10:30\",\n\"place_name\": \"\u516d\u672c\u6728\u4e4b\u4e18 (Roppongi Hills) \u6216 \u6771\u4eac\u4e2d\u57ce (Tokyo Midtown)\",\n\"description\": \"\u524d\u5f80\u516d\u672c\u6728\uff0c\u901b\u901b\u6771\u4eac\u7684\u73fe\u4ee3\u85dd\u8853\u8207\u8a2d\u8a08\u4e2d\u5fc3\uff0c\u9032\u884c\u6700\u5f8c\u7684\u7d00\u5ff5\u54c1\u8cfc\u7269\u6216\u6b23\u8cde\u57ce\u5e02\u666f\u89c0\u3002\",\n\"type\": \"\u8cfc\u7269\",\n\"cost\": \"5,000 JPY - 50,000 JPY (\u8cfc\u7269\u4f9d\u500b\u4eba)\",\n\"location\": { \"lat\": 35.6606, \"lng\": 139.7290 }\n},\n{\n\"time\": \"12:30\",\n\"place_name\": \"\u6771\u4eac\u4e2d\u57ce\u6216\u516d\u672c\u6728\u5348\u9910\",\n\"description\": \"\u5728\u516d\u672c\u6728\u5730\u5340\u9078\u64c7\u4e00\u5bb6\u6642\u5c1a\u9910\u5ef3\u4eab\u7528\u5348\u9910\uff0c\u70ba\u65c5\u7a0b\u756b\u4e0a\u53e5\u9ede\u3002\",\n\"type\": \"\u7f8e\u98df\",\n\"cost\": \"8,000 JPY - 15,000 JPY (\u5169\u4eba)\",\n\"location\": { \"lat\": 35.6657, \"lng\": 139.7289 }\n},\n{\n\"time\": \"14:30\",\n\"place_name\": \"\u8fd4\u56de\u9152\u5e97\u53d6\u884c\u674e\",\n\"description\": \"\u642d\u4e58\u8a08\u7a0b\u8eca\u6216\u5730\u9435\u8fd4\u56de\u9152\u5e97\uff0c\u6e96\u5099\u524d\u5f80\u6a5f\u5834\u3002\",\n\"type\": \"\u4ea4\u901a\",\n\"cost\": \"2,000 JPY - 5,000 JPY\",\n\"location\": { \"lat\": 35.6892, \"lng\": 139.6922 }\n},\n{\n\"time\": \"16:00\",\n\"place_name\": \"\u6210\u7530\u570b\u969b\u6a5f\u5834 (NRT) \u6216 \u7fbd\u7530\u570b\u969b\u6a5f\u5834 (HND)\",\n\"description\": \"\u642d\u4e58\u8c6a\u83ef\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u524d\u5f80\u6a5f\u5834\uff0c\u6e96\u5099\u642d\u6a5f\u8fd4\u5bb6\u3002\",\n\"type\": \"\u4ea4\u901a\",\n\"cost\": \"10,000 JPY (\u8a08\u7a0b\u8eca) / 6,000 JPY (\u5df4\u58eb\uff0c\u5169\u4eba)\",\n\"location\": { \"lat\": 35.5494, \"lng\": 139.7798 }\n}\n]\n}\n],\n\"dining_recommendations\": [\n{\n\"name\": \"Shinjuku Wagyu Kaga (\u65b0\u5bbf \u548c\u725b \u304b\u304c)\",\n\"feature\": \"\u9802\u7d1aA5\u548c\u725b\u71d2\u8089\uff0c\u8089\u8cea\u9bae\u7f8e\uff0c\u5165\u53e3\u5373\u5316\u3002\",\n\"price_range\": \"\u9ad8\u50f9\u4f4d (15,000 - 25,000 JPY/\u4eba)\"\n},\n{\n\"name\": \"Sukiyabashi Jiro (\u6578\u5bc4\u5c4b\u6a4b\u6b21\u90ce \u516d\u672c\u6728\u5e97)\",\n\"feature\": \"\u7c73\u5176\u6797\u661f\u7d1a\u58fd\u53f8\uff0c\u58fd\u53f8\u4e4b\u795e\u5c0f\u91ce\u4e8c\u90ce\u7684\u50b3\u627f\uff0c\u9700\u63d0\u524d\u9810\u7d04\u3002\",\n\"price_range\": \"\u5962\u83ef (30,000 - 50,000 JPY/\u4eba)\"\n},\n{\n\"name\": \"Ginza Kojyu (\u9280\u5ea7 \u5c0f\u5341)\",\n\"feature\": \"\u7c73\u5176\u6797\u4e09\u661f\u61f7\u77f3\u6599\u7406\uff0c\u7cbe\u7dfb\u7684\u5b63\u7bc0\u6027\u83dc\u991a\uff0c\u5448\u73fe\u65e5\u672c\u6599\u7406\u7684\u85dd\u8853\u3002\",\n\"price_range\": \"\u5962\u83ef (40,000 - 60,000 JPY/\u4eba)\"\n},\n{\n\"name\": \"Tempura Kondo (\u5929\u3077\u3089 \u8fd1\u85e4)\",\n\"feature\": \"\u7c73\u5176\u6797\u4e8c\u661f\u5929\u5a66\u7f85\uff0c\u4ee5\u65b0\u9bae\u98df\u6750\u548c\u7cbe\u6e5b\u70b8\u529f\u805e\u540d\uff0c\u7279\u5225\u662f\u852c\u83dc\u5929\u5a66\u7f85\u3002\",\n\"price_range\": \"\u9ad8\u50f9\u4f4d (10,000 - 18,000 JPY/\u4eba)\"\n},\n{\n\"name\": \"\u6dfa\u8349\u4eca\u534a (\u570b\u969b\u901a\u672c\u5e97)\",\n\"feature\": \"\u767e\u5e74\u8001\u5e97\uff0c\u4ee5\u9802\u7d1a\u58fd\u559c\u71d2\u548c\u6dae\u6dae\u934b\u805e\u540d\uff0c\u9ad4\u9a57\u50b3\u7d71\u65e5\u5f0f\u98a8\u5473\u3002\",\n\"price_range\": \"\u4e2d\u9ad8\u50f9\u4f4d (10,000 - 20,000 JPY/\u4eba)\"\n}\n],\n\"transport_tips\": \"\u6771\u4eac\u64c1\u6709\u5168\u7403\u6700\u4fbf\u6377\u9ad8\u6548\u7684\u516c\u5171\u4ea4\u901a\u7cfb\u7d71\u3002\u5efa\u8b70\u8cfc\u8cb7 Suica \u6216 Pasmo \u5132\u503c\u5361\uff0c\u53ef\u642d\u4e58\u5730\u9435 (Tokyo Metro \u53ca Toei Subway) \u548c JR \u7dda\u3002\u5c0d\u65bc\u9ad8\u9810\u7b97\u60c5\u4fb6\uff0c\u4e5f\u53ef\u9069\u6642\u5229\u7528\u8a08\u7a0b\u8eca\uff0c\u5c24\u5176\u662f\u5728\u591c\u9593\u6216\u884c\u7a0b\u4e2d\u9014\u9700\u8981\u5feb\u901f\u79fb\u52d5\u6642\u3002\u6a5f\u5834\u5f80\u8fd4\u9152\u5e97\u53ef\u9078\u64c7\u5229\u6728\u6d25\u5df4\u58eb\u6216\u8a08\u7a0b\u8eca\u3002\u8acb\u6ce8\u610f\uff0c\u6771\u4eac\u5730\u9435\u7dda\u8def\u773e\u591a\u4e14\u8907\u96dc\uff0c\u5efa\u8b70\u4f7f\u7528 Google Maps \u7b49\u5c0e\u822aApp\u898f\u5283\u8def\u7dda\u3002\"\n}"
+  },
+  "message": "\u884c\u7a0b\u751f\u6210\u6210\u529f"
+}

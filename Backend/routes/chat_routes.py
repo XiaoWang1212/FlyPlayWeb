@@ -62,31 +62,41 @@ def get_travel_recommendation():
 
 @chat_bp.route('/itinerary', methods=['POST'])
 def generate_itinerary():
-    try:
-        data = request.get_json()
-        if not data:
-            return unified_response(400, '請求體不能為空')
+    # 先走本地 mock，節省 Gemini 額度
+    import json
+    from pathlib import Path
+    mock_path = Path(__file__).resolve().parents[1] / 'data' / 'itinerary_response.json'
+    with open(mock_path, 'r', encoding='utf-8') as f:
+        mock_response = json.load(f)
+
+    # 直接回傳檔案內容（維持你現在 response.json 的格式）
+    return jsonify(mock_response), 200
+# def generate_itinerary():
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return unified_response(400, '請求體不能為空')
         
-        location = data.get('location')
-        days = data.get('days')
-        budget = data.get('budget', '中等')
-        traveler_type = data.get('travelerType', '獨旅')
-        interests = data.get('interests', [])
-        start_date = data.get('startDate') or data.get('start_date') # 支援兩種命名
+#         location = data.get('location')
+#         days = data.get('days')
+#         budget = data.get('budget', '中等')
+#         traveler_type = data.get('travelerType', '獨旅')
+#         interests = data.get('interests', [])
+#         start_date = data.get('startDate') or data.get('start_date') # 支援兩種命名
         
-        if not location or not days:
-            return unified_response(400, '必須提供 location 與 days 參數')
+#         if not location or not days:
+#             return unified_response(400, '必須提供 location 與 days 參數')
         
-        result = chat_controller.handle_generate_itinerary(
-            location, days, budget, traveler_type, interests, start_date
-        )
+#         result = chat_controller.handle_generate_itinerary(
+#             location, days, budget, traveler_type, interests, start_date
+#         )
         
-        if result['success']:
-            return unified_response(200, '行程生成成功', result['data'])
-        else:
-            return unified_response(500, result['error'])
-    except Exception as e:
-        return unified_response(500, f'服務器錯誤: {str(e)}')
+#         if result['success']:
+#             return unified_response(200, '行程生成成功', result['data'])
+#         else:
+#             return unified_response(500, result['error'])
+#     except Exception as e:
+#         return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/refine', methods=['POST'])
 def refine_itinerary():

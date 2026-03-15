@@ -5,7 +5,7 @@
 ## 1️. 距離與時間查詢
 
 **API 路徑**  
-`POST http://localhost:5000/api/maps/distance`
+`POST http://localhost:5001/api/maps/distance`
 
 ### 程式調用
 
@@ -47,7 +47,7 @@ print(result)
 ## 2️. 路線細節查詢
 
 **API 路徑**  
-`POST http://localhost:5000/api/maps/route_details`
+`POST http://localhost:5001/api/maps/route_details`
 
 ### 程式調用
 
@@ -115,7 +115,7 @@ print(result)
 ## 3️⃣ 店家營業時間查詢
 
 **API 路徑**  
-`POST http://localhost:5000/api/maps/opening_hours`
+`POST http://localhost:5001/api/maps/opening_hours`
 
 ```python
 from services.googlemap_service import GoogleMapService
