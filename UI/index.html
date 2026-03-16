@@ -136,6 +136,29 @@
       </div>
     </div>
 
+    <div class="spot-search-overlay" id="spotSearchOverlay" aria-hidden="true">
+      <div class="spot-search-panel" role="dialog" aria-modal="true">
+        <div class="spot-search-input-row">
+          <button
+            class="spot-search-close"
+            type="button"
+            onclick="closeSpotSearchModal()"
+            aria-label="關閉搜尋"
+          >
+            <i class="fas fa-close"></i>
+          </button>
+          <input
+            id="spotSearchInput"
+            class="spot-search-input"
+            type="text"
+            placeholder="輸入景點、地標或地址"
+          />
+        </div>
+        <div class="spot-search-status" id="spotSearchStatus">請輸入關鍵字開始搜尋</div>
+        <div class="spot-search-results" id="spotSearchResults"></div>
+      </div>
+    </div>
+
     <script>
       let map;
       let allDays = [];
@@ -567,6 +590,20 @@
         .getElementById("robotFab")
         .querySelector("i");
 
+      // --- 行程搜尋相關變數 ---
+      const spotSearchOverlay = document.getElementById("spotSearchOverlay");
+      const spotSearchInput = document.getElementById("spotSearchInput");
+      const spotSearchStatus = document.getElementById("spotSearchStatus");
+      const spotSearchResults = document.getElementById("spotSearchResults");
+
+      const spotSearchState = {
+        isOpen: false,
+        results: [],
+        selectedIndex: -1,
+        debounceTimer: null,
+        requestId: 0,
+      };
+
       // --- SortableJS 設定 (拖拽功能) ---
       const timelineList = document.getElementById("timelineList");
 
@@ -723,27 +760,153 @@
         }
       }
 
-      function addItem() {
-        const newItemHTML = `
-                <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                <div class="timeline-left">
-                    <div class="location-img"><i class="far fa-image"></i></div>
-                </div>
-                <div class="timeline-right">
-                    <div class="timeline-title">
-                        新景點
-                        <span class="time-badge">1小時</span>
-                    </div>
-                    <div class="timeline-desc">點擊以編輯詳細資訊...</div>
-                </div>
-            `;
-        const div = document.createElement("div");
-        div.className = "timeline-item";
-        div.innerHTML = newItemHTML;
-        timelineList.appendChild(div);
+      // --- 行程搜尋相關功能 ---
+      function openSpotSearchModal() {
+        spotSearchState.isOpen = true;
+        spotSearchState.results = [];
+        spotSearchState.selectedIndex = -1;
 
-        const addButton = document.querySelector(".add-item-btn");
-        addButton.scrollIntoView({ behavior: "smooth" });
+        spotSearchOverlay.classList.add("active");
+        spotSearchOverlay.setAttribute("aria-hidden", "false");
+        spotSearchResults.innerHTML = "";
+        spotSearchStatus.textContent = "請輸入關鍵字開始搜尋";
+        spotSearchInput.value = "";
+
+        setTimeout(() => {
+          spotSearchInput.focus(); // 動畫結束後才聚焦
+        }, 50);
+      }
+      // 關閉搜尋視窗
+      function closeSpotSearchModal() {
+        spotSearchState.isOpen = false;
+        spotSearchOverlay.classList.remove("active");
+        spotSearchOverlay.setAttribute("aria-hidden", "true");
+
+        if (spotSearchState.debounceTimer) {
+          clearTimeout(spotSearchState.debounceTimer);
+          spotSearchState.debounceTimer = null;
+        }
+      }
+
+      // 渲染搜尋結果列表
+      function renderSpotSearchResults() {
+        if (!spotSearchState.results.length) {
+          spotSearchResults.innerHTML = "";
+          return;
+        }
+
+        const html = spotSearchState.results
+          .map((item, index) => {
+            const isSelected = index === spotSearchState.selectedIndex;
+            const types = (item.types || []).slice(0, 2).join(" · ");
+            return `
+              <button
+                type="button"
+                class="spot-search-item ${isSelected ? "active" : ""}"
+                onclick="selectSpotSearchResult(${index})"
+              >
+                <div class="spot-search-item-main">${item.name || "未命名地點"}</div>
+                <div class="spot-search-item-sub">${item.address || "無地址資訊"}</div>
+                ${types ? `<div class="spot-search-item-tag">${types}</div>` : ""}
+              </button>
+            `;
+          })
+          .join("");
+
+        spotSearchResults.innerHTML = html;
+      }
+
+      function selectSpotSearchResult(index) {
+        spotSearchState.selectedIndex = index;
+        renderSpotSearchResults();
+      }
+
+      async function performSpotSearch(keyword, reqId) {
+        try {
+          const response = await fetch(`${API_BASE}/api/maps/search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              textQuery: keyword,
+              languageCode: "zh-TW",
+              maxResultCount: 10,
+            }),
+          });
+
+          const payload = await response.json();
+
+          if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
+            return;
+          }
+
+          const places = payload?.data?.places || [];
+          spotSearchState.results = places;
+          spotSearchState.selectedIndex = -1;
+
+          if (!response.ok || !payload.success) {
+            spotSearchStatus.textContent = payload.error || "搜尋失敗，請稍後再試";
+            spotSearchResults.innerHTML = "";
+            return;
+          }
+
+          if (!places.length) {
+            spotSearchStatus.textContent = "找不到相關景點，請換個關鍵字";
+            spotSearchResults.innerHTML = "";
+            return;
+          }
+
+          spotSearchStatus.textContent = `找到 ${places.length} 筆結果`;
+          renderSpotSearchResults();
+        } catch (error) {
+          if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
+            return;
+          }
+          spotSearchStatus.textContent = "搜尋失敗，請檢查網路或稍後再試";
+          spotSearchResults.innerHTML = "";
+        }
+      }
+
+      function triggerSpotSearch() {
+        const keyword = spotSearchInput.value.trim();
+        if (!keyword) {
+          spotSearchStatus.textContent = "請先輸入關鍵字";
+          spotSearchResults.innerHTML = "";
+          return;
+        }
+
+        spotSearchState.requestId += 1;
+        const currentReqId = spotSearchState.requestId;
+
+        spotSearchStatus.textContent = "搜尋中...";
+        spotSearchResults.innerHTML = "";
+        performSpotSearch(keyword, currentReqId);
+      }
+
+      function onSpotSearchInput() {
+        if (spotSearchState.debounceTimer) {
+          clearTimeout(spotSearchState.debounceTimer);
+        }
+      
+        spotSearchState.debounceTimer = setTimeout(() => {
+          if (!spotSearchState.isOpen) return;
+          triggerSpotSearch();
+        }, 350);
+      }
+
+      function onSpotSearchKeydown(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          triggerSpotSearch();
+          return;
+        }
+
+        if (e.key === "Escape") {
+          closeSpotSearchModal();
+        }
+      }
+
+      function addItem() {
+        openSpotSearchModal();
       }
 
       function toggleSidebar() {
@@ -834,6 +997,15 @@
         sessionStorage.setItem("navigationType", "forward");
         window.location.href = "setup.html";
       }
+
+      spotSearchOverlay.addEventListener("click", function (e) {
+        if (e.target === spotSearchOverlay) {
+          closeSpotSearchModal();
+        }
+      });
+
+      spotSearchInput.addEventListener("input", onSpotSearchInput);
+      spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 
       // 處理鍵盤彈出時的視窗大小變化
       window.visualViewport.addEventListener("resize", function () {
