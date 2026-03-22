@@ -36,10 +36,13 @@ class GoogleMapService:
                 photos = place.get('photos', [])
                 simplified_photos = []
                 for photo in photos[:3]:
+                    photo_name = photo.get('name', '')
+                    photo_url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=400&key={self.api_key}" if photo_name else ""
                     simplified_photos.append({
-                        'name': photo.get('name', ''),
+                        'name': photo_name,
+                        'photo_url': photo_url,
                         'widthPx': photo.get('widthPx', 0),
-                        'heightPx': photo.get('heightPx', 0)
+                        'heightPx': photo.get('heightPx', 0),
                     })
                 formatted_place = {
                     'place_id': place.get('id', ''),

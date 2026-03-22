@@ -80,39 +80,39 @@ class GeminiService:
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
     
-    def chat_with_ai(self, message, conversation_history=[]):
-        """與 AI 進行對話"""
-        try:
-            # 轉換為 Gemini 格式
-            chat = self.model.start_chat(history=[])
+    # def chat_with_ai(self, message, conversation_history=[]):
+    #     """與 AI 進行對話"""
+    #     try:
+    #         # 轉換為 Gemini 格式
+    #         chat = self.model.start_chat(history=[])
             
-            # 添加系统提示
-            system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
+    #         # 添加系统提示
+    #         system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
             
-            # 構建完整訊息
-            full_message = f"{system_prompt}\n\n用户消息: {message}"
+    #         # 構建完整訊息
+    #         full_message = f"{system_prompt}\n\n用户消息: {message}"
             
-            if conversation_history:
-                # 重建對話歷史
-                for msg in conversation_history:
-                    if msg['role'] == 'user':
-                        chat.send_message(msg['content'])
+    #         if conversation_history:
+    #             # 重建對話歷史
+    #             for msg in conversation_history:
+    #                 if msg['role'] == 'user':
+    #                     chat.send_message(msg['content'])
             
-            response = chat.send_message(full_message)
-            ai_content = response.text
+    #         response = chat.send_message(full_message)
+    #         ai_content = response.text
             
-            return {
-                'success': True,
-                'data': {
-                    'response': ai_content,
-                    'history': conversation_history + [
-                        {"role": "user", "content": message},
-                        {"role": "assistant", "content": ai_content}
-                    ]
-                }
-            }
-        except Exception as e:
-            return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
+    #         return {
+    #             'success': True,
+    #             'data': {
+    #                 'response': ai_content,
+    #                 'history': conversation_history + [
+    #                     {"role": "user", "content": message},
+    #                     {"role": "assistant", "content": ai_content}
+    #                 ]
+    #             }
+    #         }
+    #     except Exception as e:
+    #         return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
     
     def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
         """生成完整詳細行程 (結構化輸出)"""
@@ -135,7 +135,6 @@ class GeminiService:
                     {{
                         "day": 1,
                         "weekday": "星期幾 (例如：星期一)", 
-                        "date_title": "第一天主題",
                         "activities": [
                             {{
                                 "time": "09:00",
