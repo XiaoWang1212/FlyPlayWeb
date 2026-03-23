@@ -89,6 +89,7 @@
       <div id="map">
         <!-- 這裡會放置地圖 -->
       </div>
+      
       <div class="fab-group" id="fabGroup">
         <div class="fab" onclick="toggleChatMode()" id="robotFab">
           <i class="fas fa-robot"></i>
@@ -96,14 +97,12 @@
         <div class="fab" onclick="toggleEditMode()" id="editFab">
           <i class="fas fa-pen"></i>
         </div>
-      </div>
+        </div>
 
       <div class="bottom-sheet" id="bottomSheet">
         <div class="sheet-handle-bar" id="dragHandle">
           <div class="sheet-handle"></div>
         </div>
-
-        <div class="sheet-header" id="dragHeader"></div>
 
         <div class="sheet-content" id="sheetContent">
           <!-- 聊天視圖 -->
@@ -131,6 +130,9 @@
               <i class="fas fa-plus"></i> 新增行程
             </div>
             <div style="height: 20px"></div>
+            <div id="dragConfirmBtn" class="drag-confirm-btn" onclick="confirmDrag()">
+              <i class="fas fa-check"></i> 確認
+            </div>
           </div>
         </div>
       </div>
@@ -141,10 +143,23 @@
       let allDays = [];
       let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
+      
+      // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
+      let currentRenderers = []; 
+
+      // 新增：清除地圖上現有路線的函數
+      function clearMapRoutes() {
+        currentRenderers.forEach(renderer => renderer.setMap(null));
+        currentRenderers = [];
+      }
 
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
-        const colors = ["#2962FF", "#34A853", "#EA4335", "#FBBC04", "#9C27B0"];
+        // 新增：如果是 -1 (代表「全部」按鈕)，給它一個專屬的深灰色
+        if (dayIndex === -1) {
+          return "#455A64"; 
+        }
+        const colors = ["#2962FF", "#34A853", "#EA4335", "#FBBC04", "#9C27B0",  "#FFC0CB"];
         return colors[dayIndex % colors.length];
       }
 
@@ -153,6 +168,21 @@
         const timelineView = document.getElementById("timelineView");
         const buttonContainer = document.createElement("div");
         buttonContainer.id = "dayButtonContainer";
+
+       
+        const allBtn = document.createElement("button");
+        allBtn.textContent = "全部";
+        allBtn.classList.add("active"); // 預設為選中狀態
+        
+        // 新增：網頁一開始載入時，就幫「全部」按鈕上色
+        const allColor = getColorByDay(-1);
+        allBtn.style.backgroundColor = allColor;
+        allBtn.style.color = "#FFFFFF";
+        allBtn.style.borderColor = allColor;
+        
+        allBtn.onclick = () => switchDay(-1, allBtn);
+        buttonContainer.appendChild(allBtn);
+        // -------------------------
 
         allDays.forEach((day, index) => {
           const btn = document.createElement("button");
@@ -169,6 +199,9 @@
             "bot",
           );
         };
+
+        // 把按鈕加到時間線最上方
+        timelineView.insertBefore(buttonContainer, timelineView.firstChild);
 
         // 切換聊天模式
         function toggleChatMode() {
@@ -306,18 +339,29 @@
           
           const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-            <div class="timeline-left">
-              <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
-              ${!isLast ? '<div class="timeline-connector"></div>' : ''}
-            </div>
-            <div class="timeline-right">
-              <div class="timeline-title">
-                ${activity.place_name}
-                <span class="time-badge">${activity.time}</span>
+            
+            <div class="location-block">
+              <div class="timeline-left">
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+                </div>
               </div>
-              <div class="timeline-desc">${activity.description}</div>
-              ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+              <div class="timeline-right">
+                <div class="timeline-title">
+                  ${activity.place_name}
+                  <span class="time-badge">${activity.time}</span>
+                </div>
+                <div class="timeline-desc">${activity.description}</div>
+                ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+              </div>
             </div>
+
+            ${!isLast ? `
+            <div class="transit-block">
+              <div class="transit-line"></div>
+              <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+            </div>
+            ` : '<div style="height: 15px;"></div>'} 
           `;
 
           const div = document.createElement("div");
@@ -351,10 +395,13 @@
               : '';
             
             const newItemHTML = `
-              <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+            
+            <div class="location-block">
               <div class="timeline-left">
-                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
-                ${!isLast ? '<div class="timeline-connector"></div>' : ''}
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+                </div>
               </div>
               <div class="timeline-right">
                 <div class="timeline-title">
@@ -364,7 +411,15 @@
                 <div class="timeline-desc">${activity.description}</div>
                 ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
               </div>
-            `;
+            </div>
+
+            ${!isLast ? `
+            <div class="transit-block">
+              <div class="transit-line"></div>
+              <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+            </div>
+            ` : '<div style="height: 15px;"></div>'} 
+          `;
 
             const div = document.createElement("div");
             div.className = "timeline-item";
@@ -376,7 +431,10 @@
 
       // 顯示所有天的行程
       function displayAllDays() {
+        clearMapRoutes(); // 先清除舊路線
+
         const { DirectionsService, DirectionsRenderer } = google.maps;
+        const directionsService = new DirectionsService();
 
         allDays.forEach((day, dayIndex) => {
           if (!day || !day.activities || day.activities.length < 2) {
@@ -390,12 +448,14 @@
           const directionsRenderer = new DirectionsRenderer({
             map: map,
             suppressMarkers: false,
+            preserveViewport: true,
             polylineOptions: {
               strokeColor: getColorByDay(dayIndex),
               strokeWeight: 7,
               strokeOpacity: 0.6,
             },
           });
+          currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
           const origin = activities[0].location;
           const destination = activities[activities.length - 1].location;
@@ -421,12 +481,13 @@
             },
           );
         });
-
+        
         loadAllTimelineActivities();
       }
 
       // 顯示單一天的行程
       function displayDay(dayIndex) {
+        clearMapRoutes(); // 先清除舊路線
         const day = allDays[dayIndex];
 
         if (!day || !day.activities || day.activities.length < 2) {
@@ -434,7 +495,7 @@
           return;
         }
 
-        const activities = day.activities;
+        
         const { DirectionsService, DirectionsRenderer } = google.maps;
 
         const directionsService = new DirectionsService();
@@ -448,6 +509,9 @@
           },
         });
 
+        currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
+
+        const activities = day.activities;
         const origin = activities[0].location;
         const destination = activities[activities.length - 1].location;
         const waypoints = activities.slice(1, -1).map((act) => ({
@@ -479,19 +543,29 @@
       function switchDay(dayIndex, clickedBtn) {
         currentDayIndex = dayIndex;
 
-        // 更新按鈕樣式
+        // 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式）
         const allBtns = document.querySelectorAll("#dayButtonContainer button");
-        allBtns.forEach((btn, index) => {
-          if (index === dayIndex) {
-            btn.classList.add("active");
-          } else {
-            btn.classList.remove("active");
-          }
+        allBtns.forEach((btn) => {
+          btn.classList.remove("active");
+          btn.style.backgroundColor = ""; // 清除背景色
+          btn.style.color = "";           // 清除文字顏色
+          btn.style.borderColor = "";     // 清除邊框顏色
         });
 
-        displayDay(dayIndex);
-      }
+        // 2. 設定當前被點擊按鈕的專屬顏色
+        clickedBtn.classList.add("active");
+        const activeColor = getColorByDay(dayIndex);
+        clickedBtn.style.backgroundColor = activeColor;
+        clickedBtn.style.color = "#FFFFFF"; // 把文字變成白色，避免背景太深看不清楚文字
+        clickedBtn.style.borderColor = activeColor;
 
+        // 3. 判斷要顯示單天還是全部
+        if (dayIndex === -1) {
+          displayAllDays();
+        } else {
+          displayDay(dayIndex);
+        }
+      }
       async function initMap() {
         try {
           const response = await fetch(`${API_BASE}/api/itinerary`);
@@ -527,10 +601,18 @@
 
           const { Map } = await google.maps.importLibrary("maps");
           map = new Map(document.getElementById("map"), {
-            zoom: 8.5,
+            zoom: 10,
             center: { lat: avgLat, lng: avgLng },
             mapId: "DEMO_MAP_ID",
           });
+
+          map.addListener("click", () => {
+          // 當點擊地圖時，檢查下邊欄是否展開，如果是就收起
+          const sheet = document.getElementById("bottomSheet");
+          if (sheet && sheet.classList.contains("expanded")) {
+            closeSheet();
+          }
+        });
 
           createDayButtons();
           displayAllDays();
@@ -571,13 +653,32 @@
       const timelineList = document.getElementById("timelineList");
 
       let sortable = new Sortable(timelineList, {
-        animation: 150,
-        disabled: true,
-        delay: 400,
-        delayOnTouchOnly: true,
-        ghostClass: "sortable-ghost",
-        dragClass: "sortable-drag",
-      });
+  animation: 150,
+  disabled: true,
+  delay: 200,
+  delayOnTouchOnly: true,
+  handle: ".timeline-item",
+  ghostClass: "sortable-ghost",
+  dragClass: "sortable-drag",
+  filter: "[data-day-title],.delete-btn,.add-item-btn",
+  scroll: true,
+  scrollSpeed: 10,
+  onEnd: function (evt) {
+    // 拖曳放開後：鎖定拖曳，跳出確認按鈕
+    sortable.option("disabled", true);
+    document.getElementById("dragConfirmBtn").classList.add("show");
+  }
+});
+
+// 新增確認按鈕的功能
+function confirmDrag() {
+  // 這裡可以放打 API 給後端的程式碼
+  console.log("新排序已確認，準備更新後端資料...");
+
+  // 隱藏按鈕，重新啟用拖拽（可以繼續拖拽而不用重新點編輯按鈕）
+  document.getElementById("dragConfirmBtn").classList.remove("show");
+  sortable.option("disabled", false);
+}
 
       // 初始化聊天
       function showGeneratedRawOutputInChat() {
@@ -724,26 +825,49 @@
       }
 
       function addItem() {
+        // 防止未定義變數造成錯誤
+        const activity = {
+          place_name: "新增景點",
+          time: "未定",
+          description: "請點擊編輯此行程內容",
+          cost: ""
+        };
+        const photoUrl = "";
+        const isLast = true;
+
         const newItemHTML = `
-                <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-                <div class="timeline-left">
-                    <div class="location-img"><i class="far fa-image"></i></div>
-                </div>
-                <div class="timeline-right">
-                    <div class="timeline-title">
-                        新景點
-                        <span class="time-badge">1小時</span>
-                    </div>
-                    <div class="timeline-desc">點擊以編輯詳細資訊...</div>
-                </div>
-            `;
+        <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+        
+        <div class="location-block">
+          <div class="timeline-left">
+            <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
+              <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+            </div>
+          </div>
+          <div class="timeline-right">
+            <div class="timeline-title">
+              ${activity.place_name}
+              <span class="time-badge">${activity.time}</span>
+            </div>
+            <div class="timeline-desc">${activity.description}</div>
+            ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+          </div>
+        </div>
+
+        ${!isLast ? `
+        <div class="transit-block">
+          <div class="transit-line"></div>
+          <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+        </div>
+        ` : '<div style="height: 15px;"></div>'} 
+      `;
         const div = document.createElement("div");
         div.className = "timeline-item";
         div.innerHTML = newItemHTML;
         timelineList.appendChild(div);
 
         const addButton = document.querySelector(".add-item-btn");
-        addButton.scrollIntoView({ behavior: "smooth" });
+        if (addButton) addButton.scrollIntoView({ behavior: "smooth" });
       }
 
       function toggleSidebar() {

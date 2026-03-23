@@ -42,7 +42,7 @@
 
         /* Header */
         header {
-            background-color: #333;
+            background-color: #0f1a3a;
             color: white;
             height: calc(var(--header-height) + var(--safe-top));
             display: flex;
@@ -122,67 +122,102 @@
             background-size: cover; background-position: center;
             overflow: hidden;
             z-index: 0;
+
+            /* --- FAB (懸浮按鈕群組) --- */
+            .fab-group {
+                position: absolute; 
+                right: 15px; 
+                bottom: 220px;
+                display: flex; 
+                flex-direction: column;
+                gap: 10px;
+                transition: all 0.3s ease;
+                z-index: 1500; 
+
+                /* FAB 裡面的個別按鈕 */
+                .fab {
+                    width: 45px; 
+                    height: 45px; 
+                    background: white; 
+                    border-radius: 50%;
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
+                    font-size: 20px; 
+                    color: #333; 
+                    cursor: pointer;
+                }
+
+                /* 狀態：水平模式 (& 代表 .fab-group 本身) */
+                &.horizontal {
+                    bottom: auto;
+                    top: calc(var(--header-height) + var(--safe-top) + 50px); 
+                    right: 15px;
+                    flex-direction: row;
+                }
+                
+                /* 狀態：一半模式 */
+                &.half-mode {
+                    bottom: 55%;
+                }
+            }
+
+            /* --- Bottom Sheet (底部面板) --- */
+            .bottom-sheet {
+                position: absolute; 
+                bottom: 0; 
+                left: 0; 
+                width: 100%;
+                background: white;
+                border-top-left-radius: 20px; 
+                border-top-right-radius: 20px;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                transition: all 0.3s ease-in-out;
+                height: 200px;
+                display: flex; 
+                flex-direction: column;
+                z-index: 500;
+
+                /* 狀態：完全展開 */
+                &.expanded { 
+                    height: 75%; 
+                }
+
+                /* 狀態：半展開 */
+                &.half { 
+                    height: 50%; 
+                }
+
+                /* 面板內部的子元素 */
+                .sheet-handle-bar { 
+                    width: 100%; 
+                    padding: 15px 0 5px 0; 
+                    display: flex; 
+                    justify-content: center; 
+                    cursor: pointer; 
+                    touch-action: none; 
+                }
+
+                .sheet-handle { 
+                    width: 40px; 
+                    height: 5px; 
+                    background: #ddd; 
+                    border-radius: 5px; 
+                }
+
+                .sheet-content {
+                    flex: 1; 
+                    overflow-y: hidden; 
+                    padding: 0;
+                    position: relative;
+                }
+            }
         }
+        
         .map-pin { position: absolute; color: #ff4d4f; font-size: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         .pin-1 { top: 40%; left: 30%; }
         .pin-2 { top: 50%; left: 60%; }
-
-        /* --- FAB (懸浮按鈕群組) --- */
-        .fab-group {
-            position: absolute; 
-            right: 15px; 
-            bottom: 220px;
-            display: flex; 
-            flex-direction: column;
-            gap: 10px;
-            transition: all 0.3s ease;
-            z-index: 1500; 
-        }
-
-        .fab {
-            width: 45px; height: 45px; background: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 20px; color: #333; cursor: pointer;
-        }
-
-        .fab-group.horizontal {
-            bottom: auto;
-            top: calc(var(--header-height) + var(--safe-top) + 50px); 
-            right: 15px;
-            flex-direction: row;
-        }
-        
-        .fab-group.half-mode {
-            bottom: 55%;
-        }
-
-        /* Bottom Sheet */
-        .bottom-sheet {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: white;
-            border-top-left-radius: 20px; border-top-right-radius: 20px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease-in-out;
-            height: 200px;
-            display: flex; flex-direction: column;
-            z-index: 500;
-        }
-        .bottom-sheet.expanded { height: 75%; }
-        .bottom-sheet.half { height: 50%; }
-
-        .sheet-handle-bar { width: 100%; padding: 15px 0 5px 0; display: flex; justify-content: center; cursor: pointer; touch-action: none; }
-        .sheet-handle { width: 40px; height: 5px; background: #ddd; border-radius: 5px; }
-        
-        .sheet-header { 
-            padding: 0 20px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            flex-shrink: 0; cursor: pointer; touch-action: none; height: 50px; 
-        }
-
-        .sheet-content {
-            flex: 1; overflow-y: hidden; padding: 0;
-            position: relative;
-        }
 
         /* 視圖切換 */
         .view-section {
@@ -294,20 +329,80 @@
 
         /* Timeline UI (完全保持原樣) */
         .timeline-item { 
-            display: flex; margin-bottom: 20px; position: relative; transition: background 0.2s; 
+            display: flex; 
+            flex-direction: column; /* 改為垂直排列 */
+            margin-bottom: 20px; 
+            position: relative; 
+            transition: 
+            background 0.2s; 
             background: #fff;
             border-radius: 8px;
         }
+        
         .timeline-left { display: flex; flex-direction: column; align-items: center; margin-right: 15px; width: 60px; }
         .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; }
-        .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; }
+        /* .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; } */
         .timeline-transit { display: flex; align-items: center; justify-content: center; margin: 10px 0; color: #999; font-size: 12px; }
         .timeline-transit i { margin-right: 5px; }
         .timeline-right { flex: 1; padding-top: 5px; }
-        .timeline-title { font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+        .timeline-title { 
+            font-weight: bold; 
+            font-size: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+        }
         .timeline-desc { font-size: 12px; color: #999; margin-top: 5px; line-height: 1.4; }
-        .time-badge { font-size: 10px; background: #f0f0f0; padding: 2px 6px; border-radius: 10px; color: #666; font-weight: normal; }
+        .time-badge { 
+            font-size: 12px; 
+            background: #f0f0f0; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            color: #666; 
+            font-weight: normal; 
+
+            align-self: flex-start; /* 讓它靠上方對齊，不要跟著標題拉伸高度 */
+            flex-shrink: 0;         /* 防止左邊標題太長時，把時間標籤擠到變形 */
+            white-space: nowrap;    /* 確保時間文字永遠保持同一行 */
+            margin-left: 10px;      /* 確保跟左邊文字保持一點安全距離 */
+            margin-top: 2px;
+        }
         .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
+
+        .location-block {
+            display: flex;
+            padding-top: 10px;
+        }
+
+        /* 獨立出來的交通區塊 */
+        .transit-block {
+            display: flex;
+            align-items: stretch;
+            min-height: 45px;
+        }
+
+        .transit-line {
+            width: 60px; /* 和圖片一樣寬，用來對齊 */
+            margin-right: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .transit-line::after {
+            content: "";
+            width: 2px;
+            border-left: 2px dotted #ccc;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .transit-data {
+            flex: 1;
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            align-items: center;
+        }
 
         .sortable-ghost { opacity: 0.4; background: #f0f0f0; }
         .sortable-drag { opacity: 1; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
@@ -317,14 +412,28 @@
         }
 
         /* 編輯模式 */
+       /* 編輯模式時，右側留白給垃圾桶 */
+        .view-section.editing .timeline-right {
+            padding-right: 45px; 
+        }
+
+        /* 調整垃圾桶位置 */
         .delete-btn {
             display: none;
-            position: absolute; right: -10px; top: 0;
-            background: #ff4d4f; color: white;
-            width: 25px; height: 25px; border-radius: 50%;
-            text-align: center; line-height: 25px;
-            cursor: pointer; font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
+            position: absolute; 
+            right: 10px; /* 從 -10px 改為 10px 往內移 */
+            top: 15px;   /* 稍微往下移，對齊時間 */
+            background: #ff4d4f; 
+            color: white;
+            width: 25px; 
+            height: 25px; 
+            border-radius: 50%;
+            text-align: center; 
+            line-height: 25px;
+            cursor: pointer; 
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+            z-index: 10;
         }
         .add-item-btn {
             display: none;
@@ -448,3 +557,30 @@
           cursor: pointer;
           box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
+
+        .drag-confirm-btn {
+            display: none; /* 預設隱藏 */
+            position: fixed;
+            bottom: calc(30px + var(--safe-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2962FF;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+            cursor: pointer;
+        }
+        .drag-confirm-btn.show {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: popUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes popUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
