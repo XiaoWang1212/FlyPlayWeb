@@ -124,6 +124,11 @@ function bindDaysPickerClick(pickerScroll) {
     item.scrollIntoView({ block: "center", behavior: "smooth" });
 
     updateSelectedDay(pickerScroll);
+
+    // 關掉選擇器
+    document.getElementById("days-picker-group")?.classList.remove("active");
+    pickerScroll.removeEventListener("scroll", handlePickerScroll);
+    showAIRecommendButton();
   });
 }
 
@@ -284,9 +289,15 @@ function generateCompanionCards(container) {
       document.getElementById("selected-companion").textContent = opt.label;
 
       saveTripSetup({
+        companionAny: opt.value === "",
         companion: opt.value,
         companionLabel: opt.label,
       });
+
+      document
+        .getElementById("companion-picker-group")
+        ?.classList.remove("active");
+      showAIRecommendButton();
     });
 
     container.appendChild(card);
@@ -294,11 +305,17 @@ function generateCompanionCards(container) {
 
   // 回填已選項目
   const tripSetup = loadTripSetup();
-  if (tripSetup.companion) {
+  if (tripSetup.companionAny === true) {
+    const anyCompanionCard = container.querySelector('[data-value=""]');
+    if (anyCompanionCard) anyCompanionCard.classList.add("selected");
+  } else if (tripSetup.companion) {
     const selectedCard = container.querySelector(
       `[data-value="${tripSetup.companion}"]`,
     );
     if (selectedCard) selectedCard.classList.add("selected");
+  } else {
+    const anyCompanionCard = container.querySelector('[data-value=""]');
+    if (anyCompanionCard) anyCompanionCard.classList.add("selected");
   }
 }
 
@@ -357,6 +374,7 @@ function generateTravelTypeCards(container) {
                 saveTripSetup({
                     travelTypes: [],
                     travelTypeLabels: [],
+                  travelTypeAny: true, 
                   travelType: '',
                   travelTypeLabel: '',
                 });
@@ -394,6 +412,7 @@ function generateTravelTypeCards(container) {
                 saveTripSetup({
                     travelTypes: selectedValues,
                     travelTypeLabels: selectedLabels,
+                  travelTypeAny: selectedValues.length === 0,
                   travelType: selectedValues[0] || '',
                   travelTypeLabel: selectedLabels[0] || '',
                 });
@@ -603,6 +622,10 @@ function initBudgetPicker() {
         budget: budgetLabel,
         budgetLabel,
       });
+      
+      // 關掉選擇器
+      document.getElementById("budget-picker-group")?.classList.remove("active");
+      showAIRecommendButton();
     });
   });
 }
@@ -753,7 +776,9 @@ function isSetupComplete() {
   const selectedDestinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
+  const hasCompanion = tripSetup.companionAny === true || !!tripSetup.companion;
   const hasTravelType =
+    tripSetup.travelTypeAny === true || 
     !!tripSetup.travelType ||
     (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0);
 
@@ -763,7 +788,7 @@ function isSetupComplete() {
     selectedDestinations.length > 0 &&
     !!tripSetup.departure &&
     Number(tripSetup.daysValue) > 0 &&
-    !!tripSetup.companion &&
+    hasCompanion &&
     hasTravelType &&
     hasBudget
   );
@@ -838,4 +863,26 @@ window.onload = function () {
 const tripSetup = loadTripSetup();
 if (!tripSetup.budget && !tripSetup.budgetLabel) {
   saveTripSetup({ budget: "中等", budgetLabel: "中等" });
+}
+
+if (
+  tripSetup.travelTypeAny === undefined &&
+  !tripSetup.travelType &&
+  !(Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0)
+) {
+  saveTripSetup({
+    travelTypeAny: true,
+    travelTypes: [],
+    travelTypeLabels: [],
+    travelType: "",
+    travelTypeLabel: "",
+  });
+}
+
+if (tripSetup.companionAny === undefined && !tripSetup.companion) {
+  saveTripSetup({
+    companionAny: true,
+    companion: "",
+    companionLabel: "任何旅伴",
+  });
 }

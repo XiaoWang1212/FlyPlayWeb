@@ -109,7 +109,7 @@ h1 {
 
 /* ==================== 表單群組 ==================== */
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   background-color: #f5f5f5;
   border: none;
   border-radius: 12px;
@@ -232,6 +232,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 13px;
+  min-width: 0; 
   color: #333;
   font-size: var(--form-text-size);
   font-weight: var(--form-text-weight);
@@ -253,6 +254,11 @@ h1 {
 /* 展開時隱藏已選擇的選項文字 */
 .expandable-picker .picker-display span:first-child,
 .card-picker-group .picker-display span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 200px;
   opacity: 1;
   transition: opacity 0.2s ease;
 }

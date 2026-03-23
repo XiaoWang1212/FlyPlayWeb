@@ -821,6 +821,7 @@
         renderSpotSearchResults();
       }
 
+      // 執行景點搜尋
       async function performSpotSearch(keyword, reqId) {
         try {
           const response = await fetch(`${API_BASE}/api/maps/search`, {
@@ -905,6 +906,7 @@
         }
       }
 
+      // 新增行程項目（打開搜尋視窗）
       function addItem() {
         openSpotSearchModal();
       }
