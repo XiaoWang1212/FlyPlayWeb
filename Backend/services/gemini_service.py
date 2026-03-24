@@ -1,6 +1,7 @@
 import json
 import google.generativeai as genai
 from config import Config
+from datetime import datetime
 
 class GeminiService:
     def __init__(self):
@@ -51,10 +52,14 @@ class GeminiService:
         usage_metadata = getattr(response, 'usage_metadata', None)
         if not usage_metadata:
             return {
+                'input_tokens': None,
+                'output_tokens': None,
                 'total_tokens': None,
             }
 
         return {
+            'input_tokens': getattr(usage_metadata, 'prompt_token_count', None),
+            'output_tokens': getattr(usage_metadata, 'candidates_token_count', None),
             'total_tokens': getattr(usage_metadata, 'total_token_count', None),
         }
     
@@ -252,6 +257,7 @@ class GeminiService:
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
+                    'parsed': parsed_json,
                     'token_usage': token_usage,
                 }
             }
