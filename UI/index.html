@@ -769,7 +769,7 @@
         spotSearchOverlay.classList.add("active");
         spotSearchOverlay.setAttribute("aria-hidden", "false");
         spotSearchResults.innerHTML = "";
-        spotSearchStatus.textContent = "請輸入關鍵字開始搜尋";
+        spotSearchStatus.textContent = "";
         spotSearchInput.value = "";
 
         setTimeout(() => {
@@ -798,16 +798,23 @@
         const html = spotSearchState.results
           .map((item, index) => {
             const isSelected = index === spotSearchState.selectedIndex;
-            const types = (item.types || []).slice(0, 2).join(" · ");
+            const photoUrl =
+              item.photos && item.photos[0] && item.photos[0].photo_url
+                ? item.photos[0].photo_url
+                : "";
             return `
               <button
                 type="button"
                 class="spot-search-item ${isSelected ? "active" : ""}"
                 onclick="selectSpotSearchResult(${index})"
               >
-                <div class="spot-search-item-main">${item.name || "未命名地點"}</div>
-                <div class="spot-search-item-sub">${item.address || "無地址資訊"}</div>
-                ${types ? `<div class="spot-search-item-tag">${types}</div>` : ""}
+                <div class="spot-search-item-thumb ${photoUrl ? "has-photo" : ""}" ${photoUrl ? `style="background-image:url('${photoUrl}')"` : ""}>
+                  ${photoUrl ? "" : '<i class="far fa-image"></i>'}
+                </div>
+                <div class="spot-search-item-body">
+                  <div class="spot-search-item-main">${item.name || "未命名地點"}</div>
+                  <div class="spot-search-item-sub">${item.address || "無地址資訊"}</div>
+                </div>
               </button>
             `;
           })
@@ -820,21 +827,94 @@
         spotSearchState.selectedIndex = index;
         renderSpotSearchResults();
       }
+      // 從行程活動中嘗試獲取一個有效的座標位置，作為搜尋的錨點
+      function normalizeActivityLocation(location) {
+        if (!location) return null;
+
+        const lat =
+          typeof location.lat === "number"
+            ? location.lat
+            : typeof location.latitude === "number"
+              ? location.latitude
+              : null;
+
+        const lng =
+          typeof location.lng === "number"
+            ? location.lng
+            : typeof location.longitude === "number"
+              ? location.longitude
+              : null;
+
+        if (lat === null || lng === null) return null;
+        return { latitude: lat, longitude: lng };
+      }
+
+      // 優先使用當前日期的最後一個活動位置，若無則從所有日期的最後活動往前找
+      function getSearchAnchorLocation() {
+        const getDayLastLocation = (day) => {
+          if (!day || !Array.isArray(day.activities) || !day.activities.length) {
+            return null;
+          }
+
+          for (let i = day.activities.length - 1; i >= 0; i--) {
+            const normalized = normalizeActivityLocation(day.activities[i].location);
+            if (normalized) return normalized;
+          }
+          return null;
+        };
+
+        if (currentDayIndex >= 0 && currentDayIndex < allDays.length) {
+          const byCurrentDay = getDayLastLocation(allDays[currentDayIndex]);
+          if (byCurrentDay) return byCurrentDay;
+        }
+
+        for (let i = allDays.length - 1; i >= 0; i--) {
+          const byLastDay = getDayLastLocation(allDays[i]);
+          if (byLastDay) return byLastDay;
+        }
+
+        return null;
+      }
 
       // 執行景點搜尋
-      async function performSpotSearch(keyword, reqId) {
+      async function performSpotSearch(keyword, reqId, showNoResultMessage = false) {
         try {
-          const response = await fetch(`${API_BASE}/api/maps/search`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              textQuery: keyword,
-              languageCode: "zh-TW",
-              maxResultCount: 10,
-            }),
-          });
+          // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
+          const anchorLocation = getSearchAnchorLocation();
+          let response;
+          let payload;
+          let useNearbyEndpoint = false;
 
-          const payload = await response.json();
+          if (anchorLocation) {
+            response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                textQuery: keyword,
+                location: anchorLocation,
+                radius: 1500,
+                languageCode: "zh-TW",
+                maxResultCount: 8,
+              }),
+            });
+            payload = await response.json();
+            useNearbyEndpoint = response.ok && payload.success;
+          }
+
+          // nearby 無結果/失敗時，退回原本文字搜尋
+          if (!useNearbyEndpoint) {
+            response = await fetch(`${API_BASE}/api/maps/search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                textQuery: keyword,
+                languageCode: "zh-TW",
+                maxResultCount: 10,
+              }),
+            });
+
+            payload = await response.json(); 
+          } 
 
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
@@ -851,12 +931,15 @@
           }
 
           if (!places.length) {
-            spotSearchStatus.textContent = "找不到相關景點，請換個關鍵字";
+            spotSearchStatus.textContent = showNoResultMessage
+              ? "找不到相關景點，請嘗試其他關鍵字"
+              : "";
             spotSearchResults.innerHTML = "";
             return;
           }
 
-          spotSearchStatus.textContent = `找到 ${places.length} 筆結果`;
+          spotSearchStatus.textContent = "";
+
           renderSpotSearchResults();
         } catch (error) {
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
@@ -867,20 +950,28 @@
         }
       }
 
-      function triggerSpotSearch() {
+      function triggerSpotSearch(showNoResultMessage = false) {
         const keyword = spotSearchInput.value.trim();
         if (!keyword) {
-          spotSearchStatus.textContent = "請先輸入關鍵字";
+          spotSearchStatus.textContent = "";
           spotSearchResults.innerHTML = "";
           return;
+        }
+
+        const anchorLocation = getSearchAnchorLocation();
+        if (anchorLocation && map && typeof map.panTo === "function") {
+          map.panTo({
+            lat: anchorLocation.latitude,
+            lng: anchorLocation.longitude,
+          });
         }
 
         spotSearchState.requestId += 1;
         const currentReqId = spotSearchState.requestId;
 
-        spotSearchStatus.textContent = "搜尋中...";
+        spotSearchStatus.textContent = "";
         spotSearchResults.innerHTML = "";
-        performSpotSearch(keyword, currentReqId);
+        performSpotSearch(keyword, currentReqId, showNoResultMessage);
       }
 
       function onSpotSearchInput() {
@@ -897,7 +988,7 @@
       function onSpotSearchKeydown(e) {
         if (e.key === "Enter") {
           e.preventDefault();
-          triggerSpotSearch();
+          triggerSpotSearch(true);
           return;
         }
 

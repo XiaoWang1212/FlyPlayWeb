@@ -519,7 +519,7 @@
         .spot-search-status {
             font-size: 13px;
             color: #777;
-            padding: 8px 6px 6px;
+            padding: 6px 6px 2px;
             flex-shrink: 0;
         }
 
@@ -542,7 +542,9 @@
             padding: 12px 16px;
             cursor: pointer;
             transition: background 0.2s ease;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .spot-search-item:last-child {
@@ -560,10 +562,37 @@
             margin-bottom: 4px;
         }
 
+        .spot-search-item-body {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .spot-search-item-thumb {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            background: #f1f1f1;
+            color: #9a9a9a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .spot-search-item-thumb.has-photo {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
         .spot-search-item-sub {
             font-size: 13px;
             color: #666;
             line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .spot-search-item-tag {
