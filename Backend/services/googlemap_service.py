@@ -78,6 +78,83 @@ class GoogleMapService:
                 'error': f"錯誤: {str(e)}",
                 'error_type': 'UNKNOWN_ERROR'
             }
+            
+    def search_places_nearby(self, text_query: str, location: Dict, radius: int = 5000, language_code: str = "zh-TW", max_results: int = 10):
+            cache_key = f"search_nearby_{text_query}_{location['latitude']}_{location['longitude']}_{max_results}"
+            cached = self.place_cache.get(cache_key)
+            if cached:
+                return cached
+
+            try:
+                url = f"{self.base_url}/places:searchText"
+                headers = {
+                    'Content-Type': 'application/json',
+                    'X-Goog-Api-Key': self.api_key,
+                    'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.id,places.rating,places.userRatingCount,places.types,places.photos'
+                }
+                payload = {
+                    'textQuery': text_query,
+                    'languageCode': language_code,
+                    'maxResultCount': max_results,
+                    'locationBias': {
+                        'circle': {
+                            'center': {
+                                'latitude': location.get('latitude'),
+                                'longitude': location.get('longitude')
+                            },
+                            'radius': radius
+                        }
+                    }
+                }
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                places = data.get('places', [])
+                formatted_places = []
+                for place in places:
+                    photos = place.get('photos', [])
+                    simplified_photos = []
+                    for photo in photos[:3]:
+                        photo_name = photo.get('name', '')
+                        photo_url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=400&key={self.api_key}" if photo_name else ""
+                        simplified_photos.append({
+                            'name': photo_name,
+                            'photo_url': photo_url,
+                            'widthPx': photo.get('widthPx', 0),
+                            'heightPx': photo.get('heightPx', 0),
+                        })
+                    formatted_place = {
+                        'place_id': place.get('id', ''),
+                        'name': place.get('displayName', {}).get('text', ''),
+                        'address': place.get('formattedAddress', ''),
+                        'location': place.get('location', {}),
+                        'rating': place.get('rating', 0),
+                        'user_rating_count': place.get('userRatingCount', 0),
+                        'types': place.get('types', [])[:3],
+                        'photos': simplified_photos,
+                        'photo_count': len(photos)
+                    }
+                    formatted_places.append(formatted_place)
+                result = {
+                    'success': True,
+                    'places': formatted_places,
+                    'total_results': len(formatted_places),
+                    'query': text_query
+                }
+                self.place_cache.set(cache_key, result)
+                return result
+            except requests.RequestException as e:
+                return {
+                    'success': False,
+                    'error': f"網絡錯誤: {str(e)}",
+                    'error_type': 'NETWORK_ERROR'
+                }
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"錯誤: {str(e)}",
+                    'error_type': 'UNKNOWN_ERROR'
+                }
     
     def get_place_details(self, place_id_or_name: str, is_name: bool = False):
         if is_name:

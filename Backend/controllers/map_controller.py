@@ -2,7 +2,6 @@ from services.googlemap_service import GoogleMapService
 from typing import Dict, Optional, List
 
 class MapController:
-    
     def __init__(self):
         self.map_service = GoogleMapService()
     
@@ -43,6 +42,62 @@ class MapController:
                 'error': result.get('error', '搜索失敗'),
                 'error_type': result.get('error_type', 'UNKNOWN_ERROR')
             }
+            
+    def handle_text_search_nearby(self, text_query: str, location: Dict, radius: int = 5000, language_code: str = "zh-TW", max_results: int = 10):
+            if not text_query or not text_query.strip():
+                return {
+                    'success': False,
+                    'error': '搜索文字不能為空',
+                    'code': 'INVALID_INPUT'
+                }
+            if not location or not isinstance(location, dict):
+                return {
+                    'success': False,
+                    'error': '位置信息不正確',
+                    'code': 'INVALID_INPUT'
+                }
+            if 'latitude' not in location or 'longitude' not in location:
+                return {
+                    'success': False,
+                    'error': '位置必須包含latitude和longitude',
+                    'code': 'INVALID_INPUT'
+                }
+            if radius < 100 or radius > 50000:
+                return {
+                    'success': False,
+                    'error': '搜索半徑必須在100-50000米之間',
+                    'code': 'INVALID_INPUT'
+                }
+            if max_results < 1 or max_results > 20:
+                return {
+                    'success': False,
+                    'error': '結果數量必須在1-20之間',
+                    'code': 'INVALID_INPUT'
+                }
+            result = self.map_service.search_places_nearby(
+                text_query=text_query.strip(),
+                location=location,
+                radius=radius,
+                language_code=language_code,
+                max_results=max_results
+            )
+            if result['success']:
+                return {
+                    'success': True,
+                    'data': {
+                        'places': result['places'],
+                        'total': result.get('total_results', 0),
+                        'query': result.get('query', text_query),
+                        'location': location,
+                        'radius': radius
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', '查詢失敗'),
+                    'error_type': result.get('error_type', 'UNKNOWN_ERROR')
+                }
     
     def handle_place_details(self, place_id: str):
         if not place_id or not place_id.strip():

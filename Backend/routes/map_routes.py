@@ -33,6 +33,33 @@ def text_search():
             'success': False,
             'error': f'服務器錯誤: {str(e)}'
         }), 500
+        
+@map_bp.route('/search_nearby', methods=['POST'])
+def text_search_nearby():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': '請求體不能為空'}), 400
+        text_query = data.get('textQuery') or data.get('text_query')
+        location = data.get('location')
+        radius = data.get('radius', 5000)
+        language_code = data.get('languageCode', 'zh-TW')
+        max_results = data.get('maxResultCount', 10)
+        if not location:
+            return jsonify({'success': False, 'error': '必須提供location參數'}), 400
+        result = map_controller.handle_text_search_nearby(
+            text_query,
+            location,
+            radius,
+            language_code,
+            max_results
+        )
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'服務器錯誤: {str(e)}'}), 500
 
 @map_bp.route('/details/<place_id>', methods=['GET'])
 def get_place_details(place_id):
