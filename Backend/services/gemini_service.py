@@ -45,6 +45,18 @@ class GeminiService:
         cleaned_json = self._clean_json_response(raw_content)
         parsed_json = json.loads(cleaned_json)
         return raw_content, cleaned_json, parsed_json
+
+    def _extract_token_usage(self, response):
+        """提取 Gemini token 使用量；若無法取得則回傳 None。"""
+        usage_metadata = getattr(response, 'usage_metadata', None)
+        if not usage_metadata:
+            return {
+                'total_tokens': None,
+            }
+
+        return {
+            'total_tokens': getattr(usage_metadata, 'total_token_count', None),
+        }
     
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
@@ -67,6 +79,7 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
+            token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
 
@@ -75,6 +88,7 @@ class GeminiService:
                 'data': {
                     'raw_output': raw_content,
                     'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
@@ -161,6 +175,7 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
+            token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
 
@@ -168,7 +183,8 @@ class GeminiService:
                 'success': True,
                 'data': {
                     'raw_output': raw_content,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
@@ -189,6 +205,7 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
+            token_usage = self._extract_token_usage(response)
 
             _, cleaned_json, parsed_json = self._parse_response_json(response)
 
@@ -196,7 +213,8 @@ class GeminiService:
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
@@ -226,6 +244,7 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
+            token_usage = self._extract_token_usage(response)
 
             _, cleaned_json, parsed_json = self._parse_response_json(response)
 
@@ -233,6 +252,7 @@ class GeminiService:
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
