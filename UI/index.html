@@ -84,12 +84,19 @@
     </div>
 
     <div class="map-container" id="mapContainer">
-      <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
+      <!-- <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
       <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
-      <div id="map">
+       --><div id="map">
         <!-- 這裡會放置地圖 -->
       </div>
-      
+
+      <div id="customMapPopup" class="custom-map-popup">
+    <div class="popup-content">
+      </div>
+    <button class="popup-close-btn" onclick="closeCustomMapPopup()"><i class="fas fa-times"></i></button>
+    <div class="popup-tip"></div>
+  </div>
+
       <div class="fab-group" id="fabGroup">
         <div class="fab" onclick="toggleChatMode()" id="robotFab">
           <i class="fas fa-robot"></i>
@@ -146,12 +153,20 @@
       
       // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
       let currentRenderers = []; 
+      let currentMarkers = [];
+      let currentInfoWindow = null;
+      let justClickedMarker = false;
 
       // 新增：清除地圖上現有路線的函數
       function clearMapRoutes() {
-        currentRenderers.forEach(renderer => renderer.setMap(null));
-        currentRenderers = [];
-      }
+  // 清除路線
+  currentRenderers.forEach(renderer => renderer.setMap(null));
+  currentRenderers = [];
+  
+  // 清除標記
+  currentMarkers.forEach(marker => marker.map = null);
+  currentMarkers = [];
+}
 
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
@@ -222,10 +237,8 @@
             // 回到行程表模式
             chatView.classList.remove("active");
             timelineView.classList.add("active");
-            sheet.classList.remove("expanded");
-            sheet.classList.remove("half");
-            fabGroup.classList.remove("horizontal");
-            fabGroup.classList.remove("half-mode");
+            sheet.classList.remove("expanded", "half");
+            syncSheetState("sheet-collapsed");
             document.getElementById("editFab").style.display = "flex";
 
             // 恢復圖示：列表 → 機器人
@@ -236,44 +249,90 @@
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
-      // 添加自定義標記
-      function addCustomMarkers(dayActivitiesArray, dayIndex) {
-        const { AdvancedMarkerElement } = google.maps;
+      // 替換為以下這個 async 版本的 addCustomMarkers：
+      async function addCustomMarkers(activities, dayIndex) {
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
         const color = getColorByDay(dayIndex);
 
-        dayActivitiesArray.forEach((activities) => {
-          activities.forEach((activity) => {
-            const markerDiv = document.createElement("div");
-            markerDiv.classList.add("custom-marker");
-            markerDiv.style.backgroundColor = color;
-            markerDiv.textContent = `D${dayIndex + 1}`;
+        activities.forEach((activity) => {
+          // 製作地圖上的圓形小標記
+          const markerDiv = document.createElement("div");
+          markerDiv.classList.add("custom-marker");
+          markerDiv.style.backgroundColor = color;
+          markerDiv.textContent = `D${dayIndex + 1}`;
 
-            const infoWindow = new google.maps.InfoWindow({
-              content: `
-                <div style="padding: 10px;">
-                  <strong>${activity.place_name}</strong><br>
-                  時間: ${activity.time}<br>
-                  類型: ${activity.type}<br>
-                  ${activity.cost ? `費用: ${activity.cost}<br>` : ""}
-                  描述: ${activity.description}
+          const photoUrl = activity.photos && activity.photos[0] ? activity.photos[0].photo_url : '';
+
+          const popupCardHTML = `
+            <div class="popup-card-content">
+              <div class="info-img-wrapper">
+                ${photoUrl 
+                  ? `<img src="${photoUrl}" class="info-img" alt="景點圖片">`
+                  : `<div class="info-img" style="display:flex; align-items:center; justify-content:center; color:white;"><i class="far fa-image"></i></div>`
+                }
+              </div>
+              <div class="info-content">
+                <div class="info-header">
+                  <div class="info-title">${activity.place_name || '未知景點'}</div>
+                  <div class="info-time">${activity.time || '時間未定'}</div>
                 </div>
-              `,
+                <div class="info-desc" style="-webkit-line-clamp: 1;">${activity.description || '暫無簡介資訊'}</div>
+                <div class="info-meta">
+                  <div class="info-meta-item"><i class="fas fa-clock"></i> ${activity.opening_hours || activity.time || '營業時間未定'}</div>
+                  <div class="info-meta-item"><i class="fas fa-map-marker-alt"></i> ${activity.address || '尚未提供詳細地址'}</div>
+                </div>
+                ${activity.cost ? `<div class="info-cost">💰 ${activity.cost}</div>` : ''}
+              </div>
+            </div>
+          `;
+
+          const marker = new AdvancedMarkerElement({
+            map: map,
+            position: activity.location,
+            content: markerDiv,
+            title: activity.place_name,
+          });
+
+          currentMarkers.push(marker);
+
+          marker.addListener("click", (e) => {
+            justClickedMarker = true;
+
+            if (currentInfoWindow) {
+              currentInfoWindow.close();
+            }
+
+            currentInfoWindow = new google.maps.InfoWindow({
+              content: `<div style="max-width: 280px;">${popupCardHTML}</div>`,
+              maxWidth: 320,
             });
 
-            const marker = new AdvancedMarkerElement({
-              map: map,
-              position: activity.location,
-              content: markerDiv,
-              title: activity.place_name,
-            });
-
-            marker.addListener("click", () => {
-              infoWindow.open(map, marker);
-            });
+            currentInfoWindow.open({ map, anchor: marker });
           });
         });
       }
 
+      function clearCurrentPopup() {
+        if (currentInfoWindow) {
+          currentInfoWindow.close();
+          currentInfoWindow = null;
+        }
+      }
+
+      function closeCustomMapPopup() {
+        clearCurrentPopup();
+      }
+
+      function clearMapRoutes() {  currentRenderers.forEach(renderer => renderer.setMap(null));
+        currentRenderers = [];
+        
+        currentMarkers.forEach(marker => marker.map = null);
+        currentMarkers = [];
+
+        // 🔺 關鍵修復：切換天數時也清除彈出框
+        clearCurrentPopup(); 
+      }
+      
       typeMessage(
         "好的，我已經理解您的需求。根據您的行程安排，我建議可以在大阪城附近增加大阪歷史博物館，這樣可以更深入了解大阪的歷史文化。另外，從道頓堀到心齋橋的路線非常順暢，中間還可以順道逛逛美國村，那裡有很多特色小店和咖啡廳喔！",
         "bot",
@@ -282,8 +341,7 @@
       setTimeout(() => {
         sheet.classList.remove("expanded");
         sheet.classList.add("half");
-        fabGroup.classList.remove("horizontal");
-        fabGroup.classList.add("half-mode");
+        syncSheetState("sheet-half");
       }, 1000);
 
       // 逐字顯示訊息（打字機效果）
@@ -366,6 +424,7 @@
 
           const div = document.createElement("div");
           div.className = "timeline-item";
+          div.dataset.activityId = activity.activityId || activity.place_name || String(actIndex);
           div.innerHTML = newItemHTML;
           timelineList.appendChild(div);
         });
@@ -423,6 +482,7 @@
 
             const div = document.createElement("div");
             div.className = "timeline-item";
+            div.dataset.activityId = activity.activityId || activity.place_name || String(actIndex);
             div.innerHTML = newItemHTML;
             timelineList.appendChild(div);
           });
@@ -436,7 +496,7 @@
         const { DirectionsService, DirectionsRenderer } = google.maps;
         const directionsService = new DirectionsService();
 
-        allDays.forEach((day, dayIndex) => {
+        getActiveDays().forEach((day, dayIndex) => {
           if (!day || !day.activities || day.activities.length < 2) {
             console.warn(`第 ${dayIndex + 1} 天沒有足夠的活動`);
             return;
@@ -447,7 +507,7 @@
 
           const directionsRenderer = new DirectionsRenderer({
             map: map,
-            suppressMarkers: false,
+            suppressMarkers: true,
             preserveViewport: true,
             polylineOptions: {
               strokeColor: getColorByDay(dayIndex),
@@ -475,6 +535,7 @@
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
+                addCustomMarkers(activities, dayIndex);
               } else {
                 console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
               }
@@ -488,7 +549,7 @@
       // 顯示單一天的行程
       function displayDay(dayIndex) {
         clearMapRoutes(); // 先清除舊路線
-        const day = allDays[dayIndex];
+        const day = getActiveDays()[dayIndex];
 
         if (!day || !day.activities || day.activities.length < 2) {
           console.error("該日期沒有足夠的活動");
@@ -501,7 +562,7 @@
         const directionsService = new DirectionsService();
         const directionsRenderer = new DirectionsRenderer({
           map: map,
-          suppressMarkers: false,
+          suppressMarkers: true,
           polylineOptions: {
             strokeColor: getColorByDay(dayIndex),
             strokeWeight: 7,
@@ -530,6 +591,7 @@
           (result, status) => {
             if (status === "OK") {
               directionsRenderer.setDirections(result);
+              addCustomMarkers(activities, dayIndex);
               // 載入該天的時間線
               loadSingleDayTimeline(day, dayIndex);
             } else {
@@ -541,6 +603,14 @@
 
       // 切換日期
       function switchDay(dayIndex, clickedBtn) {
+        if (isEditMode && currentDayIndex !== dayIndex) {
+          if (currentDayIndex === -1) {
+            saveAllDayOrder();
+          } else {
+            saveCurrentDayOrder(currentDayIndex);
+          }
+        }
+
         currentDayIndex = dayIndex;
 
         // 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式）
@@ -607,11 +677,16 @@
           });
 
           map.addListener("click", () => {
+          if (justClickedMarker) {
+            justClickedMarker = false;
+            return;
+          }
           // 當點擊地圖時，檢查下邊欄是否展開，如果是就收起
           const sheet = document.getElementById("bottomSheet");
           if (sheet && sheet.classList.contains("expanded")) {
             closeSheet();
           }
+          clearCurrentPopup();
         });
 
           createDayButtons();
@@ -642,6 +717,10 @@
 
       let isEditMode = false;
       let isChatMode = false;
+      let originalTimelineHTML = "";
+      let isDragChanged = false;
+      let editedDays = null;
+
       const timelineView = document.getElementById("timelineView");
       const chatView = document.getElementById("chatView");
       const editFab = document.getElementById("editFab").querySelector("i");
@@ -653,32 +732,56 @@
       const timelineList = document.getElementById("timelineList");
 
       let sortable = new Sortable(timelineList, {
-  animation: 150,
-  disabled: true,
-  delay: 200,
-  delayOnTouchOnly: true,
-  handle: ".timeline-item",
-  ghostClass: "sortable-ghost",
-  dragClass: "sortable-drag",
-  filter: "[data-day-title],.delete-btn,.add-item-btn",
-  scroll: true,
-  scrollSpeed: 10,
-  onEnd: function (evt) {
-    // 拖曳放開後：鎖定拖曳，跳出確認按鈕
-    sortable.option("disabled", true);
-    document.getElementById("dragConfirmBtn").classList.add("show");
-  }
-});
+        animation: 150,
+        disabled: true,
+        delay: 200,
+        delayOnTouchOnly: true,
+        handle: ".timeline-item",
+        ghostClass: "sortable-ghost",
+        dragClass: "sortable-drag",
+        filter: "[data-day-title],.delete-btn,.add-item-btn",
+        scroll: true,
+        scrollSpeed: 10,
+        onEnd: function (evt) {
+          // 拖曳放開後：保存當前天排序並顯示確認按鈕
+          if (currentDayIndex === -1) {
+            saveAllDayOrder();
+          } else {
+            saveCurrentDayOrder(currentDayIndex);
+          }
+          isDragChanged = true;
+          document.getElementById("dragConfirmBtn").classList.add("show");
+        }
+      });
 
-// 新增確認按鈕的功能
-function confirmDrag() {
-  // 這裡可以放打 API 給後端的程式碼
-  console.log("新排序已確認，準備更新後端資料...");
+      // 新增確認按鈕的功能
+      function confirmDrag() {
+        // 這裡可以放打 API 給後端的程式碼
+        console.log("新排序已確認，準備更新後端資料...");
 
-  // 隱藏按鈕，重新啟用拖拽（可以繼續拖拽而不用重新點編輯按鈕）
-  document.getElementById("dragConfirmBtn").classList.remove("show");
-  sortable.option("disabled", false);
-}
+        if (currentDayIndex === -1) {
+          saveAllDayOrder();
+        } else {
+          saveCurrentDayOrder(currentDayIndex);
+        }
+
+        // 將編輯草稿寫回正式資料
+        if (editedDays) {
+          allDays = JSON.parse(JSON.stringify(editedDays));
+          editedDays = null;
+        }
+
+        // 隱藏按鈕，禁止拖拽（完成一次批次確認）
+        document.getElementById("dragConfirmBtn").classList.remove("show");
+        sortable.option("disabled", true);
+        isDragChanged = false;
+
+        // 回到非編輯狀態，同步按鈕
+        isEditMode = false;
+        timelineView.classList.remove("editing");
+        editFab.classList.remove("fa-times");
+        editFab.classList.add("fa-pen");
+      }
 
       // 初始化聊天
       function showGeneratedRawOutputInChat() {
@@ -726,7 +829,7 @@ function confirmDrag() {
           timelineView.classList.remove("active");
           chatView.classList.add("active");
           openSheet();
-          fabGroup.classList.add("horizontal");
+          syncSheetState("sheet-expanded");
           document.getElementById("editFab").style.display = "none";
 
           // 改變圖示：機器人 → 列表
@@ -738,10 +841,8 @@ function confirmDrag() {
           // 回到行程表模式
           chatView.classList.remove("active");
           timelineView.classList.add("active");
-          sheet.classList.remove("expanded");
-          sheet.classList.remove("half");
-          fabGroup.classList.remove("horizontal");
-          fabGroup.classList.remove("half-mode");
+          sheet.classList.remove("expanded", "half");
+          syncSheetState("sheet-collapsed");
           document.getElementById("editFab").style.display = "flex";
 
           // 恢復圖示：列表 → 機器人
@@ -795,31 +896,161 @@ function confirmDrag() {
       }
 
       // 編輯模式切換
+      function getActiveDays() {
+        return isEditMode && editedDays ? editedDays : allDays;
+      }
+
+      function saveCurrentDayOrder(dayIndex) {
+        if (dayIndex < 0 || !editedDays || !editedDays[dayIndex]) return;
+
+        const items = Array.from(
+          document.querySelectorAll("#timelineList .timeline-item"),
+        );
+        const ids = items
+          .map((item) => item.dataset.activityId)
+          .filter((id) => id);
+
+        if (!ids.length) return;
+
+        const oldActivities = editedDays[dayIndex].activities;
+        const newOrder = ids
+          .map((id) =>
+            oldActivities.find(
+              (act) => act.activityId === id || act.place_name === id,
+            ),
+          )
+          .filter(Boolean);
+
+        if (newOrder.length === oldActivities.length) {
+          editedDays[dayIndex].activities = newOrder;
+        }
+      }
+
+      function saveAllDayOrder() {
+        if (!editedDays) return;
+
+        const daySections = [];
+        let currentSection = null;
+
+        document.querySelectorAll("#timelineList > *").forEach((node) => {
+          if (node.matches("[data-day-title]")) {
+            currentSection = { activityIds: [] };
+            daySections.push(currentSection);
+          } else if (
+            node.classList &&
+            node.classList.contains("timeline-item") &&
+            currentSection
+          ) {
+            const activityId = node.dataset.activityId;
+            if (activityId) {
+              currentSection.activityIds.push(activityId);
+            }
+          }
+        });
+
+        if (!daySections.length) return;
+
+        daySections.forEach((section, idx) => {
+          const day = editedDays[idx];
+          if (!day || !day.activities) return;
+
+          const ordered = section.activityIds
+            .map((id) =>
+              day.activities.find(
+                (act) => act.activityId === id || act.place_name === id,
+              ),
+            )
+            .filter(Boolean);
+
+          if (ordered.length === day.activities.length) {
+            day.activities = ordered;
+          }
+        });
+      }
+
+      function saveCurrentDayOrder(dayIndex) {
+        if (dayIndex < 0 || !editedDays || !editedDays[dayIndex]) return;
+
+        const items = Array.from(
+          document.querySelectorAll("#timelineList .timeline-item"),
+        );
+        const ids = items
+          .map((item) => item.dataset.activityId)
+          .filter((id) => id);
+
+        if (!ids.length) return;
+
+        const oldActivities = editedDays[dayIndex].activities;
+        const newOrder = ids
+          .map((id) =>
+            oldActivities.find(
+              (act) => act.activityId === id || act.place_name === id,
+            ),
+          )
+          .filter(Boolean);
+
+        if (newOrder.length === oldActivities.length) {
+          editedDays[dayIndex].activities = newOrder;
+        }
+      }
+
       function toggleEditMode() {
         event.stopPropagation();
-        isEditMode = !isEditMode;
 
-        if (isEditMode) {
+        if (!isEditMode) {
+          // 進入編輯模式：建立一份可修改的草稿
+          editedDays = JSON.parse(JSON.stringify(allDays));
+          originalTimelineHTML = timelineList.innerHTML;
+          isDragChanged = false;
+          isEditMode = true;
+
           timelineView.classList.add("editing");
           editFab.classList.remove("fa-pen");
-          editFab.classList.add("fa-check");
+          editFab.classList.add("fa-times");
           openSheet();
           sortable.option("disabled", false);
+          document.getElementById("dragConfirmBtn").classList.remove("show");
         } else {
+          // 離開編輯模式（叉叉）：若尚未確認則還原草稿與 UI
+          if (isDragChanged) {
+            timelineList.innerHTML = originalTimelineHTML;
+            isDragChanged = false;
+          }
+          editedDays = null;
+          
+          isEditMode = false;
           timelineView.classList.remove("editing");
-          editFab.classList.remove("fa-check");
+          editFab.classList.remove("fa-times");
           editFab.classList.add("fa-pen");
           sortable.option("disabled", true);
+          document.getElementById("dragConfirmBtn").classList.remove("show");
+
+          // 恢復到確認前的資料（若有切換天數再回來）
+          if (!editedDays) {
+            // allDays 維持原狀
+          }
+          if (currentDayIndex === -1) {
+            displayAllDays();
+          } else {
+            displayDay(currentDayIndex);
+          }
         }
       }
 
       function deleteItem(btnElement) {
         const item = btnElement.closest(".timeline-item");
         if (item) {
+          const activityId = item.dataset.activityId;
           item.style.opacity = "0";
           item.style.transform = "translateX(-20px)";
           setTimeout(() => {
             item.remove();
+            if (isEditMode && editedDays && currentDayIndex !== -1) {
+              editedDays[currentDayIndex].activities = editedDays[currentDayIndex].activities.filter(
+                (act) => act.activityId !== activityId && act.place_name !== activityId,
+              );
+              isDragChanged = true;
+            }
           }, 300);
         }
       }
@@ -863,8 +1094,17 @@ function confirmDrag() {
       `;
         const div = document.createElement("div");
         div.className = "timeline-item";
+        div.dataset.activityId = activity.activityId || activity.place_name || String(Date.now());
         div.innerHTML = newItemHTML;
         timelineList.appendChild(div);
+
+        if (isEditMode && editedDays && currentDayIndex !== -1) {
+          editedDays[currentDayIndex].activities.push({
+            ...activity,
+            activityId: div.dataset.activityId,
+          });
+          isDragChanged = true;
+        }
 
         const addButton = document.querySelector(".add-item-btn");
         if (addButton) addButton.scrollIntoView({ behavior: "smooth" });
@@ -886,17 +1126,30 @@ function confirmDrag() {
         }
       }
 
+      function syncSheetState(state) {
+        mapContainer.classList.remove("sheet-expanded", "sheet-half", "sheet-collapsed");
+        mapContainer.classList.add(state);
+
+        fabGroup.classList.remove("horizontal", "vertical");
+        if (state === "sheet-expanded") {
+          fabGroup.classList.add("horizontal");
+        } else {
+          fabGroup.classList.add("vertical");
+        }
+      }
+
       function openSheet() {
         sheet.classList.add("expanded");
-        sheet.classList.remove("half", "half-mode");
-        fabGroup.classList.add("horizontal");
-        fabGroup.classList.remove("half-mode");
+        sheet.classList.remove("half");
+
+        syncSheetState("sheet-expanded");
       }
 
       function closeSheet() {
         if (isEditMode) toggleEditMode();
-        sheet.classList.remove("expanded");
-        fabGroup.classList.remove("horizontal");
+        sheet.classList.remove("expanded", "half");
+
+        syncSheetState("sheet-collapsed");
       }
 
       function toggleBottomSheet() {
@@ -980,3 +1233,5 @@ function confirmDrag() {
     </script>
   </body>
 </html>
+
+
