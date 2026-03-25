@@ -86,16 +86,18 @@
     <div class="map-container" id="mapContainer">
       <!-- <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
       <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
-       --><div id="map">
+       -->
+      <div id="map">
         <!-- 這裡會放置地圖 -->
       </div>
 
       <div id="customMapPopup" class="custom-map-popup">
-    <div class="popup-content">
+        <div class="popup-content"></div>
+        <button class="popup-close-btn" onclick="closeCustomMapPopup()">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="popup-tip"></div>
       </div>
-    <button class="popup-close-btn" onclick="closeCustomMapPopup()"><i class="fas fa-times"></i></button>
-    <div class="popup-tip"></div>
-  </div>
 
       <div class="fab-group" id="fabGroup">
         <div class="fab" onclick="toggleChatMode()" id="robotFab">
@@ -104,7 +106,7 @@
         <div class="fab" onclick="toggleEditMode()" id="editFab">
           <i class="fas fa-pen"></i>
         </div>
-        </div>
+      </div>
 
       <div class="bottom-sheet" id="bottomSheet">
         <div class="sheet-handle-bar" id="dragHandle">
@@ -137,11 +139,40 @@
               <i class="fas fa-plus"></i> 新增行程
             </div>
             <div style="height: 20px"></div>
-            <div id="dragConfirmBtn" class="drag-confirm-btn" onclick="confirmDrag()">
+            <div
+              id="dragConfirmBtn"
+              class="drag-confirm-btn"
+              onclick="confirmDrag()"
+            >
               <i class="fas fa-check"></i> 確認
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="spot-search-overlay" id="spotSearchOverlay" aria-hidden="true">
+      <div class="spot-search-panel" role="dialog" aria-modal="true">
+        <div class="spot-search-input-row">
+          <button
+            class="spot-search-close"
+            type="button"
+            onclick="closeSpotSearchModal()"
+            aria-label="關閉搜尋"
+          >
+            <i class="fas fa-close"></i>
+          </button>
+          <input
+            id="spotSearchInput"
+            class="spot-search-input"
+            type="text"
+            placeholder="輸入景點、地標或地址"
+          />
+        </div>
+        <div class="spot-search-status" id="spotSearchStatus">
+          請輸入關鍵字開始搜尋
+        </div>
+        <div class="spot-search-results" id="spotSearchResults"></div>
       </div>
     </div>
 
@@ -150,31 +181,38 @@
       let allDays = [];
       let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
-      
+
       // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
-      let currentRenderers = []; 
+      let currentRenderers = [];
       let currentMarkers = [];
       let currentInfoWindow = null;
       let justClickedMarker = false;
 
       // 新增：清除地圖上現有路線的函數
       function clearMapRoutes() {
-  // 清除路線
-  currentRenderers.forEach(renderer => renderer.setMap(null));
-  currentRenderers = [];
-  
-  // 清除標記
-  currentMarkers.forEach(marker => marker.map = null);
-  currentMarkers = [];
-}
+        // 清除路線
+        currentRenderers.forEach((renderer) => renderer.setMap(null));
+        currentRenderers = [];
+
+        // 清除標記
+        currentMarkers.forEach((marker) => (marker.map = null));
+        currentMarkers = [];
+      }
 
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
         // 新增：如果是 -1 (代表「全部」按鈕)，給它一個專屬的深灰色
         if (dayIndex === -1) {
-          return "#455A64"; 
+          return "#455A64";
         }
-        const colors = ["#2962FF", "#34A853", "#EA4335", "#FBBC04", "#9C27B0",  "#FFC0CB"];
+        const colors = [
+          "#2962FF",
+          "#34A853",
+          "#EA4335",
+          "#FBBC04",
+          "#9C27B0",
+          "#FFC0CB",
+        ];
         return colors[dayIndex % colors.length];
       }
 
@@ -184,17 +222,16 @@
         const buttonContainer = document.createElement("div");
         buttonContainer.id = "dayButtonContainer";
 
-       
         const allBtn = document.createElement("button");
         allBtn.textContent = "全部";
         allBtn.classList.add("active"); // 預設為選中狀態
-        
+
         // 新增：網頁一開始載入時，就幫「全部」按鈕上色
         const allColor = getColorByDay(-1);
         allBtn.style.backgroundColor = allColor;
         allBtn.style.color = "#FFFFFF";
         allBtn.style.borderColor = allColor;
-        
+
         allBtn.onclick = () => switchDay(-1, allBtn);
         buttonContainer.appendChild(allBtn);
         // -------------------------
@@ -251,7 +288,8 @@
 
       // 替換為以下這個 async 版本的 addCustomMarkers：
       async function addCustomMarkers(activities, dayIndex) {
-        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        const { AdvancedMarkerElement } =
+          await google.maps.importLibrary("marker");
         const color = getColorByDay(dayIndex);
 
         activities.forEach((activity, actIndex) => {
@@ -261,27 +299,31 @@
           markerDiv.style.backgroundColor = color;
           markerDiv.innerHTML = `<span>${actIndex + 1}</span>`;
 
-          const photoUrl = activity.photos && activity.photos[0] ? activity.photos[0].photo_url : '';
+          const photoUrl =
+            activity.photos && activity.photos[0]
+              ? activity.photos[0].photo_url
+              : "";
 
           const popupCardHTML = `
             <div class="popup-card-content">
               <div class="info-img-wrapper">
-                ${photoUrl 
-                  ? `<img src="${photoUrl}" class="info-img" alt="景點圖片">`
-                  : `<div class="info-img" style="display:flex; align-items:center; justify-content:center; color:white;"><i class="far fa-image"></i></div>`
+                ${
+                  photoUrl
+                    ? `<img src="${photoUrl}" class="info-img" alt="景點圖片">`
+                    : `<div class="info-img" style="display:flex; align-items:center; justify-content:center; color:white;"><i class="far fa-image"></i></div>`
                 }
               </div>
               <div class="info-content">
                 <div class="info-header">
-                  <div class="info-title">${activity.place_name || '未知景點'}</div>
-                  <div class="info-time">${activity.time || '時間未定'}</div>
+                  <div class="info-title">${activity.place_name || "未知景點"}</div>
+                  <div class="info-time">${activity.time || "時間未定"}</div>
                 </div>
-                <div class="info-desc" style="-webkit-line-clamp: 1;">${activity.description || '暫無簡介資訊'}</div>
+                <div class="info-desc" style="-webkit-line-clamp: 1;">${activity.description || "暫無簡介資訊"}</div>
                 <div class="info-meta">
-                  <div class="info-meta-item"><i class="fas fa-clock"></i> ${activity.opening_hours || activity.time || '營業時間未定'}</div>
-                  <div class="info-meta-item"><i class="fas fa-map-marker-alt"></i> ${activity.address || '尚未提供詳細地址'}</div>
+                  <div class="info-meta-item"><i class="fas fa-clock"></i> ${activity.opening_hours || activity.time || "營業時間未定"}</div>
+                  <div class="info-meta-item"><i class="fas fa-map-marker-alt"></i> ${activity.address || "尚未提供詳細地址"}</div>
                 </div>
-                ${activity.cost ? `<div class="info-cost">💰 ${activity.cost}</div>` : ''}
+                ${activity.cost ? `<div class="info-cost">💰 ${activity.cost}</div>` : ""}
               </div>
             </div>
           `;
@@ -323,16 +365,17 @@
         clearCurrentPopup();
       }
 
-      function clearMapRoutes() {  currentRenderers.forEach(renderer => renderer.setMap(null));
+      function clearMapRoutes() {
+        currentRenderers.forEach((renderer) => renderer.setMap(null));
         currentRenderers = [];
-        
-        currentMarkers.forEach(marker => marker.map = null);
+
+        currentMarkers.forEach((marker) => (marker.map = null));
         currentMarkers = [];
 
         // 🔺 關鍵修復：切換天數時也清除彈出框
-        clearCurrentPopup(); 
+        clearCurrentPopup();
       }
-      
+
       typeMessage(
         "好的，我已經理解您的需求。根據您的行程安排，我建議可以在大阪城附近增加大阪歷史博物館，這樣可以更深入了解大阪的歷史文化。另外，從道頓堀到心齋橋的路線非常順暢，中間還可以順道逛逛美國村，那裡有很多特色小店和咖啡廳喔！",
         "bot",
@@ -391,17 +434,18 @@
         // 添加該天的所有活動
         day.activities.forEach((activity, actIndex) => {
           const isLast = actIndex === day.activities.length - 1;
-          const photoUrl = activity.photos && activity.photos[0] 
-            ? activity.photos[0].photo_url
-            : '';
-          
+          const photoUrl =
+            activity.photos && activity.photos[0]
+              ? activity.photos[0].photo_url
+              : "";
+
           const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
             
             <div class="location-block">
               <div class="timeline-left">
-                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
-                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
                 </div>
               </div>
               <div class="timeline-right">
@@ -414,17 +458,22 @@
               </div>
             </div>
 
-            ${!isLast ? `
+            ${
+              !isLast
+                ? `
             <div class="transit-block">
               <div class="transit-line"></div>
               <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
             </div>
-            ` : '<div style="height: 15px;"></div>'} 
+            `
+                : '<div style="height: 15px;"></div>'
+            } 
           `;
 
           const div = document.createElement("div");
           div.className = "timeline-item";
-          div.dataset.activityId = activity.activityId || activity.place_name || String(actIndex);
+          div.dataset.activityId =
+            activity.activityId || activity.place_name || String(actIndex);
           div.innerHTML = newItemHTML;
           timelineList.appendChild(div);
         });
@@ -449,17 +498,18 @@
 
           day.activities.forEach((activity, actIndex) => {
             const isLast = actIndex === day.activities.length - 1;
-            const photoUrl = activity.photos && activity.photos[0] 
-              ? activity.photos[0].photo_url
-              : '';
-            
+            const photoUrl =
+              activity.photos && activity.photos[0]
+                ? activity.photos[0].photo_url
+                : "";
+
             const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
             
             <div class="location-block">
               <div class="timeline-left">
-                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
-                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
                 </div>
               </div>
               <div class="timeline-right">
@@ -472,17 +522,22 @@
               </div>
             </div>
 
-            ${!isLast ? `
+            ${
+              !isLast
+                ? `
             <div class="transit-block">
               <div class="transit-line"></div>
               <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
             </div>
-            ` : '<div style="height: 15px;"></div>'} 
+            `
+                : '<div style="height: 15px;"></div>'
+            } 
           `;
 
             const div = document.createElement("div");
             div.className = "timeline-item";
-            div.dataset.activityId = activity.activityId || activity.place_name || String(actIndex);
+            div.dataset.activityId =
+              activity.activityId || activity.place_name || String(actIndex);
             div.innerHTML = newItemHTML;
             timelineList.appendChild(div);
           });
@@ -542,7 +597,7 @@
             },
           );
         });
-        
+
         loadAllTimelineActivities();
       }
 
@@ -556,7 +611,6 @@
           return;
         }
 
-        
         const { DirectionsService, DirectionsRenderer } = google.maps;
 
         const directionsService = new DirectionsService();
@@ -594,9 +648,9 @@
               addCustomMarkers(activities, dayIndex);
               // 載入該天的時間線
               loadSingleDayTimeline(day, dayIndex);
-                setTimeout(() => {
-              map.panBy(0, 180); 
-            }, 150);
+              setTimeout(() => {
+                map.panBy(0, 180);
+              }, 150);
             } else {
               console.error("路線規劃失敗:", status);
             }
@@ -621,8 +675,8 @@
         allBtns.forEach((btn) => {
           btn.classList.remove("active");
           btn.style.backgroundColor = ""; // 清除背景色
-          btn.style.color = "";           // 清除文字顏色
-          btn.style.borderColor = "";     // 清除邊框顏色
+          btn.style.color = ""; // 清除文字顏色
+          btn.style.borderColor = ""; // 清除邊框顏色
         });
 
         // 2. 設定當前被點擊按鈕的專屬顏色
@@ -680,17 +734,17 @@
           });
 
           map.addListener("click", () => {
-          if (justClickedMarker) {
-            justClickedMarker = false;
-            return;
-          }
-          // 當點擊地圖時，檢查下邊欄是否展開，如果是就收起
-          const sheet = document.getElementById("bottomSheet");
-          if (sheet && sheet.classList.contains("expanded")) {
-            closeSheet();
-          }
-          clearCurrentPopup();
-        });
+            if (justClickedMarker) {
+              justClickedMarker = false;
+              return;
+            }
+            // 當點擊地圖時，檢查下邊欄是否展開，如果是就收起
+            const sheet = document.getElementById("bottomSheet");
+            if (sheet && sheet.classList.contains("expanded")) {
+              closeSheet();
+            }
+            clearCurrentPopup();
+          });
 
           createDayButtons();
           displayAllDays();
@@ -707,16 +761,13 @@
           script.async = true;
           document.head.appendChild(script);
         });
-    </script>
 
-    <script>
       const sidebar = document.getElementById("sidebar");
       const overlay = document.querySelector(".sidebar-overlay");
       const sheet = document.getElementById("bottomSheet");
       const fabGroup = document.getElementById("fabGroup");
       const mapContainer = document.getElementById("mapContainer");
       const dragHandle = document.getElementById("dragHandle");
-      const dragHeader = document.getElementById("dragHeader");
 
       let isEditMode = false;
       let isChatMode = false;
@@ -730,6 +781,20 @@
       const robotFabIcon = document
         .getElementById("robotFab")
         .querySelector("i");
+
+      // --- 行程搜尋相關變數 ---
+      const spotSearchOverlay = document.getElementById("spotSearchOverlay");
+      const spotSearchInput = document.getElementById("spotSearchInput");
+      const spotSearchStatus = document.getElementById("spotSearchStatus");
+      const spotSearchResults = document.getElementById("spotSearchResults");
+
+      const spotSearchState = {
+        isOpen: false,
+        results: [],
+        selectedIndex: -1,
+        debounceTimer: null,
+        requestId: 0,
+      };
 
       // --- SortableJS 設定 (拖拽功能) ---
       const timelineList = document.getElementById("timelineList");
@@ -754,7 +819,7 @@
           }
           isDragChanged = true;
           document.getElementById("dragConfirmBtn").classList.add("show");
-        }
+        },
       });
 
       // 新增確認按鈕的功能
@@ -1020,7 +1085,7 @@
             isDragChanged = false;
           }
           editedDays = null;
-          
+
           isEditMode = false;
           timelineView.classList.remove("editing");
           editFab.classList.remove("fa-times");
@@ -1049,8 +1114,12 @@
           setTimeout(() => {
             item.remove();
             if (isEditMode && editedDays && currentDayIndex !== -1) {
-              editedDays[currentDayIndex].activities = editedDays[currentDayIndex].activities.filter(
-                (act) => act.activityId !== activityId && act.place_name !== activityId,
+              editedDays[currentDayIndex].activities = editedDays[
+                currentDayIndex
+              ].activities.filter(
+                (act) =>
+                  act.activityId !== activityId &&
+                  act.place_name !== activityId,
               );
               isDragChanged = true;
             }
@@ -1058,13 +1127,266 @@
         }
       }
 
+      // --- 行程搜尋相關功能 ---
+      function openSpotSearchModal() {
+        spotSearchState.isOpen = true;
+        spotSearchState.results = [];
+        spotSearchState.selectedIndex = -1;
+
+        spotSearchOverlay.classList.add("active");
+        spotSearchOverlay.setAttribute("aria-hidden", "false");
+        spotSearchResults.innerHTML = "";
+        spotSearchStatus.textContent = "";
+        spotSearchInput.value = "";
+
+        setTimeout(() => {
+          spotSearchInput.focus(); // 動畫結束後才聚焦
+        }, 50);
+      }
+      // 關閉搜尋視窗
+      function closeSpotSearchModal() {
+        spotSearchState.isOpen = false;
+        spotSearchOverlay.classList.remove("active");
+        spotSearchOverlay.setAttribute("aria-hidden", "true");
+
+        if (spotSearchState.debounceTimer) {
+          clearTimeout(spotSearchState.debounceTimer);
+          spotSearchState.debounceTimer = null;
+        }
+      }
+
+      // 渲染搜尋結果列表
+      function renderSpotSearchResults() {
+        if (!spotSearchState.results.length) {
+          spotSearchResults.innerHTML = "";
+          return;
+        }
+
+        const html = spotSearchState.results
+          .map((item, index) => {
+            const isSelected = index === spotSearchState.selectedIndex;
+            const photoUrl =
+              item.photos && item.photos[0] && item.photos[0].photo_url
+                ? item.photos[0].photo_url
+                : "";
+            return `
+              <button
+                type="button"
+                class="spot-search-item ${isSelected ? "active" : ""}"
+                onclick="selectSpotSearchResult(${index})"
+              >
+                <div class="spot-search-item-thumb ${photoUrl ? "has-photo" : ""}" ${photoUrl ? `style="background-image:url('${photoUrl}')"` : ""}>
+                  ${photoUrl ? "" : '<i class="far fa-image"></i>'}
+                </div>
+                <div class="spot-search-item-body">
+                  <div class="spot-search-item-main">${item.name || "未命名地點"}</div>
+                  <div class="spot-search-item-sub">${item.address || "無地址資訊"}</div>
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+
+        spotSearchResults.innerHTML = html;
+      }
+
+      function selectSpotSearchResult(index) {
+        spotSearchState.selectedIndex = index;
+        renderSpotSearchResults();
+      }
+      // 從行程活動中嘗試獲取一個有效的座標位置，作為搜尋的錨點
+      function normalizeActivityLocation(location) {
+        if (!location) return null;
+
+        const lat =
+          typeof location.lat === "number"
+            ? location.lat
+            : typeof location.latitude === "number"
+              ? location.latitude
+              : null;
+
+        const lng =
+          typeof location.lng === "number"
+            ? location.lng
+            : typeof location.longitude === "number"
+              ? location.longitude
+              : null;
+
+        if (lat === null || lng === null) return null;
+        return { latitude: lat, longitude: lng };
+      }
+
+      // 優先使用當前日期的最後一個活動位置，若無則從所有日期的最後活動往前找
+      function getSearchAnchorLocation() {
+        const getDayLastLocation = (day) => {
+          if (
+            !day ||
+            !Array.isArray(day.activities) ||
+            !day.activities.length
+          ) {
+            return null;
+          }
+
+          for (let i = day.activities.length - 1; i >= 0; i--) {
+            const normalized = normalizeActivityLocation(
+              day.activities[i].location,
+            );
+            if (normalized) return normalized;
+          }
+          return null;
+        };
+
+        if (currentDayIndex >= 0 && currentDayIndex < allDays.length) {
+          const byCurrentDay = getDayLastLocation(allDays[currentDayIndex]);
+          if (byCurrentDay) return byCurrentDay;
+        }
+
+        for (let i = allDays.length - 1; i >= 0; i--) {
+          const byLastDay = getDayLastLocation(allDays[i]);
+          if (byLastDay) return byLastDay;
+        }
+
+        return null;
+      }
+
+      // 執行景點搜尋
+      async function performSpotSearch(
+        keyword,
+        reqId,
+        showNoResultMessage = false,
+      ) {
+        try {
+          // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
+          const anchorLocation = getSearchAnchorLocation();
+          let response;
+          let payload;
+          let useNearbyEndpoint = false;
+
+          if (anchorLocation) {
+            response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                textQuery: keyword,
+                location: anchorLocation,
+                radius: 1500,
+                languageCode: "zh-TW",
+                maxResultCount: 8,
+              }),
+            });
+            payload = await response.json();
+            useNearbyEndpoint = response.ok && payload.success;
+          }
+
+          // nearby 無結果/失敗時，退回原本文字搜尋
+          if (!useNearbyEndpoint) {
+            response = await fetch(`${API_BASE}/api/maps/search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                textQuery: keyword,
+                languageCode: "zh-TW",
+                maxResultCount: 10,
+              }),
+            });
+
+            payload = await response.json();
+          }
+
+          if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
+            return;
+          }
+
+          const places = payload?.data?.places || [];
+          spotSearchState.results = places;
+          spotSearchState.selectedIndex = -1;
+
+          if (!response.ok || !payload.success) {
+            spotSearchStatus.textContent =
+              payload.error || "搜尋失敗，請稍後再試";
+            spotSearchResults.innerHTML = "";
+            return;
+          }
+
+          if (!places.length) {
+            spotSearchStatus.textContent = showNoResultMessage
+              ? "找不到相關景點，請嘗試其他關鍵字"
+              : "";
+            spotSearchResults.innerHTML = "";
+            return;
+          }
+
+          spotSearchStatus.textContent = "";
+
+          renderSpotSearchResults();
+        } catch (error) {
+          if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
+            return;
+          }
+          spotSearchStatus.textContent = "搜尋失敗，請檢查網路或稍後再試";
+          spotSearchResults.innerHTML = "";
+        }
+      }
+
+      function triggerSpotSearch(showNoResultMessage = false) {
+        const keyword = spotSearchInput.value.trim();
+        if (!keyword) {
+          spotSearchStatus.textContent = "";
+          spotSearchResults.innerHTML = "";
+          return;
+        }
+
+        const anchorLocation = getSearchAnchorLocation();
+        if (anchorLocation && map && typeof map.panTo === "function") {
+          map.panTo({
+            lat: anchorLocation.latitude,
+            lng: anchorLocation.longitude,
+          });
+        }
+
+        spotSearchState.requestId += 1;
+        const currentReqId = spotSearchState.requestId;
+
+        spotSearchStatus.textContent = "";
+        spotSearchResults.innerHTML = "";
+        performSpotSearch(keyword, currentReqId, showNoResultMessage);
+      }
+
+      function onSpotSearchInput() {
+        if (spotSearchState.debounceTimer) {
+          clearTimeout(spotSearchState.debounceTimer);
+        }
+
+        spotSearchState.debounceTimer = setTimeout(() => {
+          if (!spotSearchState.isOpen) return;
+          triggerSpotSearch();
+        }, 350);
+      }
+
+      function onSpotSearchKeydown(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          triggerSpotSearch(true);
+          return;
+        }
+
+        if (e.key === "Escape") {
+          closeSpotSearchModal();
+        }
+      }
+
+      // 新增行程項目（打開搜尋視窗）
       function addItem() {
+        openSpotSearchModal();
+      }
+
+      function addItem1() {
         // 防止未定義變數造成錯誤
         const activity = {
           place_name: "新增景點",
           time: "未定",
           description: "請點擊編輯此行程內容",
-          cost: ""
+          cost: "",
         };
         const photoUrl = "";
         const isLast = true;
@@ -1074,8 +1396,8 @@
         
         <div class="location-block">
           <div class="timeline-left">
-            <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}>
-              <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i>
+            <div class="location-img" ${photoUrl ? (style = "background-image: url('${photoUrl}'); background-size: cover; background-position: center;") : ""}>
+              <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
             </div>
           </div>
           <div class="timeline-right">
@@ -1088,16 +1410,21 @@
           </div>
         </div>
 
-        ${!isLast ? `
+        ${
+          !isLast
+            ? `
         <div class="transit-block">
           <div class="transit-line"></div>
           <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
         </div>
-        ` : '<div style="height: 15px;"></div>'} 
+        `
+            : '<div style="height: 15px;"></div>'
+        } 
       `;
         const div = document.createElement("div");
         div.className = "timeline-item";
-        div.dataset.activityId = activity.activityId || activity.place_name || String(Date.now());
+        div.dataset.activityId =
+          activity.activityId || activity.place_name || String(Date.now());
         div.innerHTML = newItemHTML;
         timelineList.appendChild(div);
 
@@ -1130,7 +1457,11 @@
       }
 
       function syncSheetState(state) {
-        mapContainer.classList.remove("sheet-expanded", "sheet-half", "sheet-collapsed");
+        mapContainer.classList.remove(
+          "sheet-expanded",
+          "sheet-half",
+          "sheet-collapsed",
+        );
         mapContainer.classList.add(state);
 
         fabGroup.classList.remove("horizontal", "vertical");
@@ -1164,7 +1495,6 @@
       }
 
       dragHandle.addEventListener("click", toggleBottomSheet);
-      dragHeader.addEventListener("click", toggleBottomSheet);
 
       let startY = 0;
       const threshold = 50;
@@ -1182,10 +1512,6 @@
         passive: true,
       });
       dragHandle.addEventListener("touchend", handleTouchEnd);
-      dragHeader.addEventListener("touchstart", handleTouchStart, {
-        passive: true,
-      });
-      dragHeader.addEventListener("touchend", handleTouchEnd);
 
       mapContainer.addEventListener("click", function (e) {
         if (
@@ -1215,6 +1541,15 @@
         window.location.href = "setup.html";
       }
 
+      spotSearchOverlay.addEventListener("click", function (e) {
+        if (e.target === spotSearchOverlay) {
+          closeSpotSearchModal();
+        }
+      });
+      
+      spotSearchInput.addEventListener("input", onSpotSearchInput);
+      spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
+
       // 處理鍵盤彈出時的視窗大小變化
       window.visualViewport.addEventListener("resize", function () {
         const inputBar = document.querySelector(".chat-input-bar");
@@ -1236,5 +1571,3 @@
     </script>
   </body>
 </html>
-
-

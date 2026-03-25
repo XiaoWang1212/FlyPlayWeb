@@ -14,6 +14,8 @@
 
 let scrollEndTimeout;
 
+const API_BASE = "http://127.0.0.1:5001";
+
 // 跳轉頁面
 function goToDestinationPage() {
   const basePath = window.location.href.substring(
@@ -124,6 +126,11 @@ function bindDaysPickerClick(pickerScroll) {
     item.scrollIntoView({ block: "center", behavior: "smooth" });
 
     updateSelectedDay(pickerScroll);
+
+    // 關掉選擇器
+    document.getElementById("days-picker-group")?.classList.remove("active");
+    pickerScroll.removeEventListener("scroll", handlePickerScroll);
+    showAIRecommendButton();
   });
 }
 
@@ -284,10 +291,14 @@ function generateCompanionCards(container) {
       document.getElementById("selected-companion").textContent = opt.label;
 
       saveTripSetup({
+        companionAny: opt.value === "",
         companion: opt.value,
         companionLabel: opt.label,
       });
 
+      document
+        .getElementById("companion-picker-group")
+        ?.classList.remove("active");
       showAIRecommendButton();
     });
 
@@ -296,11 +307,17 @@ function generateCompanionCards(container) {
 
   // 回填已選項目
   const tripSetup = loadTripSetup();
-  if (tripSetup.companion) {
+  if (tripSetup.companionAny === true) {
+    const anyCompanionCard = container.querySelector('[data-value=""]');
+    if (anyCompanionCard) anyCompanionCard.classList.add("selected");
+  } else if (tripSetup.companion) {
     const selectedCard = container.querySelector(
       `[data-value="${tripSetup.companion}"]`,
     );
     if (selectedCard) selectedCard.classList.add("selected");
+  } else {
+    const anyCompanionCard = container.querySelector('[data-value=""]');
+    if (anyCompanionCard) anyCompanionCard.classList.add("selected");
   }
 }
 
@@ -331,6 +348,10 @@ function toggleTravelTypePicker() {
   }
 
   pickerGroup.classList.toggle("active");
+
+  if (!pickerGroup.classList.contains("active")) {
+    showAIRecommendButton();
+  }
 }
 
 function generateTravelTypeCards(container) {
@@ -355,6 +376,9 @@ function generateTravelTypeCards(container) {
                 saveTripSetup({
                     travelTypes: [],
                     travelTypeLabels: [],
+                  travelTypeAny: true, 
+                  travelType: '',
+                  travelTypeLabel: '',
                 });
             } else {
                 // 點擊具體類型時，先取消「任何類型」的選中狀態
@@ -390,10 +414,11 @@ function generateTravelTypeCards(container) {
                 saveTripSetup({
                     travelTypes: selectedValues,
                     travelTypeLabels: selectedLabels,
+                  travelTypeAny: selectedValues.length === 0,
+                  travelType: selectedValues[0] || '',
+                  travelTypeLabel: selectedLabels[0] || '',
                 });
             }
-
-      showAIRecommendButton();
     });
 
         container.appendChild(card);
@@ -420,6 +445,43 @@ function generateTravelTypeCards(container) {
 
 
 const STORAGE_KEY_TRIP_SETUP = 'tripSetup';
+
+// 判斷是否為重新載入頁面 才不會從index過來的時候還留著之前選的
+function isReloadNavigation() {
+  const navEntries = performance.getEntriesByType("navigation");
+  if (navEntries && navEntries.length > 0) {
+    return navEntries[0].type === "reload";
+  }
+
+  if (performance.navigation) {
+    return performance.navigation.type === 1;
+  }
+
+  return false;
+}
+
+function shouldResetSetupSelectionOnEntry() {
+  if (isReloadNavigation()) return false;
+
+  const referrer = document.referrer || "";
+  if (!referrer) return false;
+
+  try {
+    const referrerUrl = new URL(referrer, window.location.origin);
+    return referrerUrl.pathname.endsWith("/index.html");
+  } catch {
+    return referrer.includes("index.html");
+  }
+}
+
+function clearSetupSelectionState() {
+  localStorage.removeItem(STORAGE_KEY_TRIP_SETUP);
+  localStorage.removeItem("selectedDestinations");
+}
+
+if (shouldResetSetupSelectionOnEntry()) {
+  clearSetupSelectionState();
+}
 
 // 拿目前存的所有設定（出發地、天數、旅伴等）
 function loadTripSetup() {
@@ -562,7 +624,9 @@ function initBudgetPicker() {
         budget: budgetLabel,
         budgetLabel,
       });
-
+      
+      // 關掉選擇器
+      document.getElementById("budget-picker-group")?.classList.remove("active");
       showAIRecommendButton();
     });
   });
@@ -648,6 +712,11 @@ function buildItineraryPayload() {
   const destinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
+  const interests = Array.isArray(tripSetup.travelTypeLabels)
+    ? tripSetup.travelTypeLabels
+    : tripSetup.travelTypeLabel
+      ? [tripSetup.travelTypeLabel]
+      : [];
 
   const location = destinations?.[0]?.city || destinations?.[0]?.name || "";
   const days = Number(tripSetup.daysValue || 0);
@@ -657,7 +726,7 @@ function buildItineraryPayload() {
     days,
     budget: tripSetup.budgetLabel || tripSetup.budget || "中等",
     travelerType: tripSetup.companionLabel || tripSetup.companion || "個人",
-    interests: tripSetup.travelTypeLabel ? [tripSetup.travelTypeLabel] : [],
+    interests,
     startDate: tripSetup.startDate || null,
   };
 }
@@ -709,6 +778,11 @@ function isSetupComplete() {
   const selectedDestinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
+  const hasCompanion = tripSetup.companionAny === true || !!tripSetup.companion;
+  const hasTravelType =
+    tripSetup.travelTypeAny === true || 
+    !!tripSetup.travelType ||
+    (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0);
 
   const hasBudget = !!(tripSetup.budget || tripSetup.budgetLabel || "中等");
 
@@ -716,8 +790,8 @@ function isSetupComplete() {
     selectedDestinations.length > 0 &&
     !!tripSetup.departure &&
     Number(tripSetup.daysValue) > 0 &&
-    !!tripSetup.companion &&
-    !!tripSetup.travelType &&
+    hasCompanion &&
+    hasTravelType &&
     hasBudget
   );
 }
@@ -728,8 +802,6 @@ function updateAIRecommendButtonState() {
 
   const ready = isSetupComplete();
 
-  // 你原本是用 show 控制可見，這裡一起處理
-  btn.classList.add("show");
   btn.disabled = !ready;
   btn.classList.toggle("disabled", !ready);
   btn.classList.toggle("enabled", ready);
@@ -785,6 +857,7 @@ window.onload = function () {
   // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
 
   initBudgetPicker();
+  showAIRecommendButton();
   updateAIRecommendButtonState();
 };
 
@@ -792,4 +865,26 @@ window.onload = function () {
 const tripSetup = loadTripSetup();
 if (!tripSetup.budget && !tripSetup.budgetLabel) {
   saveTripSetup({ budget: "中等", budgetLabel: "中等" });
+}
+
+if (
+  tripSetup.travelTypeAny === undefined &&
+  !tripSetup.travelType &&
+  !(Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0)
+) {
+  saveTripSetup({
+    travelTypeAny: true,
+    travelTypes: [],
+    travelTypeLabels: [],
+    travelType: "",
+    travelTypeLabel: "",
+  });
+}
+
+if (tripSetup.companionAny === undefined && !tripSetup.companion) {
+  saveTripSetup({
+    companionAny: true,
+    companion: "",
+    companionLabel: "任何旅伴",
+  });
 }

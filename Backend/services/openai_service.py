@@ -7,68 +7,68 @@ class ChatGPTService:
         self.client = AsyncOpenAI(api_key=Config.OPENAI_API_KEY)
         self.model = "gpt-4o-mini"
     
-    async def get_travel_recommendation(self, location, days, transportation, preferences):
-        """基於參數生成旅遊推薦 (簡要版)"""
-        try:
-            prompt = f"""你是一個專業的旅遊顧問。請為使用者規劃前往{location}的{days}天行程。
-            偏好活動: {preferences}
-            主要交通方式: {transportation}
+    # async def get_travel_recommendation(self, location, days, transportation, preferences):
+    #     """基於參數生成旅遊推薦 (簡要版)"""
+    #     try:
+    #         prompt = f"""你是一個專業的旅遊顧問。請為使用者規劃前往{location}的{days}天行程。
+    #         偏好活動: {preferences}
+    #         主要交通方式: {transportation}
 
-            請嚴格遵守以下 JSON 格式回傳，不要包含 Markdown 標記：
-            {{
-                "recommendation_summary": "一句話推薦語",
-                "highlights": ["亮點1", "亮點2"],
-                "daily_outline": [
-                    {{ "day": 1, "weekday": "星期幾", "focus": "第一天重點", "places": ["地點A", "地點B"] }}
-                ]
-            }}
-            """
+    #         請嚴格遵守以下 JSON 格式回傳，不要包含 Markdown 標記：
+    #         {{
+    #             "recommendation_summary": "一句話推薦語",
+    #             "highlights": ["亮點1", "亮點2"],
+    #             "daily_outline": [
+    #                 {{ "day": 1, "weekday": "星期幾", "focus": "第一天重點", "places": ["地點A", "地點B"] }}
+    #             ]
+    #         }}
+    #         """
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "你是一個專業的旅遊顧問，僅以JSON格式回傳資料。"},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=1500
-            )
-            raw_content = response.choices[0].message.content
-            parsed_json = json.loads(raw_content)
+    #         response = await self.client.chat.completions.create(
+    #             model=self.model,
+    #             messages=[
+    #                 {"role": "system", "content": "你是一個專業的旅遊顧問，僅以JSON格式回傳資料。"},
+    #                 {"role": "user", "content": prompt}
+    #             ],
+    #             response_format={"type": "json_object"},
+    #             max_tokens=1500
+    #         )
+    #         raw_content = response.choices[0].message.content
+    #         parsed_json = json.loads(raw_content)
 
-            return {
-                'success': True,
-                'data': {
-                    'raw_output': raw_content,
-                    'parsed': parsed_json
-                }
-            }
-        except Exception as e:
-            return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
+    #         return {
+    #             'success': True,
+    #             'data': {
+    #                 'raw_output': raw_content,
+    #                 'parsed': parsed_json
+    #             }
+    #         }
+    #     except Exception as e:
+    #         return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
     
-    async def chat_with_ai(self, message, conversation_history=[]):
-        """與 AI 進行對話"""
-        try:
-            messages = [
-                {"role": "system", "content": "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"}
-            ] + conversation_history + [{"role": "user", "content": message}]
+    # async def chat_with_ai(self, message, conversation_history=[]):
+    #     """與 AI 進行對話"""
+    #     try:
+    #         messages = [
+    #             {"role": "system", "content": "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"}
+    #         ] + conversation_history + [{"role": "user", "content": message}]
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=500
-            )
+    #         response = await self.client.chat.completions.create(
+    #             model=self.model,
+    #             messages=messages,
+    #             max_tokens=500
+    #         )
             
-            ai_content = response.choices[0].message.content
-            return {
-                'success': True,
-                'data': {
-                    'response': ai_content,
-                    'history': messages + [{"role": "assistant", "content": ai_content}]
-                }
-            }
-        except Exception as e:
-            return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
+    #         ai_content = response.choices[0].message.content
+    #         return {
+    #             'success': True,
+    #             'data': {
+    #                 'response': ai_content,
+    #                 'history': messages + [{"role": "assistant", "content": ai_content}]
+    #             }
+    #         }
+    #     except Exception as e:
+    #         return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
     
     async def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
         """生成完整詳細行程 (結構化輸出)"""
