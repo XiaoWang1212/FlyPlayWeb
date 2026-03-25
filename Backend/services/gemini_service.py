@@ -1,7 +1,7 @@
 import json
 import google.generativeai as genai
 from config import Config
-import re
+from datetime import datetime
 
 class GeminiService:
     def __init__(self):
@@ -39,6 +39,29 @@ class GeminiService:
             raw_text = raw_text[:-3].strip()
         
         return raw_text
+
+    def _parse_response_json(self, response):
+        """統一處理 Gemini 回傳文字並解析為 JSON。"""
+        raw_content = response.text.strip()
+        cleaned_json = self._clean_json_response(raw_content)
+        parsed_json = json.loads(cleaned_json)
+        return raw_content, cleaned_json, parsed_json
+
+    def _extract_token_usage(self, response):
+        """提取 Gemini token 使用量；若無法取得則回傳 None。"""
+        usage_metadata = getattr(response, 'usage_metadata', None)
+        if not usage_metadata:
+            return {
+                'input_tokens': None,
+                'output_tokens': None,
+                'total_tokens': None,
+            }
+
+        return {
+            'input_tokens': getattr(usage_metadata, 'prompt_token_count', None),
+            'output_tokens': getattr(usage_metadata, 'candidates_token_count', None),
+            'total_tokens': getattr(usage_metadata, 'total_token_count', None),
+        }
     
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
@@ -61,55 +84,54 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+            token_usage = self._extract_token_usage(response)
+
+            raw_content, _, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': raw_content,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
     
-    def chat_with_ai(self, message, conversation_history=[]):
-        """與 AI 進行對話"""
-        try:
-            # 轉換為 Gemini 格式
-            chat = self.model.start_chat(history=[])
+    # def chat_with_ai(self, message, conversation_history=[]):
+    #     """與 AI 進行對話"""
+    #     try:
+    #         # 轉換為 Gemini 格式
+    #         chat = self.model.start_chat(history=[])
             
-            # 添加系统提示
-            system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
+    #         # 添加系统提示
+    #         system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
             
-            # 構建完整訊息
-            full_message = f"{system_prompt}\n\n用户消息: {message}"
+    #         # 構建完整訊息
+    #         full_message = f"{system_prompt}\n\n用户消息: {message}"
             
-            if conversation_history:
-                # 重建對話歷史
-                for msg in conversation_history:
-                    if msg['role'] == 'user':
-                        chat.send_message(msg['content'])
+    #         if conversation_history:
+    #             # 重建對話歷史
+    #             for msg in conversation_history:
+    #                 if msg['role'] == 'user':
+    #                     chat.send_message(msg['content'])
             
-            response = chat.send_message(full_message)
-            ai_content = response.text
+    #         response = chat.send_message(full_message)
+    #         ai_content = response.text
             
-            return {
-                'success': True,
-                'data': {
-                    'response': ai_content,
-                    'history': conversation_history + [
-                        {"role": "user", "content": message},
-                        {"role": "assistant", "content": ai_content}
-                    ]
-                }
-            }
-        except Exception as e:
-            return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
+    #         return {
+    #             'success': True,
+    #             'data': {
+    #                 'response': ai_content,
+    #                 'history': conversation_history + [
+    #                     {"role": "user", "content": message},
+    #                     {"role": "assistant", "content": ai_content}
+    #                 ]
+    #             }
+    #         }
+    #     except Exception as e:
+    #         return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
     
     def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
         """生成完整詳細行程 (結構化輸出)"""
@@ -123,7 +145,7 @@ class GeminiService:
             興趣: {interests_str}
             {date_info}
             
-            請嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
+            嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "trip_title": "行程標題 (例如：京都古韻三日遊)",
                 "overview": "行程總覽描述",
@@ -132,15 +154,13 @@ class GeminiService:
                     {{
                         "day": 1,
                         "weekday": "星期幾 (例如：星期一)", 
-                        "date_title": "第一天主題",
                         "activities": [
                             {{
                                 "time": "09:00",
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",
-                                "cost": "預估費用",
-                                "location": {{ "lat": 0.0, "lng": 0.0 }}
+                                "cost": "預估費用"
                             }}
                         ]
                     }}
@@ -152,23 +172,24 @@ class GeminiService:
             }}
             
             只回傳純 JSON，不要包含任何 markdown 標記。
+            不要生成經緯度，座標由系統用 Google Maps API 補齊。
+            僅可輸出上述欄位，不可新增任何欄位。
             """
             
             response = self.model.generate_content(
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+            token_usage = self._extract_token_usage(response)
+
+            raw_content, _, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': raw_content,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
@@ -189,17 +210,16 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+            token_usage = self._extract_token_usage(response)
+
+            _, cleaned_json, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
@@ -229,17 +249,16 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config
             )
-            
-            raw_content = response.text.strip()
-            # 使用新的清理函式
-            cleaned_json = self._clean_json_response(raw_content)
-            parsed_json = json.loads(cleaned_json)
+            token_usage = self._extract_token_usage(response)
+
+            _, cleaned_json, parsed_json = self._parse_response_json(response)
 
             return {
                 'success': True,
                 'data': {
                     'raw_output': cleaned_json,
-                    'parsed': parsed_json
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
                 }
             }
         except Exception as e:
