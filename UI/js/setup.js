@@ -14,6 +14,8 @@
 
 let scrollEndTimeout;
 
+const API_BASE = "http://127.0.0.1:5001";
+
 // 跳轉頁面
 function goToDestinationPage() {
   const basePath = window.location.href.substring(
