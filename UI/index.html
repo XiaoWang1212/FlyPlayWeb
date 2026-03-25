@@ -254,12 +254,12 @@
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
         const color = getColorByDay(dayIndex);
 
-        activities.forEach((activity) => {
+        activities.forEach((activity, actIndex) => {
           // 製作地圖上的圓形小標記
           const markerDiv = document.createElement("div");
           markerDiv.classList.add("custom-marker");
           markerDiv.style.backgroundColor = color;
-          markerDiv.textContent = `D${dayIndex + 1}`;
+          markerDiv.innerHTML = `<span>${actIndex + 1}</span>`;
 
           const photoUrl = activity.photos && activity.photos[0] ? activity.photos[0].photo_url : '';
 
@@ -594,6 +594,9 @@
               addCustomMarkers(activities, dayIndex);
               // 載入該天的時間線
               loadSingleDayTimeline(day, dayIndex);
+                setTimeout(() => {
+              map.panBy(0, 180); 
+            }, 150);
             } else {
               console.error("路線規劃失敗:", status);
             }

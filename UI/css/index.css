@@ -181,7 +181,7 @@
             }
 
             /* --- Bottom Sheet (底部面板) --- */
-.bottom-sheet {
+            .bottom-sheet {
                 position: absolute; 
                 bottom: 0; 
                 left: 0; 
@@ -598,20 +598,47 @@
           margin-top: 5px;
         }
 
-        /* 自定義地圖標記樣式 */
+        /* --- 自定義地圖標記樣式 (水滴型) --- */
         .custom-marker {
-          width: 35px;
-          height: 35px;
-          border: 3px solid white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 12px;
-          cursor: pointer;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            width: 28px;
+            height: 28px;
+            border: 2px solid white;
+            
+            /* 關鍵 1：設定右上、右下、左上為圓角，左下角為 0 (尖端) */
+            border-radius: 50% 50% 50% 0; 
+            
+            /* 關鍵 2：將左下角的尖端旋轉 45 度，讓它朝向正下方 */
+            transform: rotate(-45deg); 
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            
+            /* 配合旋轉角度調整陰影 (-x, +y)，讓陰影維持在圖釘正下方 */
+            box-shadow: -2px 2px 6px rgba(0,0,0,0.4); 
+        }
+
+        /* 將水滴內的文字反向旋轉轉正 */
+        .custom-marker span {
+            transform: rotate(45deg); /* 反向旋轉 45 度把文字轉正 */
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            line-height: 1;
+            /* ✨ 👇 加上深色內圈的關鍵設定 👇 ✨ */
+    background-color: rgba(0, 0, 0, 0.25); /* 半透明黑色，自動變成圖釘底色的深色版！ */
+    width: 16px;  /* 內圈圓形的寬度 */
+    height: 16px; /* 內圈圓形的高度 */
+    border-radius: 50%; /* 把背景變成完美的圓形 */
+    
+    /* 讓文字在圓圈內絕對置中 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+            /* 視覺微調：因為水滴下方多了一塊尖端，稍微把文字往左上提一點點會在視覺上更置中 */
+            margin-top: 1px;
+            margin-left: -1px;
         }
 
         .drag-confirm-btn {
