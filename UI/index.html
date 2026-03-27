@@ -492,7 +492,16 @@
               // 載入該天的時間線
               loadSingleDayTimeline(day, dayIndex);
             } else {
-              console.error("路線規劃失敗:", status);
+              console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+                status: status,
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints,
+                activities: activities.map(a => ({
+                  name: a.place_name,
+                  location: a.location
+                }))
+              });
             }
           },
         );
@@ -571,6 +580,21 @@
           document.head.appendChild(script);
         });
     </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     <script>
       const sidebar = document.getElementById("sidebar");
