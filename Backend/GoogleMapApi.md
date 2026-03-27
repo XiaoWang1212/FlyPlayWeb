@@ -31,14 +31,14 @@ print(result)
 
 ```json
 {
-    "data": {
-        "destination": "台北車站",
-        "distance": "5.8 公里",
-        "duration": "20 分鐘",
-        "mode": "driving",
-        "origin": "台北101"
-    },
-    "success": true
+  "data": {
+    "destination": "台北車站",
+    "distance": "5.8 公里",
+    "duration": "20 分鐘",
+    "mode": "driving",
+    "origin": "台北101"
+  },
+  "success": true
 }
 ```
 
@@ -73,41 +73,41 @@ print(result)
 
 ```json
 {
-    "data": {
-        "destination": "台北車站",
-        "mode": "transit",
-        "origin": "台北101",
-        "steps": [
-            {
-                "distance": "0.2 公里",
-                "duration": "4 分鐘",
-                "instruction": "步行到台北101/世貿"
-            },
-            {
-                "arrival_stop": "台北車站",
-                "departure_stop": "台北101/世貿",
-                "instruction": "捷運 開往淡水站",
-                "line_name": "淡水信義線",
-                "num_stops": 7,
-                "vehicle": "SUBWAY"
-            },
-            {
-                "distance": "0.1 公里",
-                "duration": "2 分鐘",
-                "instruction": "步行到100台灣臺北市中正區臺北車站"
-            }
-        ]
-    },
-    "success": true
+  "data": {
+    "destination": "台北車站",
+    "mode": "transit",
+    "origin": "台北101",
+    "steps": [
+      {
+        "distance": "0.2 公里",
+        "duration": "4 分鐘",
+        "instruction": "步行到台北101/世貿"
+      },
+      {
+        "arrival_stop": "台北車站",
+        "departure_stop": "台北101/世貿",
+        "instruction": "捷運 開往淡水站",
+        "line_name": "淡水信義線",
+        "num_stops": 7,
+        "vehicle": "SUBWAY"
+      },
+      {
+        "distance": "0.1 公里",
+        "duration": "2 分鐘",
+        "instruction": "步行到100台灣臺北市中正區臺北車站"
+      }
+    ]
+  },
+  "success": true
 }
 ```
 
 ### 解釋
 
 - steps：路線步驟（依序）
-    1. 步行到捷運站
-    2. 搭乘捷運（包含線路、上下車站、站數、交通工具類型）
-    3. 下車後步行到目的地
+  1. 步行到捷運站
+  2. 搭乘捷運（包含線路、上下車站、站數、交通工具類型）
+  3. 下車後步行到目的地
 - 每個步驟都包含距離、時間、指示說明
 
 ---
@@ -115,13 +115,13 @@ print(result)
 ## 3️⃣ 店家營業時間查詢
 
 **API 路徑**  
-`POST http://localhost:5001/api/maps/opening_hours`
+`POST http://localhost:5001/api/maps/business_info`
 
 ```python
 from services.googlemap_service import GoogleMapService
 
 service = GoogleMapService()
-result = service.get_opening_hours("Simple Kaffa Sola 天空興波", is_name=True)
+result = service.get_place_business_info("Simple Kaffa Sola 天空興波", is_name=True)
 print(result)
 ```
 
@@ -137,20 +137,31 @@ print(result)
 
 ```json
 {
-    "data": {
-        "name": "Simple Kaffa Sola 天空興波",
-        "opening_hours": [
-            "星期一: 09:00 – 19:00",
-            "星期二: 09:00 – 19:00",
-            "星期三: 09:00 – 19:00",
-            "星期四: 09:00 – 19:00",
-            "星期五: 09:00 – 19:00",
-            "星期六: 09:00 – 19:00",
-            "星期日: 09:00 – 19:00"
-        ],
-        "place_id": "Simple Kaffa Sola 天空興波"
-    },
-    "success": true
+  "data": {
+    "name": "Simple Kaffa Sola 天空興波",
+    "opening_hours": [
+      "星期一: 09:00 – 19:00",
+      "星期二: 09:00 – 19:00",
+      "星期三: 09:00 – 19:00",
+      "星期四: 09:00 – 19:00",
+      "星期五: 09:00 – 19:00",
+      "星期六: 09:00 – 19:00",
+      "星期日: 09:00 – 19:00"
+    ],
+    "place_id": "Simple Kaffa Sola 天空興波",
+    "google_place_id": "ChIJP5CF7pmrQjQRY1MyLg_GRrw",
+    "price_range": {
+      "startPrice": {
+        "currencyCode": "TWD",
+        "units": "200"
+      },
+      "endPrice": {
+        "currencyCode": "TWD",
+        "units": "1200"
+      }
+    }
+  },
+  "success": true
 }
 ```
 
@@ -158,7 +169,59 @@ print(result)
 
 - name：店家名稱
 - opening_hours：每週營業時間
-- place_id：查詢用的店名（或 place_id）
+- place_id：檢索輸入（若從店名查詢，為店名；若直接 path 查詢，為 path 資料）
+- google_place_id：Google Places 真實 place_id（可用於后續詳細資料查詢）
+- price_range：Google place details 回傳的價格範圍物件，通常含 startPrice/endPrice
+
+---
+
+## 3️⃣a  店家營業時間查詢（直接 place_id）
+
+**API 路徑**  
+`GET http://localhost:5001/api/maps/business_info/<place_id>`
+
+### 範例
+
+```bash
+curl -X GET "http://localhost:5001/api/maps/business_info/ChIJP5CF7pmrQjQRY1MyLg_GRrw" -H "Content-Type: application/json"
+```
+
+### 回傳範例
+
+```json
+{
+  "data": {
+    "name": "Simple Kaffa Sola 天空興波",
+    "opening_hours": [
+      "星期一: 09:00 – 19:00",
+      "星期二: 09:00 – 19:00",
+      "星期三: 09:00 – 19:00",
+      "星期四: 09:00 – 19:00",
+      "星期五: 09:00 – 19:00",
+      "星期六: 09:00 – 19:00",
+      "星期日: 09:00 – 19:00"
+    ],
+    "place_id": "ChIJP5CF7pmrQjQRY1MyLg_GRrw",
+    "price_range": {
+      "startPrice": {
+        "currencyCode": "TWD",
+        "units": "200"
+      },
+      "endPrice": {
+        "currencyCode": "TWD",
+        "units": "1200"
+      }
+    }
+  },
+  "success": true
+}
+```
+
+### 解釋
+
+- place_id：Google Places 真實 place_id
+- API 路徑取自 route `/business_info/<place_id>`
+- 輕鬆從名稱查到ID之後直接用此路徑重用（或前端直接給ID即可）
 
 ---
 
@@ -208,33 +271,33 @@ print(result)
 
 ```json
 {
-    "trip_title": "京都古韻三日遊",
-    "overview": "以寺社與美食為主的慢旅",
-    "total_budget_estimate": "JPY 45000-60000",
-    "days": [
+  "trip_title": "京都古韻三日遊",
+  "overview": "以寺社與美食為主的慢旅",
+  "total_budget_estimate": "JPY 45000-60000",
+  "days": [
+    {
+      "day": 1,
+      "weekday": "星期一",
+      "date_title": "東山散策",
+      "activities": [
         {
-            "day": 1,
-            "weekday": "星期一",
-            "date_title": "東山散策",
-            "activities": [
-                {
-                    "time": "09:00",
-                    "place_name": "清水寺",
-                    "description": "早晨避開人潮參觀",
-                    "type": "景點",
-                    "cost": "JPY 500"
-                }
-            ]
+          "time": "09:00",
+          "place_name": "清水寺",
+          "description": "早晨避開人潮參觀",
+          "type": "景點",
+          "cost": "JPY 500"
         }
-    ],
-    "dining_recommendations": [
-        {
-            "name": "錦市場美食街",
-            "feature": "在地小吃集中",
-            "price_range": "JPY 1000-2500"
-        }
-    ],
-    "transport_tips": "建議使用地鐵與步行"
+      ]
+    }
+  ],
+  "dining_recommendations": [
+    {
+      "name": "錦市場美食街",
+      "feature": "在地小吃集中",
+      "price_range": "JPY 1000-2500"
+    }
+  ],
+  "transport_tips": "建議使用地鐵與步行"
 }
 ```
 
@@ -242,46 +305,46 @@ print(result)
 
 ```json
 {
-    "trip_title": "京都古韻三日遊",
-    "overview": "以寺社與美食為主的慢旅",
-    "total_budget_estimate": "JPY 45000-60000",
-    "days": [
+  "trip_title": "京都古韻三日遊",
+  "overview": "以寺社與美食為主的慢旅",
+  "total_budget_estimate": "JPY 45000-60000",
+  "days": [
+    {
+      "day": 1,
+      "weekday": "星期一",
+      "date_title": "東山散策",
+      "activities": [
         {
-            "day": 1,
-            "weekday": "星期一",
-            "date_title": "東山散策",
-            "activities": [
-                {
-                    "time": "09:00",
-                    "place_name": "清水寺",
-                    "description": "早晨避開人潮參觀",
-                    "type": "景點",
-                    "cost": "JPY 500",
-                    "place_id": "ChIJWzQy8M4IAWAR0Glm4Wv3K2E",
-                    "address": "1 Chome-294 Kiyomizu, Higashiyama Ward, Kyoto",
-                    "location": {
-                        "lat": 34.9949,
-                        "lng": 135.785
-                    }
-                }
-            ]
+          "time": "09:00",
+          "place_name": "清水寺",
+          "description": "早晨避開人潮參觀",
+          "type": "景點",
+          "cost": "JPY 500",
+          "place_id": "ChIJWzQy8M4IAWAR0Glm4Wv3K2E",
+          "address": "1 Chome-294 Kiyomizu, Higashiyama Ward, Kyoto",
+          "location": {
+            "lat": 34.9949,
+            "lng": 135.785
+          }
         }
-    ],
-    "dining_recommendations": [
-        {
-            "name": "錦市場美食街",
-            "feature": "在地小吃集中",
-            "price_range": "JPY 1000-2500",
-            "place_id": "ChIJ0dQxM9oIAWARk6xkQf8VW3A",
-            "address": "Nishikikoji-dori, Nakagyo Ward, Kyoto",
-            "location": {
-                "lat": 35.005,
-                "lng": 135.765
-            }
-        }
-    ],
-    "transport_tips": "建議使用地鐵與步行",
-    "unresolved_places": []
+      ]
+    }
+  ],
+  "dining_recommendations": [
+    {
+      "name": "錦市場美食街",
+      "feature": "在地小吃集中",
+      "price_range": "JPY 1000-2500",
+      "place_id": "ChIJ0dQxM9oIAWARk6xkQf8VW3A",
+      "address": "Nishikikoji-dori, Nakagyo Ward, Kyoto",
+      "location": {
+        "lat": 35.005,
+        "lng": 135.765
+      }
+    }
+  ],
+  "transport_tips": "建議使用地鐵與步行",
+  "unresolved_places": []
 }
 ```
 

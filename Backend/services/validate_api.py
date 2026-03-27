@@ -51,7 +51,7 @@ def open_validate(data_days):
             act_time = act.get("time")
 
             # 查詢營業時間
-            result = service.get_opening_hours(place_name, is_name=True)
+            result = service.get_place_business_info(place_name, is_name=True)
             if not result.get("success"):
                 return {
                     "success": False,

@@ -211,14 +211,15 @@ class MapController:
                 'error': '必須提供地點名稱或 place_id',
                 'code': 'INVALID_INPUT'
             }
-        result = self.map_service.get_opening_hours(place_id_or_name, is_name=is_name)
+        result = self.map_service.get_place_business_info(place_id_or_name, is_name=is_name)
         if result.get('success'):
             return {
                 'success': True,
                 'data': {
                     'name': result.get('name'),
                     'opening_hours': result.get('opening_hours'),
-                    'place_id': result.get('place_id', place_id_or_name)
+                    'place_id': result.get('place_id', place_id_or_name),
+                    'price_range': result.get('price_range')
                 }
             }
         else:

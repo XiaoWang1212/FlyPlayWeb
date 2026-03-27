@@ -135,10 +135,10 @@ def get_distance_and_duration():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@map_bp.route('/opening_hours/<place_id>', methods=['GET'])
-def get_opening_hours(place_id):
+@map_bp.route('/business_info/<place_id>', methods=['GET'])
+def get_place_business_info(place_id):
     try:
-        result = map_controller.handle_opening_hours(place_id)
+        result = map_controller.handle_place_business_info(place_id)
         if result['success']:
             return jsonify(result), 200
         else:
@@ -146,10 +146,10 @@ def get_opening_hours(place_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
     
-@map_bp.route('/opening_hours', methods=['POST'])
-def get_opening_hours_by_name():
+@map_bp.route('/business_info', methods=['POST'])
+def get_place_business_info_by_name():
     """
-    支援只傳店名查營業時間
+    支援只傳店名查商業資訊
     """
     try:
         data = request.get_json()
