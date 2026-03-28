@@ -179,7 +179,7 @@ class GoogleMapService:
             headers = {
                 'Content-Type': 'application/json',
                 'X-Goog-Api-Key': self.api_key,
-                'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,rating,internationalPhoneNumber,websiteUri,regularOpeningHours,photos,reviews,types'
+                'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,rating,internationalPhoneNumber,websiteUri,regularOpeningHours,photos,reviews,types,priceLevel,priceRange'
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -191,6 +191,28 @@ class GoogleMapService:
                 'rating': r.get('rating', 0),
                 'text': r.get('text', {}).get('text', '')[:200]
             } for r in reviews[:3]]
+
+            price_level = data.get('priceLevel') or data.get('price_level')
+            price_range = data.get('priceRange') or data.get('price_range')
+            if not price_range and isinstance(price_level, int):
+                price_range_map = {
+                    0: '免費',
+                    1: '$',
+                    2: '$$',
+                    3: '$$$',
+                    4: '$$$$'
+                }
+                price_range = price_range_map.get(price_level, '未知')
+
+            price_map = {
+                0: '免費',
+                1: '便宜',
+                2: '中等',
+                3: '昂貴',
+                4: '高檔'
+            }
+            price_text = price_map.get(price_level, None) if isinstance(price_level, int) else None
+
             details = {
                 'place_id': data.get('id', ''),
                 'name': data.get('displayName', {}).get('text', ''),
@@ -200,6 +222,9 @@ class GoogleMapService:
                 'phone': data.get('internationalPhoneNumber', ''),
                 'website': data.get('websiteUri', ''),
                 'opening_hours': data.get('regularOpeningHours', {}),
+                'price_level': price_level,
+                'price_text': price_text,
+                'price_range': price_range,
                 'photos': simplified_photos,
                 'photo_count': len(photos),
                 'reviews': simplified_reviews,
@@ -323,44 +348,51 @@ class GoogleMapService:
         except Exception as e:
             return {'success': False, 'error': str(e)}
         
-    def get_opening_hours(self, place_id_or_name: str, is_name: bool = False):
+    def get_place_business_info(self, place_id_or_name: str, is_name: bool = False):
         if is_name:
             search_result = self.search_places(place_id_or_name)
             if not search_result.get('success') or not search_result.get('places'):
-                return {'success': False, 'error': '查無此地點'}
-            matched = None
-            for place in search_result['places']:
-                if place.get('name', '').strip() == place_id_or_name.strip():
-                    matched = place
-                    break
-            if matched:
-                place_id = matched['place_id']
-            else:
-                place_id = search_result['places'][0]['place_id']
+                return {'success': False, 'error': '查無此地點', 'error_type': 'NOT_FOUND'}
+            
+            matched = next((p for p in search_result['places'] 
+                        if p.get('name', '').strip() == place_id_or_name.strip()), None)
+        
+            place_id = matched['place_id'] if matched else search_result['places'][0]['place_id']
         else:
             place_id = place_id_or_name
 
-        cache_key = f"opening_{place_id}"
+        cache_key = f"business_{place_id}"
         cached = self.place_cache.get(cache_key)
         if cached:
             return cached
         try:
-            url = f"https://maps.googleapis.com/maps/api/place/details/json"
-            params = {
-                'place_id': place_id,
-                'fields': 'name,opening_hours',
-                'key': self.api_key,
-                'language': 'zh-TW'
+            url = f"https://places.googleapis.com/v1/places/{place_id}"
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': self.api_key,
+                'X-Goog-FieldMask': 'id,displayName,regularOpeningHours,priceRange' 
             }
-            response = requests.get(url, params=params, timeout=10)
+            params = {
+                'languageCode': 'zh-TW'
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            if response.status_code != 200:
+                return {
+                    'success': False, 
+                    'error': f"API 請求失敗: {response.status_code}",
+                    'error_type': 'API_ERROR'
+                }
+            
             data = response.json()
-            if data.get('status') != 'OK':
-                return {'success': False, 'error': data.get('error_message', '查詢失敗')}
             result = {
                 'success': True,
-                'name': data['result'].get('name'),
-                'opening_hours': data['result'].get('opening_hours', {}).get('weekday_text', [])
+                'place_id': data.get('id'),
+                'name': data.get('displayName', {}).get('text'),
+                'opening_hours': data.get('regularOpeningHours', {}).get('weekdayDescriptions', []),
+                'price_range': data.get('priceRange', '未知')
             }
+            
             self.place_cache.set(cache_key, result)
             return result
         except Exception as e:

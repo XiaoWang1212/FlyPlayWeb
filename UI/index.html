@@ -84,11 +84,21 @@
     </div>
 
     <div class="map-container" id="mapContainer">
-      <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
+      <!-- <div class="map-pin pin-1"><i class="fas fa-map-marker-alt"></i></div>
       <div class="map-pin pin-2"><i class="fas fa-map-marker-alt"></i></div>
+       -->
       <div id="map">
         <!-- 這裡會放置地圖 -->
       </div>
+
+      <div id="customMapPopup" class="custom-map-popup">
+        <div class="popup-content"></div>
+        <button class="popup-close-btn" onclick="closeCustomMapPopup()">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="popup-tip"></div>
+      </div>
+
       <div class="fab-group" id="fabGroup">
         <div class="fab" onclick="toggleChatMode()" id="robotFab">
           <i class="fas fa-robot"></i>
@@ -102,8 +112,6 @@
         <div class="sheet-handle-bar" id="dragHandle">
           <div class="sheet-handle"></div>
         </div>
-
-        <div class="sheet-header" id="dragHeader"></div>
 
         <div class="sheet-content" id="sheetContent">
           <!-- 聊天視圖 -->
@@ -131,6 +139,13 @@
               <i class="fas fa-plus"></i> 新增行程
             </div>
             <div style="height: 20px"></div>
+            <div
+              id="dragConfirmBtn"
+              class="drag-confirm-btn"
+              onclick="confirmDrag()"
+            >
+              <i class="fas fa-check"></i> 確認
+            </div>
           </div>
         </div>
       </div>
@@ -154,7 +169,9 @@
             placeholder="輸入景點、地標或地址"
           />
         </div>
-        <div class="spot-search-status" id="spotSearchStatus">請輸入關鍵字開始搜尋</div>
+        <div class="spot-search-status" id="spotSearchStatus">
+          請輸入關鍵字開始搜尋
+        </div>
         <div class="spot-search-results" id="spotSearchResults"></div>
       </div>
     </div>
@@ -165,9 +182,37 @@
       let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
 
+      // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
+      let currentRenderers = [];
+      let currentMarkers = [];
+      let currentInfoWindow = null;
+      let justClickedMarker = false;
+
+      // 新增：清除地圖上現有路線的函數
+      function clearMapRoutes() {
+        // 清除路線
+        currentRenderers.forEach((renderer) => renderer.setMap(null));
+        currentRenderers = [];
+
+        // 清除標記
+        currentMarkers.forEach((marker) => (marker.map = null));
+        currentMarkers = [];
+      }
+
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
-        const colors = ["#2962FF", "#34A853", "#EA4335", "#FBBC04", "#9C27B0"];
+        // 新增：如果是 -1 (代表「全部」按鈕)，給它一個專屬的深灰色
+        if (dayIndex === -1) {
+          return "#455A64";
+        }
+        const colors = [
+          "#2962FF",
+          "#34A853",
+          "#EA4335",
+          "#FBBC04",
+          "#9C27B0",
+          "#FFC0CB",
+        ];
         return colors[dayIndex % colors.length];
       }
 
@@ -176,6 +221,20 @@
         const timelineView = document.getElementById("timelineView");
         const buttonContainer = document.createElement("div");
         buttonContainer.id = "dayButtonContainer";
+
+        const allBtn = document.createElement("button");
+        allBtn.textContent = "全部";
+        allBtn.classList.add("active"); // 預設為選中狀態
+
+        // 新增：網頁一開始載入時，就幫「全部」按鈕上色
+        const allColor = getColorByDay(-1);
+        allBtn.style.backgroundColor = allColor;
+        allBtn.style.color = "#FFFFFF";
+        allBtn.style.borderColor = allColor;
+
+        allBtn.onclick = () => switchDay(-1, allBtn);
+        buttonContainer.appendChild(allBtn);
+        // -------------------------
 
         allDays.forEach((day, index) => {
           const btn = document.createElement("button");
@@ -192,6 +251,9 @@
             "bot",
           );
         };
+
+        // 把按鈕加到時間線最上方
+        timelineView.insertBefore(buttonContainer, timelineView.firstChild);
 
         // 切換聊天模式
         function toggleChatMode() {
@@ -212,10 +274,8 @@
             // 回到行程表模式
             chatView.classList.remove("active");
             timelineView.classList.add("active");
-            sheet.classList.remove("expanded");
-            sheet.classList.remove("half");
-            fabGroup.classList.remove("horizontal");
-            fabGroup.classList.remove("half-mode");
+            sheet.classList.remove("expanded", "half");
+            syncSheetState("sheet-collapsed");
             document.getElementById("editFab").style.display = "flex";
 
             // 恢復圖示：列表 → 機器人
@@ -226,42 +286,94 @@
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
-      // 添加自定義標記
-      function addCustomMarkers(dayActivitiesArray, dayIndex) {
-        const { AdvancedMarkerElement } = google.maps;
+      // 替換為以下這個 async 版本的 addCustomMarkers：
+      async function addCustomMarkers(activities, dayIndex) {
+        const { AdvancedMarkerElement } =
+          await google.maps.importLibrary("marker");
         const color = getColorByDay(dayIndex);
 
-        dayActivitiesArray.forEach((activities) => {
-          activities.forEach((activity) => {
-            const markerDiv = document.createElement("div");
-            markerDiv.classList.add("custom-marker");
-            markerDiv.style.backgroundColor = color;
-            markerDiv.textContent = `D${dayIndex + 1}`;
+        activities.forEach((activity, actIndex) => {
+          // 製作地圖上的圓形小標記
+          const markerDiv = document.createElement("div");
+          markerDiv.classList.add("custom-marker");
+          markerDiv.style.backgroundColor = color;
+          markerDiv.innerHTML = `<span>${actIndex + 1}</span>`;
 
-            const infoWindow = new google.maps.InfoWindow({
-              content: `
-                <div style="padding: 10px;">
-                  <strong>${activity.place_name}</strong><br>
-                  時間: ${activity.time}<br>
-                  類型: ${activity.type}<br>
-                  ${activity.cost ? `費用: ${activity.cost}<br>` : ""}
-                  描述: ${activity.description}
+          const photoUrl =
+            activity.photos && activity.photos[0]
+              ? activity.photos[0].photo_url
+              : "";
+
+          const popupCardHTML = `
+            <div class="popup-card-content">
+              <div class="info-img-wrapper">
+                ${
+                  photoUrl
+                    ? `<img src="${photoUrl}" class="info-img" alt="景點圖片">`
+                    : `<div class="info-img" style="display:flex; align-items:center; justify-content:center; color:white;"><i class="far fa-image"></i></div>`
+                }
+              </div>
+              <div class="info-content">
+                <div class="info-header">
+                  <div class="info-title">${activity.place_name || "未知景點"}</div>
+                  <div class="info-time">${activity.time || "時間未定"}</div>
                 </div>
-              `,
+                <div class="info-desc" style="-webkit-line-clamp: 1;">${activity.description || "暫無簡介資訊"}</div>
+                <div class="info-meta">
+                  <div class="info-meta-item"><i class="fas fa-clock"></i> ${activity.opening_hours || activity.time || "營業時間未定"}</div>
+                  <div class="info-meta-item"><i class="fas fa-map-marker-alt"></i> ${activity.address || "尚未提供詳細地址"}</div>
+                </div>
+                ${activity.cost ? `<div class="info-cost">💰 ${activity.cost}</div>` : ""}
+              </div>
+            </div>
+          `;
+
+          const marker = new AdvancedMarkerElement({
+            map: map,
+            position: activity.location,
+            content: markerDiv,
+            title: activity.place_name,
+          });
+
+          currentMarkers.push(marker);
+
+          marker.addListener("click", (e) => {
+            justClickedMarker = true;
+
+            if (currentInfoWindow) {
+              currentInfoWindow.close();
+            }
+
+            currentInfoWindow = new google.maps.InfoWindow({
+              content: `<div style="max-width: 280px;">${popupCardHTML}</div>`,
+              maxWidth: 320,
             });
 
-            const marker = new AdvancedMarkerElement({
-              map: map,
-              position: activity.location,
-              content: markerDiv,
-              title: activity.place_name,
-            });
-
-            marker.addListener("click", () => {
-              infoWindow.open(map, marker);
-            });
+            currentInfoWindow.open({ map, anchor: marker });
           });
         });
+      }
+
+      function clearCurrentPopup() {
+        if (currentInfoWindow) {
+          currentInfoWindow.close();
+          currentInfoWindow = null;
+        }
+      }
+
+      function closeCustomMapPopup() {
+        clearCurrentPopup();
+      }
+
+      function clearMapRoutes() {
+        currentRenderers.forEach((renderer) => renderer.setMap(null));
+        currentRenderers = [];
+
+        currentMarkers.forEach((marker) => (marker.map = null));
+        currentMarkers = [];
+
+        // 🔺 關鍵修復：切換天數時也清除彈出框
+        clearCurrentPopup();
       }
 
       typeMessage(
@@ -272,8 +384,7 @@
       setTimeout(() => {
         sheet.classList.remove("expanded");
         sheet.classList.add("half");
-        fabGroup.classList.remove("horizontal");
-        fabGroup.classList.add("half-mode");
+        syncSheetState("sheet-half");
       }, 1000);
 
       // 逐字顯示訊息（打字機效果）
@@ -323,28 +434,46 @@
         // 添加該天的所有活動
         day.activities.forEach((activity, actIndex) => {
           const isLast = actIndex === day.activities.length - 1;
-          const photoUrl = activity.photos && activity.photos[0] 
-            ? activity.photos[0].photo_url
-            : '';
-          
+          const photoUrl =
+            activity.photos && activity.photos[0]
+              ? activity.photos[0].photo_url
+              : "";
+
           const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
-            <div class="timeline-left">
-              <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
-              ${!isLast ? '<div class="timeline-connector"></div>' : ''}
-            </div>
-            <div class="timeline-right">
-              <div class="timeline-title">
-                ${activity.place_name}
-                <span class="time-badge">${activity.time}</span>
+            
+            <div class="location-block">
+              <div class="timeline-left">
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
+                </div>
               </div>
-              <div class="timeline-desc">${activity.description}</div>
-              ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+              <div class="timeline-right">
+                <div class="timeline-title">
+                  ${activity.place_name}
+                  <span class="time-badge">${activity.time}</span>
+                </div>
+                <div class="timeline-desc">${activity.description}</div>
+                ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+              </div>
             </div>
+
+            ${
+              !isLast
+                ? `
+            <div class="transit-block">
+              <div class="transit-line"></div>
+              <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+            </div>
+            `
+                : '<div style="height: 15px;"></div>'
+            } 
           `;
 
           const div = document.createElement("div");
           div.className = "timeline-item";
+          div.dataset.activityId =
+            activity.activityId || activity.place_name || String(actIndex);
           div.innerHTML = newItemHTML;
           timelineList.appendChild(div);
         });
@@ -369,15 +498,19 @@
 
           day.activities.forEach((activity, actIndex) => {
             const isLast = actIndex === day.activities.length - 1;
-            const photoUrl = activity.photos && activity.photos[0] 
-              ? activity.photos[0].photo_url
-              : '';
-            
+            const photoUrl =
+              activity.photos && activity.photos[0]
+                ? activity.photos[0].photo_url
+                : "";
+
             const newItemHTML = `
-              <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+            <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+            
+            <div class="location-block">
               <div class="timeline-left">
-                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ''}><i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ''}></i></div>
-                ${!isLast ? '<div class="timeline-connector"></div>' : ''}
+                <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
+                  <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
+                </div>
               </div>
               <div class="timeline-right">
                 <div class="timeline-title">
@@ -387,10 +520,24 @@
                 <div class="timeline-desc">${activity.description}</div>
                 ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
               </div>
-            `;
+            </div>
+
+            ${
+              !isLast
+                ? `
+            <div class="transit-block">
+              <div class="transit-line"></div>
+              <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+            </div>
+            `
+                : '<div style="height: 15px;"></div>'
+            } 
+          `;
 
             const div = document.createElement("div");
             div.className = "timeline-item";
+            div.dataset.activityId =
+              activity.activityId || activity.place_name || String(actIndex);
             div.innerHTML = newItemHTML;
             timelineList.appendChild(div);
           });
@@ -399,9 +546,12 @@
 
       // 顯示所有天的行程
       function displayAllDays() {
-        const { DirectionsService, DirectionsRenderer } = google.maps;
+        clearMapRoutes(); // 先清除舊路線
 
-        allDays.forEach((day, dayIndex) => {
+        const { DirectionsService, DirectionsRenderer } = google.maps;
+        const directionsService = new DirectionsService();
+
+        getActiveDays().forEach((day, dayIndex) => {
           if (!day || !day.activities || day.activities.length < 2) {
             console.warn(`第 ${dayIndex + 1} 天沒有足夠的活動`);
             return;
@@ -412,13 +562,15 @@
 
           const directionsRenderer = new DirectionsRenderer({
             map: map,
-            suppressMarkers: false,
+            suppressMarkers: true,
+            preserveViewport: true,
             polylineOptions: {
               strokeColor: getColorByDay(dayIndex),
               strokeWeight: 7,
               strokeOpacity: 0.6,
             },
           });
+          currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
           const origin = activities[0].location;
           const destination = activities[activities.length - 1].location;
@@ -438,6 +590,7 @@
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
+                addCustomMarkers(activities, dayIndex);
               } else {
                 console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
               }
@@ -450,20 +603,20 @@
 
       // 顯示單一天的行程
       function displayDay(dayIndex) {
-        const day = allDays[dayIndex];
+        clearMapRoutes(); // 先清除舊路線
+        const day = getActiveDays()[dayIndex];
 
         if (!day || !day.activities || day.activities.length < 2) {
           console.error("該日期沒有足夠的活動");
           return;
         }
 
-        const activities = day.activities;
         const { DirectionsService, DirectionsRenderer } = google.maps;
 
         const directionsService = new DirectionsService();
         const directionsRenderer = new DirectionsRenderer({
           map: map,
-          suppressMarkers: false,
+          suppressMarkers: true,
           polylineOptions: {
             strokeColor: getColorByDay(dayIndex),
             strokeWeight: 7,
@@ -471,6 +624,9 @@
           },
         });
 
+        currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
+
+        const activities = day.activities;
         const origin = activities[0].location;
         const destination = activities[activities.length - 1].location;
         const waypoints = activities.slice(1, -1).map((act) => ({
@@ -489,8 +645,12 @@
           (result, status) => {
             if (status === "OK") {
               directionsRenderer.setDirections(result);
+              addCustomMarkers(activities, dayIndex);
               // 載入該天的時間線
               loadSingleDayTimeline(day, dayIndex);
+              setTimeout(() => {
+                map.panBy(0, 180);
+              }, 150);
             } else {
               console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
                 status: status,
@@ -509,21 +669,39 @@
 
       // 切換日期
       function switchDay(dayIndex, clickedBtn) {
+        if (isEditMode && currentDayIndex !== dayIndex) {
+          if (currentDayIndex === -1) {
+            saveAllDayOrder();
+          } else {
+            saveCurrentDayOrder(currentDayIndex);
+          }
+        }
+
         currentDayIndex = dayIndex;
 
-        // 更新按鈕樣式
+        // 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式）
         const allBtns = document.querySelectorAll("#dayButtonContainer button");
-        allBtns.forEach((btn, index) => {
-          if (index === dayIndex) {
-            btn.classList.add("active");
-          } else {
-            btn.classList.remove("active");
-          }
+        allBtns.forEach((btn) => {
+          btn.classList.remove("active");
+          btn.style.backgroundColor = ""; // 清除背景色
+          btn.style.color = ""; // 清除文字顏色
+          btn.style.borderColor = ""; // 清除邊框顏色
         });
 
-        displayDay(dayIndex);
-      }
+        // 2. 設定當前被點擊按鈕的專屬顏色
+        clickedBtn.classList.add("active");
+        const activeColor = getColorByDay(dayIndex);
+        clickedBtn.style.backgroundColor = activeColor;
+        clickedBtn.style.color = "#FFFFFF"; // 把文字變成白色，避免背景太深看不清楚文字
+        clickedBtn.style.borderColor = activeColor;
 
+        // 3. 判斷要顯示單天還是全部
+        if (dayIndex === -1) {
+          displayAllDays();
+        } else {
+          displayDay(dayIndex);
+        }
+      }
       async function initMap() {
         try {
           const response = await fetch(`${API_BASE}/api/itinerary`);
@@ -559,9 +737,22 @@
 
           const { Map } = await google.maps.importLibrary("maps");
           map = new Map(document.getElementById("map"), {
-            zoom: 8.5,
+            zoom: 10,
             center: { lat: avgLat, lng: avgLng },
             mapId: "DEMO_MAP_ID",
+          });
+
+          map.addListener("click", () => {
+            if (justClickedMarker) {
+              justClickedMarker = false;
+              return;
+            }
+            // 當點擊地圖時，檢查下邊欄是否展開，如果是就收起
+            const sheet = document.getElementById("bottomSheet");
+            if (sheet && sheet.classList.contains("expanded")) {
+              closeSheet();
+            }
+            clearCurrentPopup();
           });
 
           createDayButtons();
@@ -579,34 +770,19 @@
           script.async = true;
           document.head.appendChild(script);
         });
-    </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <script>
       const sidebar = document.getElementById("sidebar");
       const overlay = document.querySelector(".sidebar-overlay");
       const sheet = document.getElementById("bottomSheet");
       const fabGroup = document.getElementById("fabGroup");
       const mapContainer = document.getElementById("mapContainer");
       const dragHandle = document.getElementById("dragHandle");
-      const dragHeader = document.getElementById("dragHeader");
 
       let isEditMode = false;
       let isChatMode = false;
+      let originalTimelineHTML = "";
+      let isDragChanged = false;
+      let editedDays = null;
+
       const timelineView = document.getElementById("timelineView");
       const chatView = document.getElementById("chatView");
       const editFab = document.getElementById("editFab").querySelector("i");
@@ -634,11 +810,54 @@
       let sortable = new Sortable(timelineList, {
         animation: 150,
         disabled: true,
-        delay: 400,
+        delay: 200,
         delayOnTouchOnly: true,
+        handle: ".timeline-item",
         ghostClass: "sortable-ghost",
         dragClass: "sortable-drag",
+        filter: "[data-day-title],.delete-btn,.add-item-btn",
+        scroll: true,
+        scrollSpeed: 10,
+        onEnd: function (evt) {
+          // 拖曳放開後：保存當前天排序並顯示確認按鈕
+          if (currentDayIndex === -1) {
+            saveAllDayOrder();
+          } else {
+            saveCurrentDayOrder(currentDayIndex);
+          }
+          isDragChanged = true;
+          document.getElementById("dragConfirmBtn").classList.add("show");
+        },
       });
+
+      // 新增確認按鈕的功能
+      function confirmDrag() {
+        // 這裡可以放打 API 給後端的程式碼
+        console.log("新排序已確認，準備更新後端資料...");
+
+        if (currentDayIndex === -1) {
+          saveAllDayOrder();
+        } else {
+          saveCurrentDayOrder(currentDayIndex);
+        }
+
+        // 將編輯草稿寫回正式資料
+        if (editedDays) {
+          allDays = JSON.parse(JSON.stringify(editedDays));
+          editedDays = null;
+        }
+
+        // 隱藏按鈕，禁止拖拽（完成一次批次確認）
+        document.getElementById("dragConfirmBtn").classList.remove("show");
+        sortable.option("disabled", true);
+        isDragChanged = false;
+
+        // 回到非編輯狀態，同步按鈕
+        isEditMode = false;
+        timelineView.classList.remove("editing");
+        editFab.classList.remove("fa-times");
+        editFab.classList.add("fa-pen");
+      }
 
       // 初始化聊天
       function showGeneratedRawOutputInChat() {
@@ -686,7 +905,7 @@
           timelineView.classList.remove("active");
           chatView.classList.add("active");
           openSheet();
-          fabGroup.classList.add("horizontal");
+          syncSheetState("sheet-expanded");
           document.getElementById("editFab").style.display = "none";
 
           // 改變圖示：機器人 → 列表
@@ -698,10 +917,8 @@
           // 回到行程表模式
           chatView.classList.remove("active");
           timelineView.classList.add("active");
-          sheet.classList.remove("expanded");
-          sheet.classList.remove("half");
-          fabGroup.classList.remove("horizontal");
-          fabGroup.classList.remove("half-mode");
+          sheet.classList.remove("expanded", "half");
+          syncSheetState("sheet-collapsed");
           document.getElementById("editFab").style.display = "flex";
 
           // 恢復圖示：列表 → 機器人
@@ -755,31 +972,139 @@
       }
 
       // 編輯模式切換
+      function getActiveDays() {
+        return isEditMode && editedDays ? editedDays : allDays;
+      }
+
+      function saveCurrentDayOrder(dayIndex) {
+        if (dayIndex < 0 || !editedDays || !editedDays[dayIndex]) return;
+
+        const items = Array.from(
+          document.querySelectorAll("#timelineList .timeline-item"),
+        );
+        const ids = items
+          .map((item) => item.dataset.activityId)
+          .filter((id) => id);
+
+        if (!ids.length) return;
+
+        const oldActivities = editedDays[dayIndex].activities;
+        const newOrder = ids
+          .map((id) =>
+            oldActivities.find(
+              (act) => act.activityId === id || act.place_name === id,
+            ),
+          )
+          .filter(Boolean);
+
+        if (newOrder.length === oldActivities.length) {
+          editedDays[dayIndex].activities = newOrder;
+        }
+      }
+
+      function saveAllDayOrder() {
+        if (!editedDays) return;
+
+        const daySections = [];
+        let currentSection = null;
+
+        document.querySelectorAll("#timelineList > *").forEach((node) => {
+          if (node.matches("[data-day-title]")) {
+            currentSection = { activityIds: [] };
+            daySections.push(currentSection);
+          } else if (
+            node.classList &&
+            node.classList.contains("timeline-item") &&
+            currentSection
+          ) {
+            const activityId = node.dataset.activityId;
+            if (activityId) {
+              currentSection.activityIds.push(activityId);
+            }
+          }
+        });
+
+        if (!daySections.length) return;
+
+        daySections.forEach((section, idx) => {
+          const day = editedDays[idx];
+          if (!day || !day.activities) return;
+
+          const ordered = section.activityIds
+            .map((id) =>
+              day.activities.find(
+                (act) => act.activityId === id || act.place_name === id,
+              ),
+            )
+            .filter(Boolean);
+
+          if (ordered.length === day.activities.length) {
+            day.activities = ordered;
+          }
+        });
+      }
+
       function toggleEditMode() {
         event.stopPropagation();
-        isEditMode = !isEditMode;
 
-        if (isEditMode) {
+        if (!isEditMode) {
+          // 進入編輯模式：建立一份可修改的草稿
+          editedDays = JSON.parse(JSON.stringify(allDays));
+          originalTimelineHTML = timelineList.innerHTML;
+          isDragChanged = false;
+          isEditMode = true;
+
           timelineView.classList.add("editing");
           editFab.classList.remove("fa-pen");
-          editFab.classList.add("fa-check");
+          editFab.classList.add("fa-times");
           openSheet();
           sortable.option("disabled", false);
+          document.getElementById("dragConfirmBtn").classList.remove("show");
         } else {
+          // 離開編輯模式（叉叉）：若尚未確認則還原草稿與 UI
+          if (isDragChanged) {
+            timelineList.innerHTML = originalTimelineHTML;
+            isDragChanged = false;
+          }
+          editedDays = null;
+
+          isEditMode = false;
           timelineView.classList.remove("editing");
-          editFab.classList.remove("fa-check");
+          editFab.classList.remove("fa-times");
           editFab.classList.add("fa-pen");
           sortable.option("disabled", true);
+          document.getElementById("dragConfirmBtn").classList.remove("show");
+
+          // 恢復到確認前的資料（若有切換天數再回來）
+          if (!editedDays) {
+            // allDays 維持原狀
+          }
+          if (currentDayIndex === -1) {
+            displayAllDays();
+          } else {
+            displayDay(currentDayIndex);
+          }
         }
       }
 
       function deleteItem(btnElement) {
         const item = btnElement.closest(".timeline-item");
         if (item) {
+          const activityId = item.dataset.activityId;
           item.style.opacity = "0";
           item.style.transform = "translateX(-20px)";
           setTimeout(() => {
             item.remove();
+            if (isEditMode && editedDays && currentDayIndex !== -1) {
+              editedDays[currentDayIndex].activities = editedDays[
+                currentDayIndex
+              ].activities.filter(
+                (act) =>
+                  act.activityId !== activityId &&
+                  act.place_name !== activityId,
+              );
+              isDragChanged = true;
+            }
           }, 300);
         }
       }
@@ -876,12 +1201,18 @@
       // 優先使用當前日期的最後一個活動位置，若無則從所有日期的最後活動往前找
       function getSearchAnchorLocation() {
         const getDayLastLocation = (day) => {
-          if (!day || !Array.isArray(day.activities) || !day.activities.length) {
+          if (
+            !day ||
+            !Array.isArray(day.activities) ||
+            !day.activities.length
+          ) {
             return null;
           }
 
           for (let i = day.activities.length - 1; i >= 0; i--) {
-            const normalized = normalizeActivityLocation(day.activities[i].location);
+            const normalized = normalizeActivityLocation(
+              day.activities[i].location,
+            );
             if (normalized) return normalized;
           }
           return null;
@@ -901,7 +1232,11 @@
       }
 
       // 執行景點搜尋
-      async function performSpotSearch(keyword, reqId, showNoResultMessage = false) {
+      async function performSpotSearch(
+        keyword,
+        reqId,
+        showNoResultMessage = false,
+      ) {
         try {
           // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
           const anchorLocation = getSearchAnchorLocation();
@@ -937,8 +1272,8 @@
               }),
             });
 
-            payload = await response.json(); 
-          } 
+            payload = await response.json();
+          }
 
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
@@ -949,7 +1284,8 @@
           spotSearchState.selectedIndex = -1;
 
           if (!response.ok || !payload.success) {
-            spotSearchStatus.textContent = payload.error || "搜尋失敗，請稍後再試";
+            spotSearchStatus.textContent =
+              payload.error || "搜尋失敗，請稍後再試";
             spotSearchResults.innerHTML = "";
             return;
           }
@@ -1002,7 +1338,7 @@
         if (spotSearchState.debounceTimer) {
           clearTimeout(spotSearchState.debounceTimer);
         }
-      
+
         spotSearchState.debounceTimer = setTimeout(() => {
           if (!spotSearchState.isOpen) return;
           triggerSpotSearch();
@@ -1026,6 +1362,66 @@
         openSpotSearchModal();
       }
 
+      function addItem1() {
+        // 防止未定義變數造成錯誤
+        const activity = {
+          place_name: "新增景點",
+          time: "未定",
+          description: "請點擊編輯此行程內容",
+          cost: "",
+        };
+        const photoUrl = "";
+        const isLast = true;
+
+        const newItemHTML = `
+        <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
+        
+        <div class="location-block">
+          <div class="timeline-left">
+            <div class="location-img" ${photoUrl ? (style = "background-image: url('${photoUrl}'); background-size: cover; background-position: center;") : ""}>
+              <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
+            </div>
+          </div>
+          <div class="timeline-right">
+            <div class="timeline-title">
+              ${activity.place_name}
+              <span class="time-badge">${activity.time}</span>
+            </div>
+            <div class="timeline-desc">${activity.description}</div>
+            ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
+          </div>
+        </div>
+
+        ${
+          !isLast
+            ? `
+        <div class="transit-block">
+          <div class="transit-line"></div>
+          <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+        </div>
+        `
+            : '<div style="height: 15px;"></div>'
+        } 
+      `;
+        const div = document.createElement("div");
+        div.className = "timeline-item";
+        div.dataset.activityId =
+          activity.activityId || activity.place_name || String(Date.now());
+        div.innerHTML = newItemHTML;
+        timelineList.appendChild(div);
+
+        if (isEditMode && editedDays && currentDayIndex !== -1) {
+          editedDays[currentDayIndex].activities.push({
+            ...activity,
+            activityId: div.dataset.activityId,
+          });
+          isDragChanged = true;
+        }
+
+        const addButton = document.querySelector(".add-item-btn");
+        if (addButton) addButton.scrollIntoView({ behavior: "smooth" });
+      }
+
       function toggleSidebar() {
         sidebar.classList.toggle("active");
         overlay.classList.toggle("active");
@@ -1042,17 +1438,34 @@
         }
       }
 
+      function syncSheetState(state) {
+        mapContainer.classList.remove(
+          "sheet-expanded",
+          "sheet-half",
+          "sheet-collapsed",
+        );
+        mapContainer.classList.add(state);
+
+        fabGroup.classList.remove("horizontal", "vertical");
+        if (state === "sheet-expanded") {
+          fabGroup.classList.add("horizontal");
+        } else {
+          fabGroup.classList.add("vertical");
+        }
+      }
+
       function openSheet() {
         sheet.classList.add("expanded");
-        sheet.classList.remove("half", "half-mode");
-        fabGroup.classList.add("horizontal");
-        fabGroup.classList.remove("half-mode");
+        sheet.classList.remove("half");
+
+        syncSheetState("sheet-expanded");
       }
 
       function closeSheet() {
         if (isEditMode) toggleEditMode();
-        sheet.classList.remove("expanded");
-        fabGroup.classList.remove("horizontal");
+        sheet.classList.remove("expanded", "half");
+
+        syncSheetState("sheet-collapsed");
       }
 
       function toggleBottomSheet() {
@@ -1064,7 +1477,6 @@
       }
 
       dragHandle.addEventListener("click", toggleBottomSheet);
-      dragHeader.addEventListener("click", toggleBottomSheet);
 
       let startY = 0;
       const threshold = 50;
@@ -1082,10 +1494,6 @@
         passive: true,
       });
       dragHandle.addEventListener("touchend", handleTouchEnd);
-      dragHeader.addEventListener("touchstart", handleTouchStart, {
-        passive: true,
-      });
-      dragHeader.addEventListener("touchend", handleTouchEnd);
 
       mapContainer.addEventListener("click", function (e) {
         if (
@@ -1120,7 +1528,7 @@
           closeSpotSearchModal();
         }
       });
-
+      
       spotSearchInput.addEventListener("input", onSpotSearchInput);
       spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 

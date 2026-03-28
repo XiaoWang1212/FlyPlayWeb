@@ -42,7 +42,7 @@
 
         /* Header */
         header {
-            background-color: #333;
+            background-color: #0f1a3a;
             color: white;
             height: calc(var(--header-height) + var(--safe-top));
             display: flex;
@@ -122,67 +122,158 @@
             background-size: cover; background-position: center;
             overflow: hidden;
             z-index: 0;
+
+            /* --- FAB (懸浮按鈕群組) --- */
+            .fab-group {
+                position: absolute; 
+                right: 15px; 
+                bottom: 220px; /* default closed */
+                display: flex; 
+                flex-direction: column;
+                gap: 10px;
+                transition: bottom 0.3s ease-in-out, transform 0.3s ease-in-out;
+                z-index: 1500; 
+
+                /* FAB 裡面的個別按鈕 */
+                .fab {
+                    width: 45px; 
+                    height: 45px; 
+                    background: white; 
+                    border-radius: 50%;
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
+                    font-size: 20px; 
+                    color: #333; 
+                    cursor: pointer;
+                }
+
+                &.horizontal {
+                    flex-direction: row;
+                }
+
+                &.vertical {
+                    flex-direction: column;
+
+                }
+            }
+
+            /* 用一組 class 統一管理 */
+            .sheet-expanded .bottom-sheet {
+                height: 75%;
+            }
+            .sheet-half .bottom-sheet {
+                height: 50%;
+            }
+            .sheet-collapsed .bottom-sheet {
+                height: 200px;
+            }
+
+            .sheet-expanded .fab-group {
+                bottom: calc(75% + 20px);
+            }
+            .sheet-half .fab-group {
+                bottom: calc(50% + 20px);
+            }
+            .sheet-collapsed .fab-group {
+                bottom: 220px;
+            }
+
+            /* --- Bottom Sheet (底部面板) --- */
+            .bottom-sheet {
+                position: absolute; 
+                bottom: 0; 
+                left: 0; 
+                width: 100%;
+                background: white;
+                border-top-left-radius: 20px; 
+                border-top-right-radius: 20px;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                transition: height 0.3s ease-in-out;
+                height: 200px;
+                display: flex; 
+                flex-direction: column;
+                z-index: 500;
+            }
+
+            .bottom-sheet.expanded, .map-container.sheet-expanded .bottom-sheet {
+                height: 75%;
+            }
+            .bottom-sheet.half, .map-container.sheet-half .bottom-sheet {
+                height: 50%;
+            }
+            .map-container.sheet-collapsed .bottom-sheet {
+                height: 200px;
+            }
+
+            .sheet-handle-bar { 
+                width: 100%; 
+                padding: 15px 0 5px 0; 
+                display: flex; 
+                justify-content: center; 
+                cursor: pointer; 
+                touch-action: none; 
+            }
+
+            .sheet-handle { 
+                width: 40px; 
+                height: 5px; 
+                background: #ddd; 
+                border-radius: 5px; 
+            }
+
+            .sheet-content {
+                flex: 1; 
+                overflow-y: hidden; 
+                padding: 0;
+                position: relative;
+            }
         }
+
+        .map-container .fab-group {
+            position: absolute;
+            right: 15px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: bottom 0.3s ease-in-out, transform 0.3s ease-in-out;
+            z-index: 1500;
+        }
+
+        .map-container .fab-group .fab {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 20px;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .map-container.sheet-expanded .fab-group {
+            bottom: calc(75% + 18px);
+            flex-direction: row;
+        }
+
+        .map-container.sheet-half .fab-group {
+            bottom: calc(50% + 18px);
+            flex-direction: column;
+        }
+
+        .map-container.sheet-collapsed .fab-group {
+            bottom: 220px; /* 收起時上移，避免太貼底 */
+            flex-direction: column;
+        }
+
         .map-pin { position: absolute; color: #ff4d4f; font-size: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         .pin-1 { top: 40%; left: 30%; }
         .pin-2 { top: 50%; left: 60%; }
-
-        /* --- FAB (懸浮按鈕群組) --- */
-        .fab-group {
-            position: absolute; 
-            right: 15px; 
-            bottom: 220px;
-            display: flex; 
-            flex-direction: column;
-            gap: 10px;
-            transition: all 0.3s ease;
-            z-index: 1500; 
-        }
-
-        .fab {
-            width: 45px; height: 45px; background: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-size: 20px; color: #333; cursor: pointer;
-        }
-
-        .fab-group.horizontal {
-            bottom: auto;
-            top: calc(var(--header-height) + var(--safe-top) + 50px); 
-            right: 15px;
-            flex-direction: row;
-        }
-        
-        .fab-group.half-mode {
-            bottom: 55%;
-        }
-
-        /* Bottom Sheet */
-        .bottom-sheet {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: white;
-            border-top-left-radius: 20px; border-top-right-radius: 20px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease-in-out;
-            height: 200px;
-            display: flex; flex-direction: column;
-            z-index: 500;
-        }
-        .bottom-sheet.expanded { height: 75%; }
-        .bottom-sheet.half { height: 50%; }
-
-        .sheet-handle-bar { width: 100%; padding: 15px 0 5px 0; display: flex; justify-content: center; cursor: pointer; touch-action: none; }
-        .sheet-handle { width: 40px; height: 5px; background: #ddd; border-radius: 5px; }
-        
-        .sheet-header { 
-            padding: 0 20px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            flex-shrink: 0; cursor: pointer; touch-action: none; height: 50px; 
-        }
-
-        .sheet-content {
-            flex: 1; overflow-y: hidden; padding: 0;
-            position: relative;
-        }
 
         /* 視圖切換 */
         .view-section {
@@ -294,20 +385,80 @@
 
         /* Timeline UI (完全保持原樣) */
         .timeline-item { 
-            display: flex; margin-bottom: 20px; position: relative; transition: background 0.2s; 
+            display: flex; 
+            flex-direction: column; /* 改為垂直排列 */
+            margin-bottom: 20px; 
+            position: relative; 
+            transition: 
+            background 0.2s; 
             background: #fff;
             border-radius: 8px;
         }
+        
         .timeline-left { display: flex; flex-direction: column; align-items: center; margin-right: 15px; width: 60px; }
         .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; }
-        .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; }
+        /* .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; } */
         .timeline-transit { display: flex; align-items: center; justify-content: center; margin: 10px 0; color: #999; font-size: 12px; }
         .timeline-transit i { margin-right: 5px; }
         .timeline-right { flex: 1; padding-top: 5px; }
-        .timeline-title { font-weight: bold; font-size: 16px; display: flex; justify-content: space-between; }
+        .timeline-title { 
+            font-weight: bold; 
+            font-size: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+        }
         .timeline-desc { font-size: 12px; color: #999; margin-top: 5px; line-height: 1.4; }
-        .time-badge { font-size: 10px; background: #f0f0f0; padding: 2px 6px; border-radius: 10px; color: #666; font-weight: normal; }
+        .time-badge { 
+            font-size: 12px; 
+            background: #f0f0f0; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            color: #666; 
+            font-weight: normal; 
+
+            align-self: flex-start; /* 讓它靠上方對齊，不要跟著標題拉伸高度 */
+            flex-shrink: 0;         /* 防止左邊標題太長時，把時間標籤擠到變形 */
+            white-space: nowrap;    /* 確保時間文字永遠保持同一行 */
+            margin-left: 10px;      /* 確保跟左邊文字保持一點安全距離 */
+            margin-top: 2px;
+        }
         .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
+
+        .location-block {
+            display: flex;
+            padding-top: 10px;
+        }
+
+        /* 獨立出來的交通區塊 */
+        .transit-block {
+            display: flex;
+            align-items: stretch;
+            min-height: 45px;
+        }
+
+        .transit-line {
+            width: 60px; /* 和圖片一樣寬，用來對齊 */
+            margin-right: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .transit-line::after {
+            content: "";
+            width: 2px;
+            border-left: 2px dotted #ccc;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .transit-data {
+            flex: 1;
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            align-items: center;
+        }
 
         .sortable-ghost { opacity: 0.4; background: #f0f0f0; }
         .sortable-drag { opacity: 1; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
@@ -317,14 +468,28 @@
         }
 
         /* 編輯模式 */
+       /* 編輯模式時，右側留白給垃圾桶 */
+        .view-section.editing .timeline-right {
+            padding-right: 45px; 
+        }
+
+        /* 調整垃圾桶位置 */
         .delete-btn {
             display: none;
-            position: absolute; right: -10px; top: 0;
-            background: #ff4d4f; color: white;
-            width: 25px; height: 25px; border-radius: 50%;
-            text-align: center; line-height: 25px;
-            cursor: pointer; font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
+            position: absolute; 
+            right: 10px; /* 從 -10px 改為 10px 往內移 */
+            top: 15px;   /* 稍微往下移，對齊時間 */
+            background: #ff4d4f; 
+            color: white;
+            width: 25px; 
+            height: 25px; 
+            border-radius: 50%;
+            text-align: center; 
+            line-height: 25px;
+            cursor: pointer; 
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+            z-index: 10;
         }
         .add-item-btn {
             display: none;
@@ -433,21 +598,245 @@
           margin-top: 5px;
         }
 
-        /* 自定義地圖標記樣式 */
+        /* --- 自定義地圖標記樣式 (水滴型) --- */
         .custom-marker {
-          width: 35px;
-          height: 35px;
-          border: 3px solid white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-          font-size: 12px;
-          cursor: pointer;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            width: 28px;
+            height: 28px;
+            border: 2px solid white;
+            
+            /* 關鍵 1：設定右上、右下、左上為圓角，左下角為 0 (尖端) */
+            border-radius: 50% 50% 50% 0; 
+            
+            /* 關鍵 2：將左下角的尖端旋轉 45 度，讓它朝向正下方 */
+            transform: rotate(-45deg); 
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            
+            /* 配合旋轉角度調整陰影 (-x, +y)，讓陰影維持在圖釘正下方 */
+            box-shadow: -2px 2px 6px rgba(0,0,0,0.4); 
         }
+
+        /* 將水滴內的文字反向旋轉轉正 */
+        .custom-marker span {
+            transform: rotate(45deg); /* 反向旋轉 45 度把文字轉正 */
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            line-height: 1;
+            /* ✨ 👇 加上深色內圈的關鍵設定 👇 ✨ */
+            background-color: rgba(0, 0, 0, 0.25); /* 半透明黑色，自動變成圖釘底色的深色版！ */
+            width: 16px;  /* 內圈圓形的寬度 */
+            height: 16px; /* 內圈圓形的高度 */
+            border-radius: 50%; /* 把背景變成完美的圓形 */
+    
+            /* 讓文字在圓圈內絕對置中 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 視覺微調：因為水滴下方多了一塊尖端，稍微把文字往左上提一點點會在視覺上更置中 */
+            margin-top: 1px;
+            margin-left: -1px;
+        }
+
+        .drag-confirm-btn {
+            display: none; /* 預設隱藏 */
+            position: fixed;
+            bottom: calc(30px + var(--safe-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2962FF;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+            cursor: pointer;
+        }
+        .drag-confirm-btn.show {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: popUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes popUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        /* --- 地圖彈出視窗 (InfoWindow) 客製化 UI 完美復刻版 --- */
+        .custom-info-window {
+            display: flex;
+            gap: 12px;
+            width: 260px; 
+            padding: 4px 0 0 0; 
+            font-family: inherit;
+        }
+
+        .info-img-wrapper {
+            width: 60px;
+            flex-shrink: 0;
+        }
+        .info-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: #ddd; 
+            display: block;
+        }
+
+        .info-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; 
+            gap: 8px;
+            margin-bottom: 4px; 
+        }
+        .info-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #000; 
+            line-height: 1.2;
+            margin: 0;
+        }
+        .info-time {
+            font-size: 11px;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: #666;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .info-desc {
+            font-size: 12px;
+            color: #999; 
+            margin-bottom: 6px;
+            line-height: 1.4;
+            display: -webkit-box;
+            /* -webkit-line-clamp: 2; */ 
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .info-address {
+            font-size: 12px;
+            color: #999; /* 地址文字淺灰 */
+            display: flex;
+            align-items: center; 
+            gap: 6px;
+            line-height: 1.2;
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis; 
+        }
+        .info-address i {
+            font-size: 12px;
+            color: #999; 
+        }
+
+        .info-meta-item {
+            font-size: 12px;
+            color: #999 !important; /* 底部時間/地址文字淺灰 */
+        }
+
+        .info-cost {
+            font-size: 12px;
+            color: #999 !important; /* 預算文字淺灰 */
+        }
+
+        /* --- 1. 自定義地圖彈出框容器 (扁長、無留白、小關閉按鈕) --- */
+        .custom-map-popup {
+        position: absolute;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        transform: translate(-50%, -100%); /* 置中在點上方 */
+        z-index: 1000;
+        width: 420px; /* 加長寬度 */
+        max-height: 85px; /* 減少高度 */
+        display: none; /* 預設隱藏 */
+        overflow: hidden; /* 確保內容不溢出 */
+        border: 1px solid #ddd;
+        
+        /* 🔺 為內容留白，這裡的 padding 很關鍵，用戶要求扁，所以 padding-top 設得很小 */
+        padding: 0 0 0 0; 
+        }
+
+        /* 狀態：顯示時 */
+        .custom-map-popup.show {
+        display: block;
+        animation: popupIn 0.3s ease;
+        }
+
+        /* --- 2. 卡片內容排版 (幾乎保持原樣，與行程表卡片一致) --- */
+        .popup-card-content {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        /* 移除上方留白的最關鍵 CSS：調整彈出框內部的 padding/margin */
+        .popup-card-content .info-content {
+            justify-content: flex-start; /* 確保內容靠上 */
+        }
+
+        .popup-card-content .info-header {
+            margin-bottom: 2px; /* 減小原本 margin-bottom: 6px */
+        }
+
+        .popup-card-content .info-desc {
+            margin-bottom: 4px; /* 減小原本 margin-bottom: 8px */
+        }
+
+        /* ❌ 3. 用戶要求自定義關閉按鈕樣式：右上角、小一點 */
+        .popup-close-btn {
+        position: absolute;
+        top: 5px; /* 靠上 */
+        right: 5px; /* 靠右 */
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px; /* ✨ 用戶要求變小 */
+        color: #777;
+        padding: 0;
+        line-height: 1;
+        z-index: 10;
+        }
+        .popup-close-btn:hover {
+        color: #333;
+        }
+
+        /* 🔺 4. 自定義小尾巴 (三角形) */
+        .popup-tip {
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 10px solid white;
+        }
+
+        @keyframes popupIn {
+        from { opacity: 0; transform: translate(-50%, -90%) scale(0.9); }
+        to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+        }
+
+
 
         .spot-search-overlay {
             position: fixed;

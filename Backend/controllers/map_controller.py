@@ -204,21 +204,22 @@ class MapController:
                 'error_type': result.get('error_type', 'UNKNOWN_ERROR')
             }
 
-    def handle_opening_hours(self, place_id_or_name: str, is_name: bool = False):
+    def handle_place_business_info(self, place_id_or_name: str, is_name: bool = False):
         if not place_id_or_name:
             return {
                 'success': False,
                 'error': '必須提供地點名稱或 place_id',
                 'code': 'INVALID_INPUT'
             }
-        result = self.map_service.get_opening_hours(place_id_or_name, is_name=is_name)
+        result = self.map_service.get_place_business_info(place_id_or_name, is_name=is_name)
         if result.get('success'):
             return {
                 'success': True,
                 'data': {
                     'name': result.get('name'),
                     'opening_hours': result.get('opening_hours'),
-                    'place_id': result.get('place_id', place_id_or_name)
+                    'place_id': result.get('place_id', place_id_or_name),
+                    'price_range': result.get('price_range')
                 }
             }
         else:
