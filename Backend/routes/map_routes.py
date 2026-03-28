@@ -156,7 +156,7 @@ def get_place_business_info_by_name():
         name = data.get('name')
         if not name:
             return jsonify({'success': False, 'error': '請提供店名'}), 400
-        result = map_controller.handle_opening_hours(name, is_name=True)
+        result = map_controller.handle_place_business_info(name, is_name=True)
         if result.get('success'):
             return jsonify(result), 200
         else:
