@@ -1037,12 +1037,35 @@
             flex: 1;
         }
 
+        .spot-map-card-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
         .spot-map-card-title {
             font-size: 16px;
             font-weight: 700;
             line-height: 1.25;
             margin-bottom: 4px;
             color: #0f172a;
+            min-width: 0;
+        }
+
+        .spot-map-close-btn {
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 2px 0 0;
+            flex-shrink: 0;
+        }
+
+        .spot-map-close-btn:hover {
+            color: #111827;
         }
 
         .spot-map-card-address {
@@ -1084,7 +1107,7 @@
             width: 100%;
             border: none;
             border-radius: 12px;
-            background: linear-gradient(135deg, #0f1a3a 0%, #1f3f86 100%);
+            background: #0f1a3a;
             color: #fff;
             font-size: 14px;
             font-weight: 700;
@@ -1096,4 +1119,9 @@
 
         .spot-map-add-btn:active {
             transform: translateY(1px) scale(0.99);
+        }
+
+        /* 隱藏 Google InfoWindow 預設右上角關閉按鈕，改用卡片內同列 x */
+        .gm-style .gm-ui-hover-effect {
+            display: none !important;
         }

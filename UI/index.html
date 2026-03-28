@@ -792,6 +792,18 @@
       // --- 行程搜尋相關變數 ---
       const spotSearchOverlay = document.getElementById("spotSearchOverlay");
       const spotSearchInput = document.getElementById("spotSearchInput");
+
+      // 點擊搜尋框時重新顯示清單
+      spotSearchInput.addEventListener("focus", function () {
+        if (
+          spotSearchState.isOpen &&
+          Array.isArray(spotSearchState.results) &&
+          spotSearchState.results.length > 0 &&
+          spotSearchResults.innerHTML === ""
+        ) {
+          renderSpotSearchResults();
+        }
+      });
       const spotSearchResults = document.getElementById("spotSearchResults");
 
       const spotSearchState = {
@@ -840,58 +852,100 @@
         }
       }
 
-      function getPriceLevelText(spot) {
-        const level =
-          typeof spot.price_level === "number"
-            ? spot.price_level
-            : typeof spot.priceLevel === "number"
-              ? spot.priceLevel
-              : null;
-
-        if (level === null) return "未提供";
-        return "$".repeat(Math.min(Math.max(level, 1), 4));
+      function closeSpotPreviewInfo() {
+        clearCurrentPopup();
+        clearSpotPreview();
       }
 
-      async function getOpeningHoursText(spot) {
-        if (!spot) return "未提供";
+      async function getBusinessInfo(spot) {
+        if (!spot) {
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
+        }
+
+        // 若先前已查過 business_info，優先使用快取結果，減少重複 API 請求。
+        if (spot._businessInfo) {
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+          return { openingHoursText, priceRangeText };
+        }
 
         try {
           let response;
 
+          // 以 place_id 查詢 沒有 place_id 才使用名稱查詢
           if (spot.place_id) {
             response = await fetch(
-              `${API_BASE}/api/maps/opening_hours/${encodeURIComponent(
+              `${API_BASE}/api/maps/business_info/${encodeURIComponent(
                 spot.place_id,
               )}`,
             );
           } else if (spot.name) {
-            response = await fetch(`${API_BASE}/api/maps/opening_hours`, {
+            response = await fetch(`${API_BASE}/api/maps/business_info`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ name: spot.name }),
             });
           } else {
-            return "未提供";
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
           }
 
+          // API失敗或回傳非成功格式的統一回傳預設值
           const payload = await response.json();
-          if (!response.ok || !payload.success) return "未提供";
+          if (!response.ok || !payload.success) {
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
+          }
 
-          const openingHours = payload?.data?.opening_hours;
-          if (Array.isArray(openingHours) && openingHours.length > 0) {
-            return openingHours[0];
-          }
-          if (typeof openingHours === "string" && openingHours.trim()) {
-            return openingHours;
-          }
-          return "未提供";
-        } catch (_) {
-          return "未提供";
+          // 將回傳資料暫存到 spot，讓同一景點下次可直接使用。
+          spot._businessInfo = payload?.data || {};
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+
+          return { openingHoursText, priceRangeText };
+        } catch (error) {
+          // 網路錯誤或解析錯誤時顯示
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
         }
       }
 
       // 根據景點資料建立資訊視窗的 HTML 內容
-      function buildSpotPreviewInfoHtml(spot, openingHoursText = "載入中...") {
+      function buildSpotPreviewInfoHtml(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
         const photoUrl =
           spot.photos && spot.photos[0] && spot.photos[0].photo_url
             ? spot.photos[0].photo_url
@@ -905,7 +959,7 @@
               }`
             : "未提供";
         const openingHoursDisplay = escapeHtml(openingHoursText);
-        const priceLevelText = escapeHtml(getPriceLevelText(spot));
+        const priceRangeDisplay = escapeHtml(priceRangeText);
 
         return `
           <div class="spot-map-card">
@@ -916,16 +970,26 @@
                 ${photoUrl ? "" : '<i class="far fa-image"></i>'}
               </div>
               <div class="spot-map-card-main">
-                <div class="spot-map-card-title">${name}</div>
+                <div class="spot-map-card-title-row">
+                  <div class="spot-map-card-title">${name}</div>
+                  <button
+                    type="button"
+                    class="spot-map-close-btn"
+                    aria-label="關閉景點資訊"
+                    onclick="closeSpotPreviewInfo()"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
                 <div class="spot-map-card-address">${address}</div>
               </div>
             </div>
             <div class="spot-map-card-metrics">
               <div class="spot-map-chip"><i class="fas fa-star"></i> 評分 ${ratingText}</div>
               <div class="spot-map-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
-              <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位 ${priceLevelText}</div>
+              <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
             </div>
-            <button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd)">
+            <button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
               <i class="fas fa-plus"></i> 加入行程
             </button>
           </div>
@@ -933,7 +997,11 @@
       }
 
       // 搜尋結果點擊後在地圖上顯示景點資訊的
-      function openSpotInfoOnMap(spot, openingHoursText = "載入中...") {
+      function openSpotInfoOnMap(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
         if (!map || !spot) return;
 
         const location = normalizePlaceLocation(spot);
@@ -954,6 +1022,7 @@
           content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(
             spot,
             openingHoursText,
+            priceRangeText,
           )}</div>`,
           maxWidth: 360,
         });
@@ -989,7 +1058,8 @@
       }
 
       // 把選中的景點加入行程
-      async function addSpotToItinerary(spot) {
+      async function addSpotToItinerary(spot, evt) {
+        if (evt) evt.stopPropagation();
         if (!spot) return;
 
         // 看 currentDayIndex 決定要加到哪一天
@@ -1017,9 +1087,10 @@
         } else {
           displayDay(currentDayIndex);
         }
+
+        openSheet();
       }
 
-      // 從地圖上的資訊視窗點擊「加入行程」按鈕後呼叫這個
       // --- SortableJS 設定 (拖拽功能) ---
       const timelineList = document.getElementById("timelineList");
 
@@ -1396,12 +1467,16 @@
         if (!selectedSpot) return;
 
         selectedSpotForAdd = selectedSpot;
-        closeSpotSearchModal();
-        openSpotInfoOnMap(selectedSpot, "載入中...");
+        // 只收起景點清單，不關閉搜尋框
+        spotSearchResults.innerHTML = "";
 
-        const openingHoursText = await getOpeningHoursText(selectedSpot);
+        openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
+
+        const { openingHoursText, priceRangeText } = await getBusinessInfo(
+          selectedSpot,
+        );
         if (selectedSpotForAdd === selectedSpot) {
-          openSpotInfoOnMap(selectedSpot, openingHoursText);
+          openSpotInfoOnMap(selectedSpot, openingHoursText, priceRangeText);
         }
       }
       // 從行程活動中嘗試獲取一個有效的座標位置，作為搜尋的錨點
