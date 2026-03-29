@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlyPlay 登入</title>
+    <link rel="stylesheet" href="css/login.css" />
+  </head>
+  <body>
+    <div class="login-bg">
+      <div class="login-card">
+        <h1 class="brand-title">FlyPlay</h1>
+        <form id="loginForm" autocomplete="on">
+          <div class="input-group">
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="Email"
+              required
+              autofocus
+            />
+          </div>
+          <div class="input-group">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="密碼"
+              required
+            />
+          </div>
+          <button type="submit" class="login-btn">登入</button>
+          <button type="button" class="demo-btn" id="fillDemo">
+            一鍵填入測試帳號
+          </button>
+          <div class="error-msg" id="errorMsg"></div>
+        </form>
+      </div>
+    </div>
+    <script src="js/login.js"></script>
+  </body>
+</html>
