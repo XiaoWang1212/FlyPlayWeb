@@ -764,7 +764,21 @@ async function submitAIRecommendation() {
     // 完整回應（含 raw_output）給 index.html 顯示
     localStorage.setItem("last_itinerary_response", JSON.stringify(result));
 
-    window.location.href = "index.html";
+    // ✓ POST 完整數據給 app.py 的 /api/itinerary，讓 app.py 讀取和處理
+    await fetch(`${API_BASE}/api/itinerary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result),
+    }).catch(err => {
+      console.warn("發送至 app.py 失败:", err);
+      // 即使失败也继续
+    });
+
+    console.log("✓ 準備跳轉至 index.html");
+    // 延迟 100ms 确保数据已保存
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 100);
   } catch (err) {
     console.error("itinerary 生成失敗:", err);
     alert("AI 行程生成失敗，請稍後再試");

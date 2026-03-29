@@ -652,7 +652,16 @@
                 map.panBy(0, 180);
               }, 150);
             } else {
-              console.error("路線規劃失敗:", status);
+              console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+                status: status,
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints,
+                activities: activities.map(a => ({
+                  name: a.place_name,
+                  location: a.location
+                }))
+              });
             }
           },
         );
@@ -761,7 +770,6 @@
           script.async = true;
           document.head.appendChild(script);
         });
-
       const sidebar = document.getElementById("sidebar");
       const overlay = document.querySelector(".sidebar-overlay");
       const sheet = document.getElementById("bottomSheet");
@@ -1034,32 +1042,6 @@
             day.activities = ordered;
           }
         });
-      }
-
-      function saveCurrentDayOrder(dayIndex) {
-        if (dayIndex < 0 || !editedDays || !editedDays[dayIndex]) return;
-
-        const items = Array.from(
-          document.querySelectorAll("#timelineList .timeline-item"),
-        );
-        const ids = items
-          .map((item) => item.dataset.activityId)
-          .filter((id) => id);
-
-        if (!ids.length) return;
-
-        const oldActivities = editedDays[dayIndex].activities;
-        const newOrder = ids
-          .map((id) =>
-            oldActivities.find(
-              (act) => act.activityId === id || act.place_name === id,
-            ),
-          )
-          .filter(Boolean);
-
-        if (newOrder.length === oldActivities.length) {
-          editedDays[dayIndex].activities = newOrder;
-        }
       }
 
       function toggleEditMode() {

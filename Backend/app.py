@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, send_from_directory
+from flask import Flask, jsonify, render_template, send_from_directory, request
 from flask_cors import CORS
 from config import Config
 from routes.map_routes import map_bp
@@ -10,6 +10,9 @@ from services.googlemap_service import GoogleMapService
 import os
 import traceback
 import json
+
+# 存储从 setup.html 传来的行程数据
+stored_itinerary_data = None
 
 with open('response.json', 'r', encoding='utf-8') as f:
     test_data = json.load(f)
@@ -113,22 +116,42 @@ def create_app():
         }), 200
 
 
-    @app.route('/api/itinerary', methods=['GET'])  
+    @app.route('/api/itinerary', methods=['POST', 'GET'])  
     def parse_itinerary():
-        """返回修正好的行程 JSON，並補充圖片"""
+        global stored_itinerary_data
+        
         try:
-            data = test_data
+            if request.method == 'POST':
+                incoming_data = request.get_json()
+                if incoming_data:
+                    stored_itinerary_data = incoming_data
+                    print(stored_itinerary_data)
+                    return jsonify({
+                        'code': 200,
+                        'message': '數據已接收'
+                    }), 200
+            if stored_itinerary_data:
+                response_data = stored_itinerary_data
+                message = response_data.get('message', '')
+                raw_output = response_data.get('data', {}).get('raw_output', '')
+            else:
+                response_data = test_data
+                message = ''
+                raw_output = ''
+                print("→ 使用默认 testdata")
             
-            if not data or 'data' not in data:
+            if not response_data or ('data' not in response_data and 'parsed' not in response_data):
                 return jsonify({
                     'success': False,
                     'error': '無效的請求格式'
                 }), 400
             
-            parsed_data = data.get('data', {})
-            days = parsed_data.get('parsed', {}).get('days', [])
+            if 'data' in response_data:
+                parsed_data = response_data.get('data', {})
+                days = parsed_data.get('parsed', {}).get('days', [])
+            else:
+                days = response_data.get('parsed', {}).get('days', []) if 'parsed' in response_data else []
             
-            # 修改和驗證數據
             modified_days = []
             for day in days:
                 modified_day = {
@@ -166,6 +189,13 @@ def create_app():
                             if search_result.get('success') and search_result.get('places'):
                                 place = search_result['places'][0]
                                 
+                                location = place.get('location', {})
+                                if location.get('latitude') is not None and location.get('longitude') is not None:
+                                    modified_activity['location'] = {
+                                        'lat': location['latitude'],
+                                        'lng': location['longitude']
+                                    }
+                                
                                 if place.get('photos'):
                                     modified_activity['photos'] = [place['photos'][0]]
 
@@ -185,12 +215,15 @@ def create_app():
                 
                 modified_days.append(modified_day)
             
-            print("修改後的行程數據:", modified_days)  # 調試輸出
+            print("✓ 行程數據已處理完成")  
             
-            # 返回修改後的數據
+            # 返回修改後的數據 + 原始信息
             return jsonify({
+                'code': 200,
+                'message': message,
                 'data': {
-                    'days': modified_days
+                    'days': modified_days,
+                    'raw_output': raw_output
                 }
             }), 200
             

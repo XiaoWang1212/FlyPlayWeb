@@ -159,7 +159,8 @@ class GeminiService:
                                 "time": "09:00",
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
-                                "type": "景點/美食/交通/住宿",
+                                "type": "景點/美食/交通/住宿",                         
+                                "location": {{ "lat": 0.0, "lng": 0.0 }}
                                 "cost": "預估費用"
                             }}
                         ]
@@ -172,7 +173,7 @@ class GeminiService:
             }}
             
             只回傳純 JSON，不要包含任何 markdown 標記。
-            不要生成經緯度，座標由系統用 Google Maps API 補齊。
+            飯店請也幫我找一間符合預算的，放在每天的行程裡面，且標註 type 為住宿。
             僅可輸出上述欄位，不可新增任何欄位。
             """
             
