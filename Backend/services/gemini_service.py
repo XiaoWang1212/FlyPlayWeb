@@ -10,10 +10,10 @@ class GeminiService:
         
         # 配置生成參數
         self.generation_config = {
-            "temperature": 0.7,
+            "temperature": 0.5,
             "top_p": 0.95,
             "top_k": 40,
-            "max_output_tokens": 8192,
+            "max_output_tokens": 9999, #revised
         }
     
     def _clean_json_response(self, response_text):
@@ -52,14 +52,10 @@ class GeminiService:
         usage_metadata = getattr(response, 'usage_metadata', None)
         if not usage_metadata:
             return {
-                'input_tokens': None,
-                'output_tokens': None,
                 'total_tokens': None,
             }
 
         return {
-            'input_tokens': getattr(usage_metadata, 'prompt_token_count', None),
-            'output_tokens': getattr(usage_metadata, 'candidates_token_count', None),
             'total_tokens': getattr(usage_metadata, 'total_token_count', None),
         }
     
@@ -148,7 +144,6 @@ class GeminiService:
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "trip_title": "行程標題 (例如：京都古韻三日遊)",
-                "overview": "行程總覽描述",
                 "total_budget_estimate": "預估總花費區間",
                 "days": [
                     {{
@@ -160,8 +155,8 @@ class GeminiService:
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",                         
-                                "location": {{ "lat": 0.0, "lng": 0.0 }}
-                                "cost": "預估費用"
+                                "location": {{ "lat": 0.0, "lng": 0.0 }},
+                                "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
                             }}
                         ]
                     }}
@@ -174,7 +169,19 @@ class GeminiService:
             
             只回傳純 JSON，不要包含任何 markdown 標記。
             飯店請也幫我找一間符合預算的，放在每天的行程裡面，且標註 type 為住宿。
+            place_name請不要寫超過一個以上的地點。
+            一天最多安排三個活動，不限dining_recommendations的數量。
+            decription請簡短描述活動內容，控制在一句話以內。
+            days[].activities[].cost 必須遵守以下格式：
+            1) 單一價格：幣別 + 空白 + 千分位數字 (例：JPY 3,000)
+            2) 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值 (例：JPY 1,000 - 2,500)
+            3) 免費活動：免費
+            4) 住宿可加單位：JPY 12,000 / 晚
+            5) 不確定可用估算：約 JPY 2,000
+            禁止輸出沒有幣別或沒有千分位的格式。
+            dining_recommendations[].feature 簡短描述餐廳特色，控制在一句話以內。
             僅可輸出上述欄位，不可新增任何欄位。
+            請想辦法讓生成資料的時間減少。
             """
             
             response = self.model.generate_content(
@@ -188,7 +195,7 @@ class GeminiService:
             return {
                 'success': True,
                 'data': {
-                    'raw_output': raw_content,
+                    # 'raw_output': raw_content,
                     'parsed': parsed_json,
                     'token_usage': token_usage,
                 }
