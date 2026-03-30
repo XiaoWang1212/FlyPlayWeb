@@ -16,6 +16,8 @@ stored_itinerary_data = None
 
 with open('response.json', 'r', encoding='utf-8') as f:
     test_data = json.load(f)
+with open('test.json', 'r', encoding='utf-8') as f:
+    test_data_2 = json.load(f)
 
 # 初始化 GoogleMapService
 google_map_service = GoogleMapService()
@@ -76,36 +78,79 @@ def create_app():
         }), 500
 
     
-    @app.route('/test_photos')
-    def test_photos():
-        """測試照片 API"""
-        try:
+    @app.route('/test/latlng', methods=['GET'])
+    def test_latlng():
+        all_locations = [
+            loc
+            for day in test_data_2.get('data', [])
+            for loc in day.get('locations', [])
+        ]
+
+        center_location = None
+        results = []
+        # 先找到第一個有座標的地點
+        for loc in all_locations:
             search_result = google_map_service.search_places(
-                "南港展覽館", 
+                text_query=loc.get('location_name', ''),
                 language_code='zh-TW',
                 max_results=1
             )
-            
             if search_result.get('success') and search_result.get('places'):
                 place = search_result['places'][0]
-                photos = place.get('photos', [])
-                return jsonify({
-                    'success': True,
-                    'photos': photos
-                }), 200
-            
+                location = place.get('location', {})
+                if location.get('latitude') and location.get('longitude'):
+                    center_location = {
+                        'latitude': location['latitude'],
+                        'longitude': location['longitude']
+                    }
+                    results.append({
+                        'location_name': loc.get('location_name'),
+                        'place_id': place.get('place_id'),
+                        'location': center_location
+                    })
+                    break
+        if not center_location:
             return jsonify({
                 'success': False,
-                'error': '未找到相關地點或照片'
+                'error': '所有地點皆查無座標'
             }), 404
-            
-        except Exception as e:
-            print(f"獲取照片失敗: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'獲取照片失敗: {str(e)}'
-            }), 500
 
+        # 其餘地點用 search_places_nearby 以前一個為參考座標
+        for loc in all_locations:
+            if loc.get('location_name') == results[0]['location_name']:
+                continue
+            nearby_result = google_map_service.search_places_nearby(
+                text_query=loc.get('location_name', ''),
+                location=center_location,
+                language_code='zh-TW',
+                max_results=1
+            )
+            if nearby_result.get('success') and nearby_result.get('places'):
+                place = nearby_result['places'][0]
+                location = place.get('location', {})
+                results.append({
+                    'location_name': loc.get('location_name'),
+                    'place_id': place.get('place_id'),
+                    'location': location
+                })
+                # 更新 center_location 為最新找到的地點
+                if location.get('latitude') and location.get('longitude'):
+                    center_location = {
+                        'latitude': location['latitude'],
+                        'longitude': location['longitude']
+                    }
+            else:
+                results.append({
+                    'location_name': loc.get('location_name'),
+                    'place_id': -1,
+                    'location': {}
+                })
+
+        return jsonify({
+            'success': True,
+            'results': results
+        }), 200
+        
     @app.route('/cache/clear', methods=['POST'])
     def clear_cache():
         """清除所有快取"""

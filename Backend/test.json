@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "day": 1,
+      "locations": [
+        { "location_name": "一蘭拉麵 新宿中央東口店" },
+        { "location_name": "新宿御苑" },
+        { "location_name": "歌舞伎町一番街" }
+      ]
+    },
+    {
+      "day": 2,
+      "locations": [
+        { "location_name": "淺草寺" },
+        { "location_name": "一蘭拉麵 淺草店" },
+        { "location_name": "東京晴空塔" }
+      ]
+    },
+    {
+      "day": 3,
+      "locations": [
+        { "location_name": "金閣寺" },
+        { "location_name": "伏見稻荷大社" },
+        { "location_name": "一蘭拉麵 京都河原町店" }
+      ]
+    }
+  ]
+}
