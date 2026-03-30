@@ -143,7 +143,6 @@ class GeminiService:
             
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
-                "trip_title": "行程標題 (例如：京都古韻三日遊)",
                 "total_budget_estimate": "預估總花費區間",
                 "days": [
                     {{
