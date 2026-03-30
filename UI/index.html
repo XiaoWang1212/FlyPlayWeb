@@ -169,9 +169,6 @@
             placeholder="輸入景點、地標或地址"
           />
         </div>
-        <div class="spot-search-status" id="spotSearchStatus">
-          請輸入關鍵字開始搜尋
-        </div>
         <div class="spot-search-results" id="spotSearchResults"></div>
       </div>
     </div>
@@ -187,6 +184,8 @@
       let currentMarkers = [];
       let currentInfoWindow = null;
       let justClickedMarker = false;
+      let spotPreviewMarker = null;
+      let selectedSpotForAdd = null;
 
       // 新增：清除地圖上現有路線的函數
       function clearMapRoutes() {
@@ -793,16 +792,305 @@
       // --- 行程搜尋相關變數 ---
       const spotSearchOverlay = document.getElementById("spotSearchOverlay");
       const spotSearchInput = document.getElementById("spotSearchInput");
-      const spotSearchStatus = document.getElementById("spotSearchStatus");
+
+      // 點擊搜尋框時重新顯示清單
+      spotSearchInput.addEventListener("focus", function () {
+        if (
+          spotSearchState.isOpen &&
+          Array.isArray(spotSearchState.results) &&
+          spotSearchState.results.length > 0 &&
+          spotSearchResults.innerHTML === ""
+        ) {
+          renderSpotSearchResults();
+        }
+      });
       const spotSearchResults = document.getElementById("spotSearchResults");
 
       const spotSearchState = {
         isOpen: false,
         results: [],
         selectedIndex: -1,
-        debounceTimer: null,
         requestId: 0,
       };
+
+      function escapeHtml(text) {
+        if (text === null || text === undefined) return "";
+        return String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      // 將 Google Places API 的地點物件轉換成統一的 { lat, lng } 格式
+      function normalizePlaceLocation(place) {
+        if (!place || !place.location) return null;
+
+        const lat =
+          typeof place.location.lat === "number"
+            ? place.location.lat
+            : typeof place.location.latitude === "number"
+              ? place.location.latitude
+              : null;
+
+        const lng =
+          typeof place.location.lng === "number"
+            ? place.location.lng
+            : typeof place.location.longitude === "number"
+              ? place.location.longitude
+              : null;
+
+        if (lat === null || lng === null) return null;
+        return { lat, lng };
+      }
+
+      function clearSpotPreview() {
+        if (spotPreviewMarker) {
+          spotPreviewMarker.setMap(null);
+          spotPreviewMarker = null;
+        }
+      }
+
+      function closeSpotPreviewInfo() {
+        clearCurrentPopup();
+        clearSpotPreview();
+      }
+
+      async function getBusinessInfo(spot) {
+        if (!spot) {
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
+        }
+
+        // 若先前已查過 business_info，優先使用快取結果，減少重複 API 請求。
+        if (spot._businessInfo) {
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+          return { openingHoursText, priceRangeText };
+        }
+
+        try {
+          let response;
+
+          // 以 place_id 查詢 沒有 place_id 才使用名稱查詢
+          if (spot.place_id) {
+            response = await fetch(
+              `${API_BASE}/api/maps/business_info/${encodeURIComponent(
+                spot.place_id,
+              )}`,
+            );
+          } else if (spot.name) {
+            response = await fetch(`${API_BASE}/api/maps/business_info`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: spot.name }),
+            });
+          } else {
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
+          }
+
+          // API失敗或回傳非成功格式的統一回傳預設值
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
+          }
+
+          // 將回傳資料暫存到 spot，讓同一景點下次可直接使用。
+          spot._businessInfo = payload?.data || {};
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+
+          return { openingHoursText, priceRangeText };
+        } catch (error) {
+          // 網路錯誤或解析錯誤時顯示
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
+        }
+      }
+
+      // 根據景點資料建立資訊視窗的 HTML 內容
+      function buildSpotPreviewInfoHtml(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
+        const photoUrl =
+          spot.photos && spot.photos[0] && spot.photos[0].photo_url
+            ? spot.photos[0].photo_url
+            : "";
+        const name = escapeHtml(spot.name || "未命名地點");
+        const address = escapeHtml(spot.address || "無地址資訊");
+        const ratingText =
+          typeof spot.rating === "number"
+            ? `${spot.rating.toFixed(1)}${
+                spot.user_rating_count ? ` (${spot.user_rating_count})` : ""
+              }`
+            : "未提供";
+        const openingHoursDisplay = escapeHtml(openingHoursText);
+        const priceRangeDisplay = escapeHtml(priceRangeText);
+
+        return `
+          <div class="spot-map-card">
+            <div class="spot-map-card-head">
+              <div class="spot-map-card-thumb ${photoUrl ? "has-photo" : ""}" ${
+          photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
+        }>
+                ${photoUrl ? "" : '<i class="far fa-image"></i>'}
+              </div>
+              <div class="spot-map-card-main">
+                <div class="spot-map-card-title-row">
+                  <div class="spot-map-card-title">${name}</div>
+                  <button
+                    type="button"
+                    class="spot-map-close-btn"
+                    aria-label="關閉景點資訊"
+                    onclick="closeSpotPreviewInfo()"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="spot-map-card-address">${address}</div>
+              </div>
+            </div>
+            <div class="spot-map-card-metrics">
+              <div class="spot-map-chip"><i class="fas fa-star"></i> 評分 ${ratingText}</div>
+              <div class="spot-map-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
+              <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
+            </div>
+            <button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
+              <i class="fas fa-plus"></i> 加入行程
+            </button>
+          </div>
+        `;
+      }
+
+      // 搜尋結果點擊後在地圖上顯示景點資訊的
+      function openSpotInfoOnMap(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
+        if (!map || !spot) return;
+
+        const location = normalizePlaceLocation(spot);
+        if (!location) return;
+
+        clearSpotPreview();
+        clearCurrentPopup();
+
+        // 新增一個 marker 來顯示目前選中的景點
+        spotPreviewMarker = new google.maps.Marker({
+          map,
+          position: location,
+          title: spot.name || "景點",
+          animation: google.maps.Animation.DROP,
+        });
+
+        currentInfoWindow = new google.maps.InfoWindow({
+          content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(
+            spot,
+            openingHoursText,
+            priceRangeText,
+          )}</div>`,
+          maxWidth: 360,
+        });
+
+        // 打開資訊視窗並把地圖中心移到這個景點
+        currentInfoWindow.open({ map, anchor: spotPreviewMarker });
+        map.panTo(location);
+        if ((map.getZoom() || 0) < 15) {
+          map.setZoom(15);
+        }
+      }
+
+      // 在搜尋結果區顯示提示訊息（例如錯誤訊息或「沒有找到結果」的提示）
+      function showSearchMessage(message) {
+        spotSearchResults.innerHTML = `<div class="spot-search-message">${escapeHtml(message)}</div>`;
+      }
+
+      function buildActivityFromSpot(spot) {
+        const location = normalizePlaceLocation(spot) || { lat: 0, lng: 0 };
+        const types = Array.isArray(spot.types) ? spot.types : [];
+
+        return {
+          activityId: spot.place_id || `${spot.name || "spot"}-${Date.now()}`,
+          place_name: spot.name || "未命名地點",
+          time: "待安排",
+          description: spot.address || "從搜尋新增的景點",
+          cost: "",
+          type: types[0] || "景點",
+          address: spot.address || "",
+          location,
+          photos: spot.photos || [],
+        };
+      }
+
+      // 把選中的景點加入行程
+      async function addSpotToItinerary(spot, evt) {
+        if (evt) evt.stopPropagation();
+        if (!spot) return;
+
+        // 看 currentDayIndex 決定要加到哪一天
+        const targetDays = getActiveDays();
+        if (!Array.isArray(targetDays) || !targetDays.length) return;
+
+        const targetDayIndex =
+          currentDayIndex >= 0 && currentDayIndex < targetDays.length
+            ? currentDayIndex
+            : 0;
+
+        const targetDay = targetDays[targetDayIndex];
+        if (!targetDay || !Array.isArray(targetDay.activities)) return;
+
+        const newActivity = buildActivityFromSpot(spot);
+        targetDay.activities.push(newActivity);
+
+        if (isEditMode && editedDays) {
+          isDragChanged = true;
+          document.getElementById("dragConfirmBtn").classList.add("show");
+        }
+
+        if (currentDayIndex === -1) {
+          displayAllDays();
+        } else {
+          displayDay(currentDayIndex);
+        }
+
+        openSheet();
+        closeSpotSearchModal();
+      }
 
       // --- SortableJS 設定 (拖拽功能) ---
       const timelineList = document.getElementById("timelineList");
@@ -1114,12 +1402,16 @@
         spotSearchState.isOpen = true;
         spotSearchState.results = [];
         spotSearchState.selectedIndex = -1;
+        selectedSpotForAdd = null;
 
         spotSearchOverlay.classList.add("active");
         spotSearchOverlay.setAttribute("aria-hidden", "false");
         spotSearchResults.innerHTML = "";
-        spotSearchStatus.textContent = "";
         spotSearchInput.value = "";
+
+        // 搜尋時先收起下方面板，避免遮住地圖
+        sheet.classList.remove("expanded", "half");
+        syncSheetState("sheet-collapsed");
 
         setTimeout(() => {
           spotSearchInput.focus(); // 動畫結束後才聚焦
@@ -1130,11 +1422,6 @@
         spotSearchState.isOpen = false;
         spotSearchOverlay.classList.remove("active");
         spotSearchOverlay.setAttribute("aria-hidden", "true");
-
-        if (spotSearchState.debounceTimer) {
-          clearTimeout(spotSearchState.debounceTimer);
-          spotSearchState.debounceTimer = null;
-        }
       }
 
       // 渲染搜尋結果列表
@@ -1172,9 +1459,30 @@
         spotSearchResults.innerHTML = html;
       }
 
-      function selectSpotSearchResult(index) {
+      async function selectSpotSearchResult(index) {
         spotSearchState.selectedIndex = index;
         renderSpotSearchResults();
+
+        // 根據選中的搜尋結果在地圖上顯示資訊，並準備加入行程
+        const selectedSpot = spotSearchState.results[index];
+        if (!selectedSpot) return;
+
+        selectedSpotForAdd = selectedSpot;
+        // 只收起景點清單，不關閉搜尋框
+        spotSearchResults.innerHTML = "";
+
+        // 收起 bottom sheet
+        sheet.classList.remove("expanded", "half");
+        syncSheetState("sheet-collapsed");
+
+        openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
+
+        const { openingHoursText, priceRangeText } = await getBusinessInfo(
+          selectedSpot,
+        );
+        if (selectedSpotForAdd === selectedSpot) {
+          openSpotInfoOnMap(selectedSpot, openingHoursText, priceRangeText);
+        }
       }
       // 從行程活動中嘗試獲取一個有效的座標位置，作為搜尋的錨點
       function normalizeActivityLocation(location) {
@@ -1238,11 +1546,8 @@
         showNoResultMessage = false,
       ) {
         try {
-          // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
           const anchorLocation = getSearchAnchorLocation();
-          let response;
-          let payload;
-          let useNearbyEndpoint = false;
+          let response, payload;
 
           if (anchorLocation) {
             response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
@@ -1256,12 +1561,7 @@
                 maxResultCount: 8,
               }),
             });
-            payload = await response.json();
-            useNearbyEndpoint = response.ok && payload.success;
-          }
-
-          // nearby 無結果/失敗時，退回原本文字搜尋
-          if (!useNearbyEndpoint) {
+          } else {
             response = await fetch(`${API_BASE}/api/maps/search`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1271,9 +1571,9 @@
                 maxResultCount: 10,
               }),
             });
-
-            payload = await response.json();
           }
+
+          payload = await response.json();
 
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
@@ -1284,37 +1584,32 @@
           spotSearchState.selectedIndex = -1;
 
           if (!response.ok || !payload.success) {
-            spotSearchStatus.textContent =
-              payload.error || "搜尋失敗，請稍後再試";
-            spotSearchResults.innerHTML = "";
+            showSearchMessage(payload.error || "搜尋失敗，請稍後再試");
             return;
           }
 
           if (!places.length) {
-            spotSearchStatus.textContent = showNoResultMessage
-              ? "找不到相關景點，請嘗試其他關鍵字"
-              : "";
-            spotSearchResults.innerHTML = "";
+            if (showNoResultMessage) {
+              showSearchMessage("找不到相關景點，請嘗試其他關鍵字");
+            } else {
+              spotSearchResults.innerHTML = "";
+            }
             return;
           }
-
-          spotSearchStatus.textContent = "";
 
           renderSpotSearchResults();
         } catch (error) {
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
           }
-          spotSearchStatus.textContent = "搜尋失敗，請檢查網路或稍後再試";
-          spotSearchResults.innerHTML = "";
+          showSearchMessage("搜尋失敗，請檢查網路或稍後再試");
         }
       }
 
       function triggerSpotSearch(showNoResultMessage = false) {
         const keyword = spotSearchInput.value.trim();
         if (!keyword) {
-          spotSearchStatus.textContent = "";
-          spotSearchResults.innerHTML = "";
+          showSearchMessage("請先輸入關鍵字");
           return;
         }
 
@@ -1328,21 +1623,8 @@
 
         spotSearchState.requestId += 1;
         const currentReqId = spotSearchState.requestId;
-
-        spotSearchStatus.textContent = "";
         spotSearchResults.innerHTML = "";
         performSpotSearch(keyword, currentReqId, showNoResultMessage);
-      }
-
-      function onSpotSearchInput() {
-        if (spotSearchState.debounceTimer) {
-          clearTimeout(spotSearchState.debounceTimer);
-        }
-
-        spotSearchState.debounceTimer = setTimeout(() => {
-          if (!spotSearchState.isOpen) return;
-          triggerSpotSearch();
-        }, 350);
       }
 
       function onSpotSearchKeydown(e) {
@@ -1529,7 +1811,6 @@
         }
       });
       
-      spotSearchInput.addEventListener("input", onSpotSearchInput);
       spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 
       // 處理鍵盤彈出時的視窗大小變化
