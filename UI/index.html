@@ -1089,6 +1089,7 @@
         }
 
         openSheet();
+        closeSpotSearchModal();
       }
 
       // --- SortableJS 設定 (拖拽功能) ---
@@ -1470,6 +1471,10 @@
         // 只收起景點清單，不關閉搜尋框
         spotSearchResults.innerHTML = "";
 
+        // 收起 bottom sheet
+        sheet.classList.remove("expanded", "half");
+        syncSheetState("sheet-collapsed");
+
         openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
 
         const { openingHoursText, priceRangeText } = await getBusinessInfo(
@@ -1541,11 +1546,8 @@
         showNoResultMessage = false,
       ) {
         try {
-          // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
           const anchorLocation = getSearchAnchorLocation();
-          let response;
-          let payload;
-          let useNearbyEndpoint = false;
+          let response, payload;
 
           if (anchorLocation) {
             response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
@@ -1559,12 +1561,7 @@
                 maxResultCount: 8,
               }),
             });
-            payload = await response.json();
-            useNearbyEndpoint = response.ok && payload.success;
-          }
-
-          // nearby 無結果/失敗時，退回原本文字搜尋
-          if (!useNearbyEndpoint) {
+          } else {
             response = await fetch(`${API_BASE}/api/maps/search`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1574,9 +1571,9 @@
                 maxResultCount: 10,
               }),
             });
-
-            payload = await response.json();
           }
+
+          payload = await response.json();
 
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
