@@ -140,10 +140,8 @@ class GeminiService:
             預算: {budget}
             興趣: {interests_str}
             {date_info}
-            
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
-                "total_budget_estimate": "預估總花費區間",
                 "days": [
                     {{
                         "day": 1,
@@ -154,7 +152,6 @@ class GeminiService:
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",                         
-                                "location": {{ "lat": 0.0, "lng": 0.0 }},
                                 "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
                             }}
                         ]
@@ -180,9 +177,34 @@ class GeminiService:
             禁止輸出沒有幣別或沒有千分位的格式。
             dining_recommendations[].feature 簡短描述餐廳特色，控制在一句話以內。
             僅可輸出上述欄位，不可新增任何欄位。
+            交通建議請在兩三句話內結束，不要有容辭贅字。
             請想辦法讓生成資料的時間減少。
             """
             
+            #純location 版本
+            # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
+            # {{
+            #     "days": [
+            #         {{
+            #             "day": 1,
+            #             "weekday": "星期幾 (例如：星期一)", 
+            #             "location": [
+            #                 {{
+            #                     "time": "09:00",
+            #                     "location_name": "地點名稱",
+            #                 }}
+            #             ]
+            #         }}
+            #     ],
+
+            # }}
+            # 只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
+            # 一天最多三個景點就好。
+            # days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+
+            #  """
+
+
             response = self.model.generate_content(
                 prompt,
                 generation_config=self.generation_config
