@@ -243,14 +243,6 @@
           buttonContainer.appendChild(btn);
         });
 
-        // 初始化聊天
-        window.onload = function () {
-          typeMessage(
-            "您好！我是飛遊 AI 助手。我可以幫您調整行程、推薦景點、規劃路線，或是回答旅遊相關問題。請告訴我您需要什麼協助？",
-            "bot",
-          );
-        };
-
         // 把按鈕加到時間線最上方
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
 
@@ -701,8 +693,53 @@
           displayDay(dayIndex);
         }
       }
-      async function initMap() {
+      // 第一階段：先加載坐標信息（快速展示地圖）
+      async function loadCoordinatesFirst() {
         try {
+          console.log("載入坐標信息...");
+          const response = await fetch(`${API_BASE}/data/latlng`);
+          
+          if (!response.ok) {
+            throw new Error(`latlng API ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          // 存進 localStorage
+          localStorage.setItem("data_latlng", JSON.stringify(result));
+          console.log("坐標數據已存入 localStorage");
+          
+          // 從 /data/latlng 的結果構建臨時行程數據結構
+          allDays = result.data.map((dayData) => {
+            return {
+              day: dayData.day,
+              weekday: dayData.day ? `第${dayData.day}天` : "未知",
+              activities: dayData.locations.map((loc) => ({
+                place_name: loc.location_name,
+                location: {
+                  lat: loc.location.latitude || 0,
+                  lng: loc.location.longitude || 0,
+                },
+                time: "",
+                description: "",
+                type: "",
+                cost: "",
+              })),
+            };
+          });
+          
+          console.log("坐標已載入", allDays);
+          return true;
+        } catch (error) {
+          console.error("載入坐標失敗：", error);
+          return false;
+        }
+      }
+
+      // 第二階段：在對話時補齊完整數據
+      async function enrichWithFullData() {
+        try {
+          console.log("補齊完整數據...");
           const response = await fetch(`${API_BASE}/api/itinerary`);
 
           if (!response.ok) {
@@ -710,7 +747,36 @@
           }
 
           const result = await response.json();
-          allDays = result.data.days;
+          const fullDays = result.data.days;
+          
+          // 用完整數據更新 allDays（保留坐標，補齊其他信息）
+          allDays = allDays.map((tempDay, dayIndex) => {
+            const fullDay = fullDays[dayIndex] || tempDay;
+            return {
+              ...tempDay,
+              activities: (fullDay.activities || []).map((activity, actIndex) => ({
+                ...activity,
+                // 用臨時坐標補充（如果完整數據沒有）
+                location: activity.location || (tempDay.activities[actIndex]?.location || { lat: 0, lng: 0 }),
+              })),
+            };
+          });
+          
+          console.log("完整數據已補齊", allDays);
+          return true;
+        } catch (error) {
+          console.error("補齊數據失敗：", error);
+          return false;
+        }
+      }
+
+      async function initMap() {
+        try {
+          // 第一步：先加載坐標
+          const coordsLoaded = await loadCoordinatesFirst();
+          if (!coordsLoaded) {
+            throw new Error("無法載入坐標信息");
+          }
 
           // 計算所有景點的平均座標
           let totalLat = 0;
@@ -765,7 +831,7 @@
         .then((res) => res.json())
         .then((data) => {
           const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&callback=initMap&libraries=routes&loading=async`;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes&loading=async`;
           script.async = true;
           document.head.appendChild(script);
         });
@@ -1149,6 +1215,28 @@
 
       // 初始化聊天
       function showGeneratedRawOutputInChat() {
+        // 先發送 coordinatesData（本地存儲的坐標數據）
+        const coordinatesData = localStorage.getItem("data_latlng");
+        if (coordinatesData) {
+          try {
+            const data = JSON.parse(coordinatesData);
+            
+            // 自動切到聊天視圖
+            if (!isChatMode) {
+              toggleChatMode();
+            }
+            
+            // 發送坐標數據訊息
+            const displayText = JSON.stringify(data, null, 2);
+            appendMsg("📍 行程坐標信息已加載:\n" + displayText, "bot");
+            
+            console.log("✓ 已發送 data_latlng 到聊天");
+          } catch (e) {
+            console.error("解析 data_latlng 失敗:", e);
+          }
+        }
+
+        // 然後顯示之前保存的行程回應
         const raw = localStorage.getItem("last_itinerary_response");
         if (!raw) return;
 
@@ -1179,9 +1267,141 @@
         }
       }
 
+      // 通過Gemini補充詳細信息
+      async function generateDetailedItinerary() {
+        try {
+          console.log("第二步：調用 Gemini 補充詳細信息");
+          
+          // 從 localStorage 讀取坐標數據
+          const dataLatLng = localStorage.getItem("data_latlng");
+          if (!dataLatLng) {
+            console.warn("找不到坐標數據");
+            return false;
+          }
+          const tripSetup = localStorage.getItem("trip_setup");
+
+          // 合併坐標數據和旅行配置
+          const payload = {
+            data_latlng: JSON.parse(dataLatLng),
+            trip_setup: tripSetup ? JSON.parse(tripSetup) : {}
+          };
+          
+          // 調用後端端點來生成詳細行程
+          const response = await fetch(`${API_BASE}/api/itinerary/detail`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API 呼叫失敗 ${response.status}`);
+          }
+          
+          const result = await response.json();
+          
+          if (result.code !== 200) {
+            throw new Error(result.error || "生成詳細行程失敗");
+          }
+          
+          console.log("✓ 詳細行程已生成");
+          
+          // 存儲原始詳細行程
+          localStorage.setItem("detailed_itinerary", JSON.stringify(result.data));
+          
+          return result.data;
+        } catch (error) {
+          console.error("生成詳細行程失敗：", error);
+          return false;
+        }
+      }
+      
+      // 補充圖片信息
+      async function enrichWithPictureInfo(detailedData) {
+        try {
+          console.log("第三步：調用 /api/itinerary 補充圖片信息");
+
+          // 先POST保存到後端
+          let response = await fetch(`${API_BASE}/api/itinerary`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(detailedData.days)
+          });
+          
+          if (!response.ok) {
+            console.warn("POST 失敗，嘗試 GET");
+          }
+          
+          
+          const result = await response.json();
+          
+          if (result.code !== 200) {
+            throw new Error(result.error || "補充圖片信息失敗");
+          }
+          
+          console.log("✓ 圖片信息已補充");
+          
+          // 轉換為 allDays 格式並存儲
+          allDays = convertToAllDaysFormat(result.data.days);
+          localStorage.setItem("complete_itinerary", JSON.stringify(allDays));
+          
+          return true;
+        } catch (error) {
+          console.error("補充圖片信息失敗：", error);
+          return false;
+        }
+      }
+      
+      // 轉換為 allDays 期望的格式
+      function convertToAllDaysFormat(days) {
+        if (!days) return [];
+        
+        return days.map(day => ({
+          day: day.day,
+          weekday: day.weekday,
+          activities: (day.location || day.activities || []).map(item => ({
+            time: item.time,
+            place_name: item.place_name,
+            description: item.description || "",
+            type: item.type || "景點",
+            cost: item.cost || "未知",
+            location: item.location || { lat: 0, lng: 0 },
+            photos: item.photos,
+            rating: item.rating,
+            address: item.address,
+            phone: item.phone
+          }))
+        }));
+      }
+      
       // 初始化聊天（原本的測試訊息請移除）
-      window.onload = function () {
-        showGeneratedRawOutputInChat();
+      window.onload = async function () {
+        try {
+          console.log("=== 頁面初始化開始 ===");
+          console.log("第一步：初始化地圖");
+          
+          // 初始化地圖（使用 coordinatesData）
+          await initMap();
+          
+          // 補充詳細行程信息
+          const detailedData = await generateDetailedItinerary();
+          if (detailedData) {
+            // 補充圖片信息
+            await enrichWithPictureInfo(detailedData);
+            
+            // 重新顯示行程（使用完整數據）
+            displayAllDays();
+            console.log("=== 頁面初始化完成 ===");
+          } else {
+            console.warn("⚠️  無法生成詳細行程，使用基礎坐標數據");
+          }
+          
+        } catch (error) {
+          console.error("初始化失敗:", error);
+        }
       };
 
       // 切換聊天模式
@@ -1223,6 +1443,9 @@
 
         appendMsg(text, "user");
         input.value = "";
+        
+        // 確保完整數據已加載
+        enrichWithFullData();
 
         const loadingId = "loading-" + Date.now();
         document
