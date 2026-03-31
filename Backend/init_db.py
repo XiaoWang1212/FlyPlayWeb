@@ -54,10 +54,13 @@ class DatabaseInitializer:
                             itinerary_id SERIAL PRIMARY KEY,
                             project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
                             days INTEGER NOT NULL,
+                            departure_airport VARCHAR(255),         -- 原來的出發地改成出發機場
                             destination VARCHAR(255),
-                            type VARCHAR(50), -- 旅遊類型
-                            money NUMERIC(12, 2), -- 預算
-                            data_json JSONB NOT NULL DEFAULT '{}'::jsonb, -- 詳細行程內容
+                            type VARCHAR(50),                       -- 旅遊類型
+                            companion VARCHAR(50),                  -- 旅伴
+                            travel_style VARCHAR(50),               -- 旅遊類型詳細（如美食、冒險）
+                            budget VARCHAR(50),                     -- 預算等級（中等、高等...）
+                            data_json JSONB NOT NULL DEFAULT '{}'::jsonb,  -- 詳細行程內容
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
                     ''')
