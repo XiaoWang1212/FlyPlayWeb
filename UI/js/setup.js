@@ -802,7 +802,8 @@ async function submitAIRecommendation() {
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const result = await res.json();
-    if (result.code !== 200) throw new Error(result.message || "AI 生成錯誤");
+    if (result.code !== 200 && result.code !== 201)
+      throw new Error(result.message || "AI 生成錯誤");
 
     // 給地圖/行程使用
     localStorage.setItem(
@@ -824,10 +825,8 @@ async function submitAIRecommendation() {
     });
 
     console.log("✓ 準備跳轉至 index.html");
-    // 延迟 100ms 确保数据已保存
-    setTimeout(() => {
-      window.location.href = "index.html";
-    }, 100);
+    // 行程建立成功後自動導向首頁
+    window.location.href = "index.html";
   } catch (err) {
     console.error("itinerary 生成失敗:", err);
     alert("AI 行程生成失敗，請稍後再試");

@@ -501,6 +501,8 @@
           dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
           timelineList.appendChild(dayTitle);
 
+          console.log(`正在載入第 ${day.day} 天的活動：`, day.activities);
+
           day.activities.forEach((activity, actIndex) => {
             const isLast = actIndex === day.activities.length - 1;
             const photoUrl =
@@ -579,6 +581,13 @@
 
           const origin = activities[0].location;
           const destination = activities[activities.length - 1].location;
+          if (!origin || !destination) {
+            console.warn(
+              `第 ${dayIndex + 1} 天缺少地點座標，無法規劃路線`,
+              activities,
+            );
+            return;
+          }
           const waypoints = activities.slice(1, -1).map((act) => ({
             location: act.location,
             stopover: true,
@@ -596,8 +605,22 @@
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
                 addCustomMarkers(activities, dayIndex);
+                // 載入該天的時間線
+                loadSingleDayTimeline(day, dayIndex);
+                setTimeout(() => {
+                  map.panBy(0, 180);
+                }, 150);
               } else {
-                console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
+                console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+                  status: status,
+                  origin: origin,
+                  destination: destination,
+                  waypoints: waypoints,
+                  activities: activities.map((a) => ({
+                    name: a.place_name,
+                    location: a.location,
+                  })),
+                });
               }
             },
           );
@@ -709,14 +732,38 @@
       }
       async function initMap() {
         try {
-          const response = await fetch(`${API_BASE}/api/itinerary`);
-
-          if (!response.ok) {
-            throw new Error(`itinerary API ${response.status}`);
+          // 1. 先嘗試從 localStorage 取得 ai_itinerary
+          let aiItinerary = localStorage.getItem("ai_itinerary");
+          let usedLocal = false;
+          if (aiItinerary) {
+            try {
+              const parsed = JSON.parse(aiItinerary);
+              if (
+                parsed.days &&
+                Array.isArray(parsed.days) &&
+                parsed.days.length > 0
+              ) {
+                allDays = parsed.days;
+                usedLocal = true;
+              } else if (Array.isArray(parsed) && parsed.length > 0) {
+                allDays = parsed;
+                usedLocal = true;
+              }
+            } catch (e) {
+              // 解析失敗 fallback
+              allDays = [];
+            }
           }
 
-          const result = await response.json();
-          allDays = result.data.days;
+          // 2. 若 localStorage 沒資料，再呼叫 API
+          if (!usedLocal) {
+            const response = await fetch(`${API_BASE}/api/itinerary`);
+            if (!response.ok) {
+              throw new Error(`itinerary API ${response.status}`);
+            }
+            const result = await response.json();
+            allDays = result.data.days;
+          }
 
           // 計算所有景點的平均座標
           let totalLat = 0;
@@ -971,8 +1018,8 @@
           <div class="spot-map-card">
             <div class="spot-map-card-head">
               <div class="spot-map-card-thumb ${photoUrl ? "has-photo" : ""}" ${
-          photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
-        }>
+                photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
+              }>
                 ${photoUrl ? "" : '<i class="far fa-image"></i>'}
               </div>
               <div class="spot-map-card-main">
@@ -1483,9 +1530,8 @@
 
         openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
 
-        const { openingHoursText, priceRangeText } = await getBusinessInfo(
-          selectedSpot,
-        );
+        const { openingHoursText, priceRangeText } =
+          await getBusinessInfo(selectedSpot);
         if (selectedSpotForAdd === selectedSpot) {
           openSpotInfoOnMap(selectedSpot, openingHoursText, priceRangeText);
         }
@@ -1820,7 +1866,7 @@
           closeSpotSearchModal();
         }
       });
-      
+
       spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 
       // 處理鍵盤彈出時的視窗大小變化
@@ -1950,10 +1996,17 @@
           },
         );
         const body = await res.json();
+        console.log("openProject", res.status, body);
 
         if (res.ok && body.code === 200 && body.data && body.data.length > 0) {
-          // 有 itinerary，直接渲染
-          renderItinerary(body.data);
+          // 有 itinerary，將所有 data_json.days 合併為 allDays
+          allDays = body.data.flatMap((item) =>
+            item.data_json && Array.isArray(item.data_json.days)
+              ? item.data_json.days
+              : [],
+          );
+          createDayButtons();
+          displayAllDays();
         } else {
           // 沒 itinerary -> 轉 setup
           sessionStorage.setItem("currentProjectId", project.project_id);
@@ -1962,8 +2015,6 @@
           window.location.href = "setup.html";
         }
       }
-
-      item.addEventListener("click", () => openProject(project));
     </script>
   </body>
 </html>
