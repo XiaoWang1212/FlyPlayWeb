@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from controllers.chat_controller import ChatController
+from decorators.auth_decorator import login_required
 
 chat_bp = Blueprint('chat', __name__)
 chat_controller = ChatController()
@@ -35,6 +36,7 @@ def unified_response(code, message, data=None):
 #         return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/recommendation', methods=['POST'])
+@login_required
 def get_travel_recommendation():
     try:
         data = request.get_json()
@@ -61,6 +63,7 @@ def get_travel_recommendation():
         return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/itinerary', methods=['POST'])
+@login_required
 # def generate_itinerary():
 #     # 先走本地 mock，節省 Gemini 額度
 #     import json
@@ -99,6 +102,7 @@ def generate_itinerary():
         return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/refine', methods=['POST'])
+@login_required
 def refine_itinerary():
     try:
         data = request.get_json()
@@ -143,6 +147,7 @@ def refine_itinerary():
 #         return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/clear-history', methods=['POST'])
+@login_required
 def clear_conversation_history():
     try:
         result = chat_controller.handle_clear_history()

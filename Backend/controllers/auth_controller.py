@@ -6,7 +6,7 @@ class AuthController:
 
     def login(self, email, password):
         if not email or not password:
-            return {"success": False, "error": "email/password 必填"}
+            return {"success": False, "error": "email/password 欄位必填"}
         return self.auth_service.login(email, password)
 
     def register(self, email, password, name=None):

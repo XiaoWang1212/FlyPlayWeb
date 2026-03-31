@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify
 from controllers.map_controller import MapController
+from decorators.auth_decorator import login_required
 
 map_bp = Blueprint('maps', __name__)
 map_controller = MapController()
 
 @map_bp.route('/search', methods=['POST'])
+@login_required
 def text_search():
     try:
         data = request.get_json()
@@ -35,6 +37,7 @@ def text_search():
         }), 500
         
 @map_bp.route('/search_nearby', methods=['POST'])
+@login_required
 def text_search_nearby():
     try:
         data = request.get_json()
@@ -62,6 +65,7 @@ def text_search_nearby():
         return jsonify({'success': False, 'error': f'服務器錯誤: {str(e)}'}), 500
 
 @map_bp.route('/details/<place_id>', methods=['GET'])
+@login_required
 def get_place_details(place_id):
     """獲取地點詳情"""
     try:
@@ -78,6 +82,7 @@ def get_place_details(place_id):
         }), 500
 
 @map_bp.route('/nearby', methods=['POST'])
+@login_required
 def nearby_search():
     """附近搜索"""
     try:
@@ -119,6 +124,7 @@ def nearby_search():
         }), 500
         
 @map_bp.route('/distance', methods=['POST'])
+@login_required
 def get_distance_and_duration():
     try:
         data = request.get_json()
@@ -136,6 +142,7 @@ def get_distance_and_duration():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @map_bp.route('/business_info/<place_id>', methods=['GET'])
+@login_required
 def get_place_business_info(place_id):
     try:
         result = map_controller.handle_place_business_info(place_id)
@@ -147,6 +154,7 @@ def get_place_business_info(place_id):
         return jsonify({'success': False, 'error': str(e)}), 500
     
 @map_bp.route('/business_info', methods=['POST'])
+@login_required
 def get_place_business_info_by_name():
     """
     支援只傳店名查商業資訊
@@ -165,6 +173,7 @@ def get_place_business_info_by_name():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @map_bp.route('/route_details', methods=['POST'])
+@login_required
 def get_route_details():
     try:
         data = request.get_json()

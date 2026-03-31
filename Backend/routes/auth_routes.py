@@ -4,8 +4,10 @@ from controllers.auth_controller import AuthController
 auth_bp = Blueprint("auth", __name__)
 auth_ctrl = AuthController()
 
+
 def unified_response(code, message, data=None):
     return jsonify({"code": code, "message": message, "data": data}), code
+
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -14,8 +16,11 @@ def login():
     password = payload.get("password")
     res = auth_ctrl.login(email, password)
     if res["success"]:
-        return unified_response(200, "登入成功", res["user"])
+        return unified_response(
+            200, "登入成功", {"user": res["user"], "token": res["token"]}
+        )
     return unified_response(401, res.get("error", "登入失敗"))
+
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
