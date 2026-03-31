@@ -802,7 +802,7 @@
       async function initMap() {
         try {
           // 1. 先嘗試從 localStorage 取得 ai_itinerary
-          let aiItinerary = localStorage.getItem("ai_itinerary");
+          let aiItinerary = localStorage.getItem("data_latlng");
           let usedLocal = false;
           if (aiItinerary) {
             try {
