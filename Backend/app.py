@@ -7,6 +7,8 @@ from routes.travel_routes import travel_bp
 from routes.auth_routes import auth_bp
 from models.plan_model import init_plan_tables
 from services.googlemap_service import GoogleMapService
+from services.data_fix_service import DataFixService
+from services.gemini_service import GeminiService
 import os
 import traceback
 import json
@@ -16,9 +18,13 @@ stored_itinerary_data = None
 
 with open('response.json', 'r', encoding='utf-8') as f:
     test_data = json.load(f)
+with open('test.json', 'r', encoding='utf-8') as f:
+    test_data_2 = json.load(f)
 
-# 初始化 GoogleMapService
+# 初始化服務
 google_map_service = GoogleMapService()
+data_fix_service = DataFixService()
+gemini_service = GeminiService()
 
 def create_app():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,37 +81,52 @@ def create_app():
             'error': f'未預期的錯誤: {str(error)}'
         }), 500
 
+    # @app.route('/api/debug-key', methods=['GET'])
+    # def debug_key():
+    #     """檢查 API Key 是否被正確加載"""
+    #     api_key = Config.GOOGLE_MAPS_API_KEY
+        
+    #     debug_info = {
+    #         'api_key_loaded': api_key is not None and len(api_key) > 0,
+    #         'api_key_length': len(api_key) if api_key else 0,
+    #         'api_key_prefix': f"{api_key[:10]}..." if api_key else "None",
+    #         'api_key_full': api_key,  # 完整 API Key（用於調試）
+    #     }
+        
+    #     return jsonify(debug_info), 200
     
-    @app.route('/test_photos')
-    def test_photos():
-        """測試照片 API"""
+    @app.route('/data/latlng', methods=['GET'])
+    def test_latlng():
+        """
+        測試端點：使用 nearby 模式增強位置坐標信息
+        """
         try:
-            search_result = google_map_service.search_places(
-                "南港展覽館", 
-                language_code='zh-TW',
-                max_results=1
-            )
             
-            if search_result.get('success') and search_result.get('places'):
-                place = search_result['places'][0]
-                photos = place.get('photos', [])
+            data = test_data_2.get('data', [])
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'error': '沒有測試數據'
+                }), 400
+            
+            result = data_fix_service.enrich_data_with_location(data)
+            
+            if result['success']:
                 return jsonify({
                     'success': True,
-                    'photos': photos
+                    'data': result['data']
                 }), 200
-            
-            return jsonify({
-                'success': False,
-                'error': '未找到相關地點或照片'
-            }), 404
-            
+            else:
+                return jsonify(result), 400
+                
         except Exception as e:
-            print(f"獲取照片失敗: {e}")
+            print(f"測試端點錯誤: {e}")
+            print(traceback.format_exc())
             return jsonify({
                 'success': False,
-                'error': f'獲取照片失敗: {str(e)}'
+                'error': f'服務器錯誤: {str(e)}'
             }), 500
-
+        
     @app.route('/cache/clear', methods=['POST'])
     def clear_cache():
         """清除所有快取"""
@@ -115,6 +136,69 @@ def create_app():
             'message': '所有快取已清除'
         }), 200
 
+    @app.route('/api/itinerary/detail', methods=['POST'])
+    def generate_itinerary_detail():
+        """調用 Gemini 生成詳細行程"""
+        try:
+            request_data = request.get_json()
+            
+            # 處理新的合併格式：{ data_latlng: {...}, trip_setup: {...} }
+            if 'data_latlng' in request_data and 'trip_setup' in request_data:
+                existing_itinerary = request_data.get('data_latlng')
+                data = request_data.get('trip_setup', {})
+            else:
+                # 相容舊格式
+                existing_itinerary = None
+                data = request_data
+            
+            # 從 trip_setup 中提取配置信息
+            location = data.get('location') or (data.get('destinations', [{}])[0].get('city') 
+                                   if data.get('destinations') else '東京')
+            days = int(data.get('daysValue') or data.get('days', 3))
+            budget = data.get('budgetLabel') or data.get('budget') or '中等'
+            traveler_type = data.get('companionLabel') or data.get('companion') or '個人'
+
+            if 'travelTypeLabels' in data and isinstance(data['travelTypeLabels'], list):
+                interests = data['travelTypeLabels']
+            elif 'travelTypeLabel' in data and data['travelTypeLabel']:
+                interests = [data['travelTypeLabel']]
+            else:
+                interests = []
+
+            print(f"→ 呼叫 generate_itinerary_detail")
+            print(f"   位置: {location}, 天數: {days}, 預算: {budget}")
+            
+            # 調用 GeminiService
+            result = gemini_service.generate_itinerary_detail(
+                location=location,
+                days=days,
+                budget=budget,
+                traveler_type=traveler_type,
+                interests=interests,
+                existing_itinerary=existing_itinerary
+            )
+            
+            if result['success']:
+                print("✓ 詳細行程已生成")
+                return jsonify({
+                    'code': 200,
+                    'message': '詳細行程已生成',
+                    'data': result['data']
+                }), 200
+            else:
+                print(f"✗ 生成失敗: {result['error']}")
+                return jsonify({
+                    'code': 400,
+                    'error': result['error']
+                }), 400
+                
+        except Exception as e:
+            print(f"生成詳細行程錯誤: {e}")
+            print(traceback.format_exc())
+            return jsonify({
+                'success': False,
+                'error': f'詳細行程生成失敗: {str(e)}'
+            }), 500
 
     @app.route('/api/itinerary', methods=['POST', 'GET'])  
     def parse_itinerary():
@@ -130,6 +214,8 @@ def create_app():
                         'code': 200,
                         'message': '數據已接收'
                     }), 200
+            
+            # GET 方法：返回完整的行程數據
             if stored_itinerary_data:
                 response_data = stored_itinerary_data
                 message = response_data.get('message', '')
@@ -152,68 +238,8 @@ def create_app():
             else:
                 days = response_data.get('parsed', {}).get('days', []) if 'parsed' in response_data else []
             
-            modified_days = []
-            for day in days:
-                modified_day = {
-                    'day': day.get('day'),
-                    'weekday': day.get('weekday', ''),
-                    'activities': []
-                }
-                
-                # 修改每個活動
-                activities = day.get('activities', [])
-                for activity in activities:
-                    modified_activity = {
-                        'place_name': activity.get('place_name', '未命名'),
-                        'time': activity.get('time', ''),
-                        'description': activity.get('description', ''),
-                        'location': activity.get('location', {'lat': 0, 'lng': 0}),
-                        'type': activity.get('type', ''),
-                        'cost': activity.get('cost', '')
-                    }
-                    
-                    # 驗證 location 是否有效
-                    if not modified_activity['location'] or 'lat' not in modified_activity['location']:
-                        modified_activity['location'] = {'lat': 0, 'lng': 0}
-                    
-                    # 使用 search_places 獲取圖片
-                    place_name = modified_activity['place_name']
-                    if place_name and place_name != '未命名':
-                        try:
-                            search_result = google_map_service.search_places(
-                                place_name, 
-                                language_code='zh-TW',
-                                max_results=1
-                            )
-                            
-                            if search_result.get('success') and search_result.get('places'):
-                                place = search_result['places'][0]
-                                
-                                location = place.get('location', {})
-                                if location.get('latitude') is not None and location.get('longitude') is not None:
-                                    modified_activity['location'] = {
-                                        'lat': location['latitude'],
-                                        'lng': location['longitude']
-                                    }
-                                
-                                if place.get('photos'):
-                                    modified_activity['photos'] = [place['photos'][0]]
 
-                                if place.get('rating'):
-                                    modified_activity['rating'] = place['rating']
-                                
-                                if place.get('address'):
-                                    modified_activity['address'] = place['address']
-                                
-                                if place.get('phone'):
-                                    modified_activity['phone'] = place['phone']
-                                
-                        except Exception as e:
-                            print(f"獲取 {place_name} 的圖片失敗: {e}")
-                    
-                    modified_day['activities'].append(modified_activity)
-                
-                modified_days.append(modified_day)
+            modified_days = data_fix_service.enrich_data_with_picture(days)
             
             print("✓ 行程數據已處理完成")  
             

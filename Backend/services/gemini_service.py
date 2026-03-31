@@ -3,6 +3,10 @@ import google.generativeai as genai
 from config import Config
 from datetime import datetime
 
+
+with open('test.json', 'r', encoding='utf-8') as f:
+    test_data = json.load(f)
+
 class GeminiService:
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
@@ -140,71 +144,68 @@ class GeminiService:
             預算: {budget}
             興趣: {interests_str}
             {date_info}
+            
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "days": [
                     {{
                         "day": 1,
                         "weekday": "星期幾 (例如：星期一)", 
-                        "activities": [
+                        "location": [
                             {{
                                 "time": "09:00",
-                                "place_name": "地點名稱",
-                                "description": "活動簡述",
-                                "type": "景點/美食/交通/住宿",                         
-                                "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
+                                "location_name": "地點名稱",
                             }}
                         ]
                     }}
                 ],
-                "dining_recommendations": [
-                    {{ "name": "餐廳名", "feature": "特色", "price_range": "價位" }}
-                ],
-                "transport_tips": "交通建議"
+
             }}
-            
-            只回傳純 JSON，不要包含任何 markdown 標記。
-            飯店請也幫我找一間符合預算的，放在每天的行程裡面，且標註 type 為住宿。
-            place_name請不要寫超過一個以上的地點。
-            一天最多安排三個活動，不限dining_recommendations的數量。
-            decription請簡短描述活動內容，控制在一句話以內。
-            days[].activities[].cost 必須遵守以下格式：
-            1) 單一價格：幣別 + 空白 + 千分位數字 (例：JPY 3,000)
-            2) 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值 (例：JPY 1,000 - 2,500)
-            3) 免費活動：免費
-            4) 住宿可加單位：JPY 12,000 / 晚
-            5) 不確定可用估算：約 JPY 2,000
-            禁止輸出沒有幣別或沒有千分位的格式。
-            dining_recommendations[].feature 簡短描述餐廳特色，控制在一句話以內。
-            僅可輸出上述欄位，不可新增任何欄位。
-            交通建議請在兩三句話內結束，不要有容辭贅字。
-            請想辦法讓生成資料的時間減少。
+            只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
+            一天最多三個景點就好。
+            days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+
             """
-            
-            #純location 版本
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             # {{
             #     "days": [
             #         {{
             #             "day": 1,
             #             "weekday": "星期幾 (例如：星期一)", 
-            #             "location": [
+            #             "activities": [
             #                 {{
             #                     "time": "09:00",
-            #                     "location_name": "地點名稱",
+            #                     "place_name": "地點名稱",
+            #                     "description": "活動簡述",
+            #                     "type": "景點/美食/交通/住宿",                         
+            #                     "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
             #                 }}
             #             ]
             #         }}
             #     ],
-
+            #     "dining_recommendations": [
+            #         {{ "name": "餐廳名", "feature": "特色", "price_range": "價位" }}
+            #     ],
+            #     "transport_tips": "交通建議"
             # }}
-            # 只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
-            # 一天最多三個景點就好。
-            # days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
-
-            #  """
-
-
+            
+            # 只回傳純 JSON，不要包含任何 markdown 標記。
+            # 飯店請也幫我找一間符合預算的，放在每天的行程裡面，且標註 type 為住宿。
+            # place_name請不要寫超過一個以上的地點。
+            # 一天最多安排三個活動，不限dining_recommendations的數量。
+            # decription請簡短描述活動內容，控制在一句話以內。
+            # days[].activities[].cost 必須遵守以下格式：
+            # 1) 單一價格：幣別 + 空白 + 千分位數字 (例：JPY 3,000)
+            # 2) 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值 (例：JPY 1,000 - 2,500)
+            # 3) 免費活動：免費
+            # 4) 住宿可加單位：JPY 12,000 / 晚
+            # 5) 不確定可用估算：約 JPY 2,000
+            # 禁止輸出沒有幣別或沒有千分位的格式。
+            # dining_recommendations[].feature 簡短描述餐廳特色，控制在一句話以內。
+            # 僅可輸出上述欄位，不可新增任何欄位。
+            # 交通建議請在兩三句話內結束，不要有容辭贅字。
+            # 請想辦法讓生成資料的時間減少。
+            # """
             response = self.model.generate_content(
                 prompt,
                 generation_config=self.generation_config
@@ -223,6 +224,81 @@ class GeminiService:
             }
         except Exception as e:
             return {'success': False, 'error': f"行程生成失敗: {str(e)}"}
+    
+    def generate_itinerary_detail(self, location, days, budget, traveler_type, interests, start_date=None, existing_itinerary=None):
+        """生成完整詳細行程 (包含description、type、cost等詳細信息)
+        
+        參數：
+            existing_itinerary: 可選的現有行程 JSON 數據。如果提供，AI 會根據其進行修改優化。
+        """
+        try:
+            interests_str = ', '.join(interests) if interests else '通用興趣'
+            date_info = f"出發日期: {start_date}" if start_date else "出發日期: 未指定 (請假設從星期一開始)"
+            existing_itinerary_str = test_data
+            prompt = f"""請根據以下現有行程進行修改和優化。
+            原始行程：
+            {existing_itinerary_str}
+
+            修改要求：
+            旅客類型: {traveler_type}
+            預算: {budget}
+            興趣: {interests_str}
+            {date_info}
+
+            請保留現有行程的日期和基本結構，根據上述要求對行程的各個景點進行調整、添加或刪除。
+            確保修改後的行程仍然保持以下 JSON 結構：
+            {{
+                "days": [
+                    {{
+                        "day": 1,
+                        "weekday": "星期幾 (例如：星期一)", 
+                        "location": [
+                            {{
+                                "time": "09:00",
+                                "place_name": "地點名稱",
+                                "description": "活動簡述",
+                                "type": "景點/美食/交通/住宿",
+                                "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
+                            }}
+                        ]
+                    }}
+                ]
+            }}
+
+            規則要求：
+            1. place_name 只可包含地點名稱，不要包含任何描述。
+            2. description 簡短描述活動內容，控制在一句話以內。
+            3. type 必須是以下之一：景點、美食、交通、住宿。
+            4. cost 必須遵守以下格式：
+            - 單一價格：幣別 + 空白 + 千分位數字 (例：JPY 3,000)
+            - 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值 (例：JPY 1,000 - 2,500)
+            - 免費活動：免費
+            - 住宿可加單位：JPY 12,000 / 晚
+            - 不確定的估算：約 JPY 2,000
+            - 禁止輸出沒有幣別或沒有千分位的格式。
+            5. 一天最多安排 3-5 個活動（包含住宿）。
+            6. 每天應包含至少一個住宿選項（type 為住宿）。
+            7. 只回傳純 JSON，不要包含任何 markdown 標記。
+            8. 確保修改後的行程符合用戶預算和興趣。
+            """
+            
+            response = self.model.generate_content(
+                prompt,
+                generation_config=self.generation_config
+            )
+            token_usage = self._extract_token_usage(response)
+
+            raw_content, _, parsed_json = self._parse_response_json(response)
+
+            return {
+                'success': True,
+                'data': {
+                    'parsed': parsed_json,
+                    'token_usage': token_usage,
+                }
+            }
+        except Exception as e:
+            return {'success': False, 'error': f"行程生成/修改失敗: {str(e)}"}
     
     def refine_itinerary(self, itinerary, feedback):
         """根據用戶反饋優化行程"""
