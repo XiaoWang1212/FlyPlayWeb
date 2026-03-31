@@ -59,11 +59,11 @@ def create_itinerary():
         "departure_airport",
         "destination",
         "type",
-        "money",
-        "data_json",
         "companion",
         "travel_style",
         "budget",
+        "interests",
+        "start_date",
     ]
     if not all(k in payload for k in required):
         missing = [k for k in required if k not in payload]
@@ -74,11 +74,11 @@ def create_itinerary():
         payload["departure_airport"],
         payload["destination"],
         payload["type"],
-        payload["money"],
-        payload["data_json"],
         payload["companion"],
         payload["travel_style"],
         payload["budget"],
+        payload["interests"],
+        payload["start_date"],
     )
     if not result["success"]:
         return unified_response(400, result["error"])

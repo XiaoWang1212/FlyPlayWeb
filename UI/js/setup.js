@@ -228,16 +228,17 @@ window.onload = function () {
       tripSetup.travelTypeLabel;
   }
 
-  // 只要出發地有變動就自動存到 localStorage
-  departureSelect.addEventListener("change", function () {
-    saveTripSetup({
-      departure: this.value,
-      departureLabel: this.options[this.selectedIndex]?.textContent ?? "",
-    });
+  // 回填預算
+  if (tripSetup.budgetLabel) {
+    document.getElementById("selected-budget").textContent =
+      tripSetup.budgetLabel;
+  }
 
-    // 出發地選完後，檢查是否該顯示 AI 推薦按鈕
-    showAIRecommendButton();
-  });
+  // 重要：不要再使用不存在的 departureSelect.addEventListener(...)
+  // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
+
+  initBudgetPicker();
+  updateAIRecommendButtonState();
 };
 
 // ========== 旅伴卡片 picker ==========
@@ -729,25 +730,35 @@ function buildItineraryPayload() {
     (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0
       ? tripSetup.travelTypes[0]
       : tripSetup.travelType) || "relax";
-  const money = Number(
-    tripSetup.budget || tripSetup.budgetLabel || "0", // 若 budgetLabel 是文字，需要 mapping
-  );
 
   const projectId = Number(sessionStorage.getItem("currentProjectId") || 0);
 
-  // 如果你希望讓 AI 同時根據這些過濾參數生成行程，data_json 先空物件
+  // 修正這三個欄位，空字串時給預設
+  const departure_airport =
+    tripSetup.departureLabel || tripSetup.departure || "未填";
+  const companion =
+    tripSetup.companionLabel || tripSetup.companion || "任何旅伴";
+  const travel_style =
+    (Array.isArray(tripSetup.travelTypeLabels) &&
+    tripSetup.travelTypeLabels.length > 0
+      ? tripSetup.travelTypeLabels[0]
+      : tripSetup.travelTypeLabel || tripSetup.travelType) || "任何類型";
+
+  const budget = tripSetup.budgetLabel || tripSetup.budget || "中等";
+
   return {
     project_id: projectId,
     days,
+    departure_airport,
     destination,
     type,
-    money,
-    data_json: {},
+    companion,
+    travel_style,
+    budget,
 
-    // 舊有 for 生成 AI 參數用
+    // 下面這些是給 AI 生成用的參數（可保留）
     location: destination,
-    budget: tripSetup.budgetLabel || tripSetup.budget || "中等",
-    travelerType: tripSetup.companionLabel || tripSetup.companion || "個人",
+    travelerType: companion,
     interests:
       Array.isArray(tripSetup.travelTypeLabels) &&
       tripSetup.travelTypeLabels.length > 0
@@ -755,7 +766,7 @@ function buildItineraryPayload() {
         : tripSetup.travelType
           ? [tripSetup.travelType]
           : [],
-    startDate: tripSetup.startDate || null,
+    start_date: tripSetup.startDate || "2024-01-01",
   };
 }
 
@@ -775,6 +786,8 @@ async function submitAIRecommendation() {
     alert("請先完成目的地與天數");
     return;
   }
+
+  console.log(payload);
 
   setGeneratingState(true);
   try {

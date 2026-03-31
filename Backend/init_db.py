@@ -59,7 +59,6 @@ class DatabaseInitializer:
                             type VARCHAR(50),                       -- 旅遊類型
                             companion VARCHAR(50),                  -- 旅伴
                             travel_style VARCHAR(50),               -- 旅遊類型詳細（如美食、冒險）
-                            money NUMERIC(12,2),                    -- 預算
                             budget VARCHAR(50),                     -- 預算等級（中等、高等...）
                             data_json JSONB NOT NULL DEFAULT '{}'::jsonb,  -- 詳細行程內容
                             created_at TIMESTAMPTZ DEFAULT NOW()
