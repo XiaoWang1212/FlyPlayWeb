@@ -801,18 +801,13 @@ async function submitAIRecommendation() {
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const result = await res.json();
+
     if (result.code !== 200 && result.code !== 201)
       throw new Error(result.message || "AI 生成錯誤");
-
-    // 給地圖/行程使用
-    localStorage.setItem(
-      "ai_itinerary",
-      JSON.stringify(result.data?.parsed || result.data),
-    );
-
-    // 完整回應（含 raw_output）給 index.html 顯示
-    localStorage.setItem("last_itinerary_response", JSON.stringify(result));
+    
+    localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
 
     console.log("✓ 準備跳轉至 index.html");
     // 行程建立成功後自動導向首頁

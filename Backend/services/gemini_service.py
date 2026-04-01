@@ -147,7 +147,7 @@ class GeminiService:
             
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
-                "days": [
+                "data": [
                     {{
                         "day": 1,
                         "weekday": "星期幾 (例如：星期一)", 

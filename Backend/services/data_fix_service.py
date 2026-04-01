@@ -13,25 +13,24 @@ class DataFixService:
     def enrich_data_with_location(self, data):
         output_data = []
         center_location = None
-        
+
+        days = data.get("data", [])
+
         # 第一步：找到第一個有座標的地點
-        for day in data:
-            for loc in day.get('locations', []):
+        for day in days:
+            for loc in day.get('location', []):  
                 location_name = loc.get('location_name', '')
                 print(f"🔍 正在查詢第一個中心點: {location_name}")
-                
+
                 search_result = self.google_map_service.search_places(
                     text_query=location_name,
                     language_code='zh-TW',
                     max_results=1
                 )
-                
-                print(f"   查詢結果: {search_result.get('error', 'Success')}")
 
                 if search_result.get('success') and search_result.get('places'):
                     place = search_result['places'][0]
                     location = place.get('location', {})
-                    print(f"   地點座標: {location}")
 
                     if location.get('latitude') is not None:
                         center_location = {
@@ -42,26 +41,24 @@ class DataFixService:
                         break
             if center_location:
                 break
-        
+
         if not center_location:
-            print("無法確定中心位置，查詢失敗")
             return {
                 'success': False,
                 'error': '無法確定中心位置',
                 'data': []
             }
 
-        # 第二步：用中心點查詢其他地點
-        print(f"\n使用中心點進行 nearby 查詢...")
-        for day in data:
+        # 第二步：查詢所有地點
+        print(f"開始查詢剩餘地點")
+        for day in days:
             day_result = {
                 "day": day.get("day"),
                 "locations": []
             }
 
-            for loc in day.get('locations', []):
+            for loc in day.get('location', []):  
                 location_name = loc.get('location_name', '')
-                print(f" 查詢: {location_name}")
 
                 nearby_result = self.google_map_service.search_places_nearby(
                     text_query=location_name,
@@ -74,7 +71,6 @@ class DataFixService:
                 if nearby_result.get('success') and nearby_result.get('places'):
                     place = nearby_result['places'][0]
                     location = place.get('location', {})
-                    print(f"     找到 ✓: {location}")
 
                     day_result["locations"].append({
                         "location_name": location_name,
@@ -82,14 +78,13 @@ class DataFixService:
                         "location": location
                     })
 
-                    # 更新中心
+                    # 更新中心點
                     if location.get('latitude') is not None:
                         center_location = {
                             'latitude': location['latitude'],
                             'longitude': location['longitude']
                         }
                 else:
-                    print(f"     找不到 ✗: {nearby_result.get('error', '未知錯誤')}")
                     day_result["locations"].append({
                         "location_name": location_name,
                         "place_id": -1,

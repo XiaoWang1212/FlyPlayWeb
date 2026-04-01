@@ -9,6 +9,7 @@ from models.plan_model import init_plan_tables
 from services.googlemap_service import GoogleMapService
 from services.data_fix_service import DataFixService
 from services.gemini_service import GeminiService
+from services.travel_service import TravelService
 import os
 import traceback
 import json
@@ -25,6 +26,7 @@ with open('test.json', 'r', encoding='utf-8') as f:
 google_map_service = GoogleMapService()
 data_fix_service = DataFixService()
 gemini_service = GeminiService()
+travel_service = TravelService()
 
 def create_app():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -95,21 +97,39 @@ def create_app():
         
     #     return jsonify(debug_info), 200
     
-    @app.route('/data/latlng', methods=['GET'])
-    def test_latlng():
-        """
-        測試端點：使用 nearby 模式增強位置坐標信息
-        """
+    @app.route('/data/latlng', methods=['POST'])
+    def get_latlng():
         try:
+            request_data = request.get_json(silent=True) or {}
+            itinerary_id = request_data.get('itinerary_id')
             
-            data = test_data_2.get('data', [])
-            if not data:
+            if not itinerary_id:
                 return jsonify({
                     'success': False,
-                    'error': '沒有測試數據'
+                    'error': '缺少 itinerary_id 参数'
                 }), 400
             
-            result = data_fix_service.enrich_data_with_location(data)
+            # 从数据库获取行程
+            itinerary = travel_service.get_itinerary(int(itinerary_id))
+            
+            if not itinerary:
+                return jsonify({
+                    'success': False,
+                    'error': '未找到该行程'
+                }), 404
+            
+            # 提取 data_json
+            data_json = itinerary.get('data_json')
+            if isinstance(data_json, str):
+                data_json = json.loads(data_json)
+            
+            
+            
+            # 测试用：使用 test_data_2 (JSON 格式)
+            # data = test_data_2
+        
+            print(data_json)
+            result = data_fix_service.enrich_data_with_location(data_json)
             
             if result['success']:
                 return jsonify({
@@ -119,12 +139,18 @@ def create_app():
             else:
                 return jsonify(result), 400
                 
+        except ValueError as e:
+            print(f"参数错误: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'参数错误: {str(e)}'
+            }), 400
         except Exception as e:
-            print(f"測試端點錯誤: {e}")
+            print(f"获取行程数据错误: {e}")
             print(traceback.format_exc())
             return jsonify({
                 'success': False,
-                'error': f'服務器錯誤: {str(e)}'
+                'error': f'服务器错误: {str(e)}'
             }), 500
         
     @app.route('/cache/clear', methods=['POST'])
@@ -210,7 +236,6 @@ def create_app():
                     'error': '請求內容為空或不是合法 JSON'
                 }), 400
 
-            # 只支援 { days: [...] } 格式
             if 'days' in request_data and isinstance(request_data['days'], list):
                 days = request_data['days']
             else:

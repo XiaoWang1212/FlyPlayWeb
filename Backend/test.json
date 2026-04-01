@@ -2,26 +2,74 @@
   "data": [
     {
       "day": 1,
-      "locations": [
-        { "location_name": "一蘭拉麵 新宿中央東口店" },
-        { "location_name": "新宿御苑" },
-        { "location_name": "歌舞伎町一番街" }
+      "weekday": "星期一",
+      "location": [
+        {
+          "time": "09:00",
+          "location_name": "伏見稻荷大社"
+        },
+        {
+          "time": "14:00",
+          "location_name": "祇園"
+        },
+        {
+          "time": "18:30",
+          "location_name": "先斗町"
+        }
       ]
     },
     {
       "day": 2,
-      "locations": [
-        { "location_name": "淺草寺" },
-        { "location_name": "一蘭拉麵 淺草店" },
-        { "location_name": "東京晴空塔" }
+      "weekday": "星期二",
+      "location": [
+        {
+          "time": "09:30",
+          "location_name": "嵐山竹林"
+        },
+        {
+          "time": "11:00",
+          "location_name": "天龍寺"
+        },
+        {
+          "time": "14:00",
+          "location_name": "渡月橋"
+        }
       ]
     },
     {
       "day": 3,
-      "locations": [
-        { "location_name": "金閣寺" },
-        { "location_name": "伏見稻荷大社" },
-        { "location_name": "一蘭拉麵 京都河原町店" }
+      "weekday": "星期三",
+      "location": [
+        {
+          "time": "09:30",
+          "location_name": "金閣寺"
+        },
+        {
+          "time": "13:30",
+          "location_name": "銀閣寺"
+        },
+        {
+          "time": "15:00",
+          "location_name": "哲學之道"
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "weekday": "星期四",
+      "location": [
+        {
+          "time": "09:00",
+          "location_name": "清水寺"
+        },
+        {
+          "time": "11:30",
+          "location_name": "二年坂・三年坂"
+        },
+        {
+          "time": "14:00",
+          "location_name": "錦市場"
+        }
       ]
     }
   ]
