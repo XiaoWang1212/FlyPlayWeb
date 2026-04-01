@@ -722,17 +722,48 @@
           displayDay(dayIndex);
         }
       }
-            // 第一階段：先加載坐標信息（快速展示地圖）
+            // 第一階段：先加載坐標信息（供給 localStorage 的 generatedItinerary）
       async function loadCoordinatesFirst() {
         try {
           console.log("載入坐標信息...");
-          const response = await fetch(`${API_BASE}/data/latlng`);
+          
+          // 從 localStorage 中獲取行程 ID
+          const generatedItinerary = localStorage.getItem("generatedItinerary");
+          if (!generatedItinerary) {
+            console.warn("未找到 generatedItinerary");
+            return false;
+          }
+          
+          const itineraryData = JSON.parse(generatedItinerary);
+          const itinerary_id = itineraryData.itinerary_id || itineraryData.id;
+          
+          if (!itinerary_id) {
+            console.warn("未找到 itinerary_id");
+            return false;
+          }
+          
+          console.log(`使用 itinerary_id: ${itinerary_id} 加載行程`);
+          
+          // 調用後端 API 獲取行程數據
+          const response = await fetch(`${API_BASE}/data/latlng`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              itinerary_id: itinerary_id
+            }),
+          });
           
           if (!response.ok) {
-            throw new Error(`latlng API ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
           }
-
+          
           const result = await response.json();
+          
+          if (!result.success) {
+            throw new Error(result.error || "獲取行程失敗");
+          }
           
           // 存進 localStorage
           localStorage.setItem("data_latlng", JSON.stringify(result));
@@ -765,40 +796,6 @@
         }
       }
 
-      // 第二階段：在對話時補齊完整數據
-      async function enrichWithFullData() {
-        try {
-          console.log("補齊完整數據...");
-          const response = await fetch(`${API_BASE}/api/itinerary`);
-
-          if (!response.ok) {
-            throw new Error(`itinerary API ${response.status}`);
-          }
-
-          const result = await response.json();
-          const fullDays = result.data.days;
-          
-          // 用完整數據更新 allDays（保留坐標，補齊其他信息）
-          allDays = allDays.map((tempDay, dayIndex) => {
-            const fullDay = fullDays[dayIndex] || tempDay;
-            return {
-              ...tempDay,
-              activities: (fullDay.activities || []).map((activity, actIndex) => ({
-                ...activity,
-                // 用臨時坐標補充（如果完整數據沒有）
-                location: activity.location || (tempDay.activities[actIndex]?.location || { lat: 0, lng: 0 }),
-              })),
-            };
-          });
-          
-          console.log("完整數據已補齊", allDays);
-          return true;
-        } catch (error) {
-          console.error("補齊數據失敗：", error);
-          return false;
-        }
-      }
-
       async function initMap() {
         try {
           // 1. 先嘗試從 localStorage 取得 ai_itinerary
@@ -807,15 +804,18 @@
           if (aiItinerary) {
             try {
               const parsed = JSON.parse(aiItinerary);
-              if (
-                parsed.days &&
-                Array.isArray(parsed.days) &&
-                parsed.days.length > 0
-              ) {
-                allDays = parsed.days;
-                usedLocal = true;
-              } else if (Array.isArray(parsed) && parsed.length > 0) {
-                allDays = parsed;
+              if (parsed.data && Array.isArray(parsed.data) && parsed.data.length > 0) {
+                allDays = parsed.data.map(dayObj => ({
+                  day: dayObj.day,
+                  weekday: dayObj.weekday || `第${dayObj.day}天`,
+                  activities: (dayObj.locations || []).map(loc => ({
+                    place_name: loc.location_name,
+                    location: {
+                      lat: loc.location.latitude || 0,
+                      lng: loc.location.longitude || 0,
+                    },
+                  }))
+                }));
                 usedLocal = true;
               }
             } catch (e) {
@@ -1387,16 +1387,8 @@
             },
             body: JSON.stringify(detailedData.days)
           });
-          
           if (!response.ok) {
-            console.warn("POST 失敗，嘗試 GET");
-          }
-          
-          
-          const result = await response.json();
-          
-          if (result.code !== 200) {
-            throw new Error(result.error || "補充圖片信息失敗");
+            throw new Error(`POST 失敗 ${response.status}`);
           }
           
           console.log("✓ 圖片信息已補充");
@@ -1437,17 +1429,18 @@
       // 初始化聊天（原本的測試訊息請移除）
       window.onload = async function () {
         try {
-          console.log("=== 頁面初始化開始 ===");
-          console.log("第一步：初始化地圖");
+          const coordinatesLoaded = await loadCoordinatesFirst();         
           
-          // 初始化地圖（使用 coordinatesData）
           await initMap();
           
           // 補充詳細行程信息
           const detailedData = await generateDetailedItinerary();
+          displayAllDays();
+
+          
           if (detailedData) {
             // 補充圖片信息
-            await enrichWithPictureInfo(detailedData);
+            await enrichWithPictureInfo(detailedData.parsed.days);
             
             // 重新顯示行程（使用完整數據）
             displayAllDays();
@@ -1500,9 +1493,6 @@
 
         appendMsg(text, "user");
         input.value = "";
-        
-        // 確保完整數據已加載
-        enrichWithFullData();
 
         const loadingId = "loading-" + Date.now();
         document

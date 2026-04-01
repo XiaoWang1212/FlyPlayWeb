@@ -801,28 +801,13 @@ async function submitAIRecommendation() {
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const result = await res.json();
+
     if (result.code !== 200 && result.code !== 201)
       throw new Error(result.message || "AI 生成錯誤");
-
-    // 給地圖/行程使用
-    localStorage.setItem(
-      "ai_itinerary",
-      JSON.stringify(result.data?.parsed || result.data),
-    );
-
-    // 完整回應（含 raw_output）給 index.html 顯示
-    localStorage.setItem("last_itinerary_response", JSON.stringify(result));
-
-    // ✓ POST 完整數據給 app.py 的 /api/itinerary，讓 app.py 讀取和處理
-    await fetch(`${API_BASE}/api/itinerary`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(result),
-    }).catch((err) => {
-      console.warn("發送至 app.py 失败:", err);
-      // 即使失败也继续
-    });
+    
+    localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
 
     console.log("✓ 準備跳轉至 index.html");
     // 行程建立成功後自動導向首頁
