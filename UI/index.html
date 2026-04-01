@@ -224,6 +224,8 @@
       // 創建日期按鈕
       function createDayButtons() {
         const timelineView = document.getElementById("timelineView");
+        const oldContainer = document.getElementById("dayButtonContainer");
+        if (oldContainer) oldContainer.remove();
         const buttonContainer = document.createElement("div");
         buttonContainer.id = "dayButtonContainer";
 
@@ -240,7 +242,6 @@
         allBtn.onclick = () => switchDay(-1, allBtn);
         buttonContainer.appendChild(allBtn);
         // -------------------------
-
         allDays.forEach((day, index) => {
           const btn = document.createElement("button");
           btn.textContent = `第 ${day.day} 天`;
@@ -249,37 +250,9 @@
           buttonContainer.appendChild(btn);
         });
 
+        console.log("AllDAYS", allDays);
+
         // 把按鈕加到時間線最上方
-        timelineView.insertBefore(buttonContainer, timelineView.firstChild);
-
-        // 切換聊天模式
-        function toggleChatMode() {
-          isChatMode = !isChatMode;
-
-          if (isChatMode) {
-            // 進入聊天模式
-            timelineView.classList.remove("active");
-            chatView.classList.add("active");
-            openSheet();
-            fabGroup.classList.add("horizontal");
-            document.getElementById("editFab").style.display = "none";
-
-            // 改變圖示：機器人 → 列表
-            robotFabIcon.classList.remove("fa-robot");
-            robotFabIcon.classList.add("fa-list-ul");
-          } else {
-            // 回到行程表模式
-            chatView.classList.remove("active");
-            timelineView.classList.add("active");
-            sheet.classList.remove("expanded", "half");
-            syncSheetState("sheet-collapsed");
-            document.getElementById("editFab").style.display = "flex";
-
-            // 恢復圖示：列表 → 機器人
-            robotFabIcon.classList.remove("fa-list-ul");
-            robotFabIcon.classList.add("fa-robot");
-          }
-        }
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
@@ -360,6 +333,25 @@
 
       function closeCustomMapPopup() {
         clearCurrentPopup();
+      }
+
+      function isValidRouteLocation(location) {
+        if (!location) return false;
+        const lat =
+          typeof location.lat === "number"
+            ? location.lat
+            : typeof location.latitude === "number"
+              ? location.latitude
+              : null;
+        const lng =
+          typeof location.lng === "number"
+            ? location.lng
+            : typeof location.longitude === "number"
+              ? location.longitude
+              : null;
+        if (lat === null || lng === null) return false;
+        if (lat === 0 && lng === 0) return false;
+        return true;
       }
 
       function clearMapRoutes() {
@@ -557,6 +549,9 @@
           }
 
           const activities = day.activities;
+          const routeActivities = activities.filter((a) =>
+            isValidRouteLocation(a.location),
+          );
           const directionsService = new DirectionsService();
 
           const directionsRenderer = new DirectionsRenderer({
@@ -571,16 +566,18 @@
           });
           currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
-          const origin = activities[0].location;
-          const destination = activities[activities.length - 1].location;
+          const origin = routeActivities[0]?.location;
+          const destination =
+            routeActivities[routeActivities.length - 1]?.location;
           if (!origin || !destination) {
             console.warn(
               `第 ${dayIndex + 1} 天缺少地點座標，無法規劃路線`,
               activities,
             );
+            addCustomMarkers(routeActivities, dayIndex);
             return;
           }
-          const waypoints = activities.slice(1, -1).map((act) => ({
+          const waypoints = routeActivities.slice(1, -1).map((act) => ({
             location: act.location,
             stopover: true,
           }));
@@ -596,23 +593,19 @@
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
-                addCustomMarkers(activities, dayIndex);
-                // 載入該天的時間線
-                loadSingleDayTimeline(day, dayIndex);
-                setTimeout(() => {
-                  map.panBy(0, 180);
-                }, 150);
+                addCustomMarkers(routeActivities, dayIndex);
               } else {
                 console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
                   status: status,
                   origin: origin,
                   destination: destination,
                   waypoints: waypoints,
-                  activities: activities.map((a) => ({
+                  activities: routeActivities.map((a) => ({
                     name: a.place_name,
                     location: a.location,
                   })),
                 });
+                addCustomMarkers(routeActivities, dayIndex);
               }
             },
           );
@@ -647,9 +640,22 @@
         currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
         const activities = day.activities;
-        const origin = activities[0].location;
-        const destination = activities[activities.length - 1].location;
-        const waypoints = activities.slice(1, -1).map((act) => ({
+        const routeActivities = activities.filter((a) =>
+          isValidRouteLocation(a.location),
+        );
+
+        // 先更新該天時間線，避免路線失敗時仍顯示全部內容
+        loadSingleDayTimeline(day, dayIndex);
+
+        const origin = routeActivities[0]?.location;
+        const destination =
+          routeActivities[routeActivities.length - 1]?.location;
+        if (!origin || !destination) {
+          addCustomMarkers(routeActivities, dayIndex);
+          return;
+        }
+
+        const waypoints = routeActivities.slice(1, -1).map((act) => ({
           location: act.location,
           stopover: true,
         }));
@@ -665,9 +671,7 @@
           (result, status) => {
             if (status === "OK") {
               directionsRenderer.setDirections(result);
-              addCustomMarkers(activities, dayIndex);
-              // 載入該天的時間線
-              loadSingleDayTimeline(day, dayIndex);
+              addCustomMarkers(routeActivities, dayIndex);
               setTimeout(() => {
                 map.panBy(0, 180);
               }, 150);
@@ -677,11 +681,12 @@
                 origin: origin,
                 destination: destination,
                 waypoints: waypoints,
-                activities: activities.map((a) => ({
+                activities: routeActivities.map((a) => ({
                   name: a.place_name,
                   location: a.location,
                 })),
               });
+              addCustomMarkers(routeActivities, dayIndex);
             }
           },
         );
@@ -828,14 +833,9 @@
             }
           }
 
-          // 2. 若 localStorage 沒資料，再呼叫 API
+          // 2. localStorage 沒資料時，不再呼叫 /api/itinerary（該端點僅支援 POST）
           if (!usedLocal) {
-            const response = await fetch(`${API_BASE}/api/itinerary`);
-            if (!response.ok) {
-              throw new Error(`itinerary API ${response.status}`);
-            }
-            const result = await response.json();
-            allDays = result.data.days;
+            allDays = Array.isArray(allDays) ? allDays : [];
           }
 
           // 計算所有景點的平均座標
@@ -880,8 +880,10 @@
             clearCurrentPopup();
           });
 
-          createDayButtons();
-          displayAllDays();
+          if (Array.isArray(allDays) && allDays.length > 0) {
+            createDayButtons();
+            displayAllDays();
+          }
         } catch (error) {
           console.error("初始化地圖失敗：", error);
         }
@@ -1348,9 +1350,9 @@
               },
             },
           );
+          const body = await res.json().catch(() => ({}));
+          if (redirectToLoginIfUnauthorized(res.status, body)) return null;
           if (!res.ok) return null;
-
-          const body = await res.json();
           if (body.code !== 200 || !Array.isArray(body.data)) return null;
 
           const row = body.data.find(
@@ -1491,13 +1493,118 @@
             description: item.description || "",
             type: item.type || "景點",
             cost: item.cost || "未知",
-            location: item.location || { lat: 0, lng: 0 },
+            location: item.location || null,
             photos: item.photos,
             rating: item.rating,
             address: item.address,
             phone: item.phone,
           })),
         }));
+      }
+
+      function normalizeItineraryRowToAllDays(item) {
+        if (!item || typeof item !== "object") return [];
+
+        const rawLatLng =
+          item?.data_latlng?.data && Array.isArray(item.data_latlng.data)
+            ? item.data_latlng.data
+            : Array.isArray(item?.data_latlng)
+              ? item.data_latlng
+              : [];
+
+        const mergeDaysWithLatLng = (daysSource) => {
+          const days = convertToAllDaysFormat(daysSource);
+          if (!Array.isArray(days) || !days.length) return [];
+
+          if (!rawLatLng.length) return days;
+
+          return days.map((day, dayIndex) => {
+            const dayLatLng =
+              rawLatLng.find((d) => Number(d?.day) === Number(day?.day)) ||
+              rawLatLng[dayIndex];
+            const locations = Array.isArray(dayLatLng?.locations)
+              ? dayLatLng.locations
+              : [];
+
+            return {
+              ...day,
+              activities: (day.activities || []).map((activity, actIndex) => {
+                const hasValidLocation =
+                  activity?.location &&
+                  typeof activity.location.lat === "number" &&
+                  typeof activity.location.lng === "number" &&
+                  !(activity.location.lat === 0 && activity.location.lng === 0);
+
+                if (hasValidLocation) return activity;
+
+                let matched = locations.find(
+                  (loc) => loc?.location_name === activity?.place_name,
+                );
+                if (!matched) matched = locations[actIndex];
+
+                if (!matched?.location) return activity;
+
+                return {
+                  ...activity,
+                  location: {
+                    lat:
+                      typeof matched.location.latitude === "number"
+                        ? matched.location.latitude
+                        : null,
+                    lng:
+                      typeof matched.location.longitude === "number"
+                        ? matched.location.longitude
+                        : null,
+                  },
+                };
+              }),
+            };
+          });
+        };
+
+        const fromDetailedParsed = item?.detailed_itinerary?.parsed?.days;
+        if (
+          Array.isArray(fromDetailedParsed) &&
+          fromDetailedParsed.length > 0
+        ) {
+          return mergeDaysWithLatLng(fromDetailedParsed);
+        }
+
+        const fromDetailedDays = item?.detailed_itinerary?.days;
+        if (Array.isArray(fromDetailedDays) && fromDetailedDays.length > 0) {
+          return mergeDaysWithLatLng(fromDetailedDays);
+        }
+
+        const fromDataJson = item?.data_json?.days;
+        if (Array.isArray(fromDataJson) && fromDataJson.length > 0) {
+          return mergeDaysWithLatLng(fromDataJson);
+        }
+
+        if (rawLatLng.length > 0) {
+          return rawLatLng.map((dayObj) => ({
+            day: dayObj.day,
+            weekday: dayObj.weekday || `第${dayObj.day}天`,
+            activities: (dayObj.locations || []).map((loc) => ({
+              place_name: loc.location_name,
+              location: {
+                lat:
+                  typeof loc?.location?.latitude === "number"
+                    ? loc.location.latitude
+                    : null,
+                lng:
+                  typeof loc?.location?.longitude === "number"
+                    ? loc.location.longitude
+                    : null,
+              },
+              time: "",
+              description: "",
+              type: "",
+              cost: "",
+            })),
+          }));
+        }
+
+        return [];
       }
 
       // 初始化頁面
@@ -1515,6 +1622,16 @@
             const detailedData = await generateDetailedItinerary();
             if (detailedData) {
               console.log("✓ detailed_itinerary 生成完成");
+
+              const currentProjectId = Number(
+                sessionStorage.getItem("currentProjectId") || 0,
+              );
+              if (currentProjectId) {
+                await openProject({
+                  project_id: currentProjectId,
+                  title: sessionStorage.getItem("currentProjectTitle") || "",
+                });
+              }
             } else {
               console.warn("⚠️ detailed_itinerary 生成失敗或未執行");
             }
@@ -2182,6 +2299,21 @@
       const userId = Number(localStorage.getItem("userId"));
       const token = localStorage.getItem("userToken");
       if (!userId || !token) window.location.href = "login.html";
+      let isRedirectingToLogin = false;
+
+      function redirectToLoginIfUnauthorized(status, body) {
+        if (isRedirectingToLogin) return true;
+        if (status === 401 || body?.code === 401) {
+          isRedirectingToLogin = true;
+          localStorage.removeItem("userToken");
+          localStorage.removeItem("userId");
+          sessionStorage.clear();
+          alert("登入已過期，請重新登入");
+          window.location.href = "login.html";
+          return true;
+        }
+        return false;
+      }
 
       function renderProjects(projects) {
         const list = document.querySelector(".trip-list");
@@ -2231,7 +2363,8 @@
             }),
           });
 
-          const result = await resp.json();
+          const result = await resp.json().catch(() => ({}));
+          if (redirectToLoginIfUnauthorized(resp.status, result)) return;
           if (resp.ok && result.code === 201) {
             const projectId = result.data.project_id;
             const projectTitle = title.trim();
@@ -2262,7 +2395,8 @@
             },
           },
         );
-        const body = await res.json();
+        const body = await res.json().catch(() => ({}));
+        if (redirectToLoginIfUnauthorized(res.status, body)) return;
         console.log("loadProjects", res.status, body);
         if (res.ok && body.code === 200) {
           renderProjects(body.data);
@@ -2288,7 +2422,8 @@
             },
           },
         );
-        const body = await res.json();
+        const body = await res.json().catch(() => ({}));
+        if (redirectToLoginIfUnauthorized(res.status, body)) return;
         console.log("openProject", res.status, body);
 
         if (res.ok && body.code === 200 && body.data && body.data.length > 0) {
@@ -2305,12 +2440,23 @@
             );
           }
 
-          // 有 itinerary，將所有 data_json.days 合併為 allDays
+          // 有 itinerary，優先使用 detailed_itinerary，其次 data_json，再退回 data_latlng
           allDays = body.data.flatMap((item) =>
-            item.data_json && Array.isArray(item.data_json.days)
-              ? item.data_json.days
-              : [],
+            normalizeItineraryRowToAllDays(item),
           );
+          console.log("AllDAYS", allDays);
+
+          if (!allDays.length) {
+            console.warn(
+              "此專案 itinerary 存在，但無可渲染 days，將導向 setup",
+            );
+            sessionStorage.setItem("currentProjectId", project.project_id);
+            sessionStorage.setItem("currentProjectTitle", project.title);
+            sessionStorage.setItem("navigationType", "forward");
+            window.location.href = "setup.html";
+            return;
+          }
+
           createDayButtons();
           displayAllDays();
         } else {
