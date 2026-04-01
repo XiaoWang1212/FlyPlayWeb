@@ -132,6 +132,14 @@ def create_app():
             result = data_fix_service.enrich_data_with_location(data_json)
             
             if result['success']:
+                try:
+                    travel_service.update_itinerary_ai_data(
+                        int(itinerary_id),
+                        data_latlng=result['data']
+                    )
+                except Exception as save_err:
+                    print(f"儲存 data_latlng 失敗: {save_err}")
+
                 return jsonify({
                     'success': True,
                     'data': result['data']
@@ -167,6 +175,7 @@ def create_app():
         """調用 Gemini 生成詳細行程"""
         try:
             request_data = request.get_json()
+            itinerary_id = request_data.get('itinerary_id') if request_data else None
             
             # 處理新的合併格式：{ data_latlng: {...}, trip_setup: {...} }
             if 'data_latlng' in request_data and 'trip_setup' in request_data:
@@ -205,6 +214,16 @@ def create_app():
             )
             
             if result['success']:
+                if itinerary_id:
+                    try:
+                        travel_service.update_itinerary_ai_data(
+                            int(itinerary_id),
+                            detailed_itinerary=result['data'],
+                            data_latlng=existing_itinerary if existing_itinerary is not None else None
+                        )
+                    except Exception as save_err:
+                        print(f"儲存 detailed_itinerary 失敗: {save_err}")
+
                 print("✓ 詳細行程已生成")
                 return jsonify({
                     'code': 200,

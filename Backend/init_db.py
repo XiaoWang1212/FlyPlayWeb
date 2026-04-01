@@ -61,6 +61,8 @@ class DatabaseInitializer:
                             travel_style VARCHAR(50),               -- 旅遊類型詳細（如美食、冒險）
                             budget VARCHAR(50),                     -- 預算等級（中等、高等...）
                             data_json JSONB NOT NULL DEFAULT '{}'::jsonb,  -- 詳細行程內容
+                            data_latlng JSONB NOT NULL DEFAULT '{}'::jsonb, -- 經緯度補齊後資料
+                            detailed_itinerary JSONB NOT NULL DEFAULT '{}'::jsonb, -- Gemini 詳細行程結果
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
                     ''')

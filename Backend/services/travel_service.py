@@ -96,6 +96,31 @@ class TravelService:
                 )
                 return cur.fetchone()
 
+    def update_itinerary_ai_data(self, itinerary_id, detailed_itinerary=None, data_latlng=None):
+        set_items = []
+        values = []
+
+        if detailed_itinerary is not None:
+            set_items.append("detailed_itinerary=%s")
+            values.append(json.dumps(detailed_itinerary))
+
+        if data_latlng is not None:
+            set_items.append("data_latlng=%s")
+            values.append(json.dumps(data_latlng))
+
+        if not set_items:
+            return None
+
+        values.append(itinerary_id)
+        sql = f"UPDATE itineraries SET {', '.join(set_items)} WHERE itinerary_id=%s RETURNING itinerary_id"
+
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(values))
+                row = cur.fetchone()
+            conn.commit()
+        return row
+
     def update_itinerary(self, itinerary_id, **fields):
         if not fields:
             return None
