@@ -42,12 +42,18 @@
         </div>
       </div>
       <div class="sidebar-content">
-        <a onclick="navigateToSetup()" class="new-trip-btn">
+        <!-- <a onclick="navigateToSetup()" class="new-trip-btn"> -->
+        <a
+          class="new-trip-btn"
+          href="javascript:void(0)"
+          onclick="createNewProject()"
+        >
           <i class="far fa-square-plus"></i>
           <span>開啟新行程</span>
         </a>
         <hr class="sidebar-divider" />
-        <div class="trip-item">
+        <div class="trip-list"></div>
+        <!-- <div class="trip-item">
           <div class="trip-info">
             <i
               class="fas fa-bookmark bookmark-icon"
@@ -82,7 +88,7 @@
               <span>2024/02/01</span>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
 
@@ -172,9 +178,6 @@
             placeholder="輸入景點、地標或地址"
           />
         </div>
-        <div class="spot-search-status" id="spotSearchStatus">
-          請輸入關鍵字開始搜尋
-        </div>
         <div class="spot-search-results" id="spotSearchResults"></div>
       </div>
     </div>
@@ -192,6 +195,8 @@
       let currentMarkers = [];
       let currentInfoWindow = null;
       let justClickedMarker = false;
+      let spotPreviewMarker = null;
+      let selectedSpotForAdd = null;
 
       // 新增：清除地圖上現有路線的函數
       function clearMapRoutes() {
@@ -224,6 +229,8 @@
       // 創建日期按鈕
       function createDayButtons() {
         const timelineView = document.getElementById("timelineView");
+        const oldContainer = document.getElementById("dayButtonContainer");
+        if (oldContainer) oldContainer.remove();
         const buttonContainer = document.createElement("div");
         buttonContainer.id = "dayButtonContainer";
 
@@ -240,7 +247,6 @@
         allBtn.onclick = () => switchDay(-1, allBtn);
         buttonContainer.appendChild(allBtn);
         // -------------------------
-
         allDays.forEach((day, index) => {
           const btn = document.createElement("button");
           btn.textContent = `第 ${day.day} 天`;
@@ -249,45 +255,9 @@
           buttonContainer.appendChild(btn);
         });
 
-        // 初始化聊天
-        window.onload = function () {
-          typeMessage(
-            "您好！我是飛遊 AI 助手。我可以幫您調整行程、推薦景點、規劃路線，或是回答旅遊相關問題。請告訴我您需要什麼協助？",
-            "bot",
-          );
-        };
+        console.log("AllDAYS", allDays);
 
         // 把按鈕加到時間線最上方
-        timelineView.insertBefore(buttonContainer, timelineView.firstChild);
-
-        // 切換聊天模式
-        function toggleChatMode() {
-          isChatMode = !isChatMode;
-
-          if (isChatMode) {
-            // 進入聊天模式
-            timelineView.classList.remove("active");
-            chatView.classList.add("active");
-            openSheet();
-            fabGroup.classList.add("horizontal");
-            document.getElementById("editFab").style.display = "none";
-
-            // 改變圖示：機器人 → 列表
-            robotFabIcon.classList.remove("fa-robot");
-            robotFabIcon.classList.add("fa-list-ul");
-          } else {
-            // 回到行程表模式
-            chatView.classList.remove("active");
-            timelineView.classList.add("active");
-            sheet.classList.remove("expanded", "half");
-            syncSheetState("sheet-collapsed");
-            document.getElementById("editFab").style.display = "flex";
-
-            // 恢復圖示：列表 → 機器人
-            robotFabIcon.classList.remove("fa-list-ul");
-            robotFabIcon.classList.add("fa-robot");
-          }
-        }
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
@@ -369,6 +339,25 @@
 
       function closeCustomMapPopup() {
         clearCurrentPopup();
+      }
+
+      function isValidRouteLocation(location) {
+        if (!location) return false;
+        const lat =
+          typeof location.lat === "number"
+            ? location.lat
+            : typeof location.latitude === "number"
+              ? location.latitude
+              : null;
+        const lng =
+          typeof location.lng === "number"
+            ? location.lng
+            : typeof location.longitude === "number"
+              ? location.longitude
+              : null;
+        if (lat === null || lng === null) return false;
+        if (lat === 0 && lng === 0) return false;
+        return true;
       }
 
       function clearMapRoutes() {
@@ -502,6 +491,8 @@
           dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
           timelineList.appendChild(dayTitle);
 
+          console.log(`正在載入第 ${day.day} 天的活動：`, day.activities);
+
           day.activities.forEach((activity, actIndex) => {
             const isLast = actIndex === day.activities.length - 1;
             const photoUrl =
@@ -564,6 +555,9 @@
           }
 
           const activities = day.activities;
+          const routeActivities = activities.filter((a) =>
+            isValidRouteLocation(a.location),
+          );
           const directionsService = new DirectionsService();
 
           const directionsRenderer = new DirectionsRenderer({
@@ -578,9 +572,18 @@
           });
           currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
-          const origin = activities[0].location;
-          const destination = activities[activities.length - 1].location;
-          const waypoints = activities.slice(1, -1).map((act) => ({
+          const origin = routeActivities[0]?.location;
+          const destination =
+            routeActivities[routeActivities.length - 1]?.location;
+          if (!origin || !destination) {
+            console.warn(
+              `第 ${dayIndex + 1} 天缺少地點座標，無法規劃路線`,
+              activities,
+            );
+            addCustomMarkers(routeActivities, dayIndex);
+            return;
+          }
+          const waypoints = routeActivities.slice(1, -1).map((act) => ({
             location: act.location,
             stopover: true,
           }));
@@ -591,14 +594,25 @@
               destination: destination,
               waypoints: waypoints,
               optimizeWaypoints: false,
-              travelMode: google.maps.TravelMode.DRIVING,
+              travelMode: "WALKING",
+              // travelMode: google.maps.TravelMode.DRIVING || "WALKING",
             },
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
-                addCustomMarkers(activities, dayIndex);
+                addCustomMarkers(routeActivities, dayIndex);
               } else {
-                console.error(`第 ${dayIndex + 1} 天路線規劃失敗:`, status);
+                console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+                  status: status,
+                  origin: origin,
+                  destination: destination,
+                  waypoints: waypoints,
+                  activities: routeActivities.map((a) => ({
+                    name: a.place_name,
+                    location: a.location,
+                  })),
+                });
+                addCustomMarkers(routeActivities, dayIndex);
               }
             },
           );
@@ -633,9 +647,22 @@
         currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
         const activities = day.activities;
-        const origin = activities[0].location;
-        const destination = activities[activities.length - 1].location;
-        const waypoints = activities.slice(1, -1).map((act) => ({
+        const routeActivities = activities.filter((a) =>
+          isValidRouteLocation(a.location),
+        );
+
+        // 先更新該天時間線，避免路線失敗時仍顯示全部內容
+        loadSingleDayTimeline(day, dayIndex);
+
+        const origin = routeActivities[0]?.location;
+        const destination =
+          routeActivities[routeActivities.length - 1]?.location;
+        if (!origin || !destination) {
+          addCustomMarkers(routeActivities, dayIndex);
+          return;
+        }
+
+        const waypoints = routeActivities.slice(1, -1).map((act) => ({
           location: act.location,
           stopover: true,
         }));
@@ -646,14 +673,13 @@
             destination: destination,
             waypoints: waypoints,
             optimizeWaypoints: false,
-            travelMode: google.maps.TravelMode.DRIVING,
+            // travelMode: google.maps.TravelMode.DRIVING,
+            travelMode: "WALKING",
           },
           (result, status) => {
             if (status === "OK") {
               directionsRenderer.setDirections(result);
-              addCustomMarkers(activities, dayIndex);
-              // 載入該天的時間線
-              loadSingleDayTimeline(day, dayIndex);
+              addCustomMarkers(routeActivities, dayIndex);
               setTimeout(() => {
                 map.panBy(0, 180);
               }, 150);
@@ -663,11 +689,12 @@
                 origin: origin,
                 destination: destination,
                 waypoints: waypoints,
-                activities: activities.map(a => ({
+                activities: routeActivities.map((a) => ({
                   name: a.place_name,
-                  location: a.location
-                }))
+                  location: a.location,
+                })),
               });
+              addCustomMarkers(routeActivities, dayIndex);
             }
           },
         );
@@ -708,16 +735,116 @@
           displayDay(dayIndex);
         }
       }
-      async function initMap() {
+      // 第一階段：先加載坐標信息（供給 localStorage 的 generatedItinerary）
+      async function loadCoordinatesFirst() {
         try {
-          const response = await fetch(`${API_BASE}/api/itinerary`);
+          console.log("載入坐標信息...");
+
+          // 從 localStorage 中獲取行程 ID
+          const generatedItinerary = localStorage.getItem("generatedItinerary");
+          if (!generatedItinerary) {
+            console.warn("未找到 generatedItinerary");
+            return false;
+          }
+
+          const itineraryData = JSON.parse(generatedItinerary);
+          const itinerary_id = itineraryData.itinerary_id || itineraryData.id;
+
+          if (!itinerary_id) {
+            console.warn("未找到 itinerary_id");
+            return false;
+          }
+
+          console.log(`使用 itinerary_id: ${itinerary_id} 加載行程`);
+
+          // 調用後端 API 獲取行程數據
+          const response = await fetch(`${API_BASE}/data/latlng`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              itinerary_id: itinerary_id,
+            }),
+          });
 
           if (!response.ok) {
-            throw new Error(`itinerary API ${response.status}`);
+            throw new Error(`HTTP ${response.status}`);
           }
 
           const result = await response.json();
-          allDays = result.data.days;
+
+          if (!result.success) {
+            throw new Error(result.error || "獲取行程失敗");
+          }
+
+          // 存進 localStorage
+          localStorage.setItem("data_latlng", JSON.stringify(result));
+          console.log("坐標數據已存入 localStorage");
+
+          // 從 /data/latlng 的結果構建臨時行程數據結構
+          allDays = result.data.map((dayData) => {
+            return {
+              day: dayData.day,
+              weekday: dayData.day ? `第${dayData.day}天` : "未知",
+              activities: dayData.locations.map((loc) => ({
+                place_name: loc.location_name,
+                location: {
+                  lat: loc.location.latitude || 0,
+                  lng: loc.location.longitude || 0,
+                },
+                time: "",
+                description: "",
+                type: "",
+                cost: "",
+              })),
+            };
+          });
+
+          console.log("坐標已載入", allDays);
+          return true;
+        } catch (error) {
+          console.error("載入坐標失敗：", error);
+          return false;
+        }
+      }
+
+      async function initMap() {
+        try {
+          // 1. 先嘗試從 localStorage 取得 ai_itinerary
+          let aiItinerary = localStorage.getItem("data_latlng");
+          let usedLocal = false;
+          if (aiItinerary) {
+            try {
+              const parsed = JSON.parse(aiItinerary);
+              if (
+                parsed.data &&
+                Array.isArray(parsed.data) &&
+                parsed.data.length > 0
+              ) {
+                allDays = parsed.data.map((dayObj) => ({
+                  day: dayObj.day,
+                  weekday: dayObj.weekday || `第${dayObj.day}天`,
+                  activities: (dayObj.locations || []).map((loc) => ({
+                    place_name: loc.location_name,
+                    location: {
+                      lat: loc.location.latitude || 0,
+                      lng: loc.location.longitude || 0,
+                    },
+                  })),
+                }));
+                usedLocal = true;
+              }
+            } catch (e) {
+              // 解析失敗 fallback
+              allDays = [];
+            }
+          }
+
+          // 2. localStorage 沒資料時，不再呼叫 /api/itinerary（該端點僅支援 POST）
+          if (!usedLocal) {
+            allDays = Array.isArray(allDays) ? allDays : [];
+          }
 
           // 計算所有景點的平均座標
           let totalLat = 0;
@@ -761,8 +888,10 @@
             clearCurrentPopup();
           });
 
-          createDayButtons();
-          displayAllDays();
+          if (Array.isArray(allDays) && allDays.length > 0) {
+            createDayButtons();
+            displayAllDays();
+          }
         } catch (error) {
           console.error("初始化地圖失敗：", error);
         }
@@ -772,7 +901,7 @@
         .then((res) => res.json())
         .then((data) => {
           const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&callback=initMap&libraries=routes&loading=async`;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes&loading=async`;
           script.async = true;
           document.head.appendChild(script);
         });
@@ -799,16 +928,305 @@
       // --- 行程搜尋相關變數 ---
       const spotSearchOverlay = document.getElementById("spotSearchOverlay");
       const spotSearchInput = document.getElementById("spotSearchInput");
-      const spotSearchStatus = document.getElementById("spotSearchStatus");
+
+      // 點擊搜尋框時重新顯示清單
+      spotSearchInput.addEventListener("focus", function () {
+        if (
+          spotSearchState.isOpen &&
+          Array.isArray(spotSearchState.results) &&
+          spotSearchState.results.length > 0 &&
+          spotSearchResults.innerHTML === ""
+        ) {
+          renderSpotSearchResults();
+        }
+      });
       const spotSearchResults = document.getElementById("spotSearchResults");
 
       const spotSearchState = {
         isOpen: false,
         results: [],
         selectedIndex: -1,
-        debounceTimer: null,
         requestId: 0,
       };
+
+      function escapeHtml(text) {
+        if (text === null || text === undefined) return "";
+        return String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      // 將 Google Places API 的地點物件轉換成統一的 { lat, lng } 格式
+      function normalizePlaceLocation(place) {
+        if (!place || !place.location) return null;
+
+        const lat =
+          typeof place.location.lat === "number"
+            ? place.location.lat
+            : typeof place.location.latitude === "number"
+              ? place.location.latitude
+              : null;
+
+        const lng =
+          typeof place.location.lng === "number"
+            ? place.location.lng
+            : typeof place.location.longitude === "number"
+              ? place.location.longitude
+              : null;
+
+        if (lat === null || lng === null) return null;
+        return { lat, lng };
+      }
+
+      function clearSpotPreview() {
+        if (spotPreviewMarker) {
+          spotPreviewMarker.setMap(null);
+          spotPreviewMarker = null;
+        }
+      }
+
+      function closeSpotPreviewInfo() {
+        clearCurrentPopup();
+        clearSpotPreview();
+      }
+
+      async function getBusinessInfo(spot) {
+        if (!spot) {
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
+        }
+
+        // 若先前已查過 business_info，優先使用快取結果，減少重複 API 請求。
+        if (spot._businessInfo) {
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+          return { openingHoursText, priceRangeText };
+        }
+
+        try {
+          let response;
+
+          // 以 place_id 查詢 沒有 place_id 才使用名稱查詢
+          if (spot.place_id) {
+            response = await fetch(
+              `${API_BASE}/api/maps/business_info/${encodeURIComponent(
+                spot.place_id,
+              )}`,
+            );
+          } else if (spot.name) {
+            response = await fetch(`${API_BASE}/api/maps/business_info`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: spot.name }),
+            });
+          } else {
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
+          }
+
+          // API失敗或回傳非成功格式的統一回傳預設值
+          const payload = await response.json();
+          if (!response.ok || !payload.success) {
+            return {
+              openingHoursText: "未提供",
+              priceRangeText: "未提供",
+            };
+          }
+
+          // 將回傳資料暫存到 spot，讓同一景點下次可直接使用。
+          spot._businessInfo = payload?.data || {};
+          const openingHours = spot._businessInfo.opening_hours;
+          const priceRange = spot._businessInfo.price_range;
+
+          const openingHoursText =
+            Array.isArray(openingHours) && openingHours.length > 0
+              ? openingHours[0]
+              : "未提供";
+          const priceRangeText =
+            priceRange && typeof priceRange === "object"
+              ? `${priceRange?.startPrice?.currencyCode || ""} ${
+                  priceRange?.startPrice?.units || ""
+                }-${priceRange?.endPrice?.units || ""}`.trim()
+              : "未提供";
+
+          return { openingHoursText, priceRangeText };
+        } catch (error) {
+          // 網路錯誤或解析錯誤時顯示
+          return {
+            openingHoursText: "未提供",
+            priceRangeText: "未提供",
+          };
+        }
+      }
+
+      // 根據景點資料建立資訊視窗的 HTML 內容
+      function buildSpotPreviewInfoHtml(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
+        const photoUrl =
+          spot.photos && spot.photos[0] && spot.photos[0].photo_url
+            ? spot.photos[0].photo_url
+            : "";
+        const name = escapeHtml(spot.name || "未命名地點");
+        const address = escapeHtml(spot.address || "無地址資訊");
+        const ratingText =
+          typeof spot.rating === "number"
+            ? `${spot.rating.toFixed(1)}${
+                spot.user_rating_count ? ` (${spot.user_rating_count})` : ""
+              }`
+            : "未提供";
+        const openingHoursDisplay = escapeHtml(openingHoursText);
+        const priceRangeDisplay = escapeHtml(priceRangeText);
+
+        return `
+          <div class="spot-map-card">
+            <div class="spot-map-card-head">
+              <div class="spot-map-card-thumb ${photoUrl ? "has-photo" : ""}" ${
+                photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
+              }>
+                ${photoUrl ? "" : '<i class="far fa-image"></i>'}
+              </div>
+              <div class="spot-map-card-main">
+                <div class="spot-map-card-title-row">
+                  <div class="spot-map-card-title">${name}</div>
+                  <button
+                    type="button"
+                    class="spot-map-close-btn"
+                    aria-label="關閉景點資訊"
+                    onclick="closeSpotPreviewInfo()"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="spot-map-card-address">${address}</div>
+              </div>
+            </div>
+            <div class="spot-map-card-metrics">
+              <div class="spot-map-chip"><i class="fas fa-star"></i> 評分 ${ratingText}</div>
+              <div class="spot-map-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
+              <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
+            </div>
+            <button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
+              <i class="fas fa-plus"></i> 加入行程
+            </button>
+          </div>
+        `;
+      }
+
+      // 搜尋結果點擊後在地圖上顯示景點資訊的
+      function openSpotInfoOnMap(
+        spot,
+        openingHoursText = "載入中...",
+        priceRangeText = "載入中...",
+      ) {
+        if (!map || !spot) return;
+
+        const location = normalizePlaceLocation(spot);
+        if (!location) return;
+
+        clearSpotPreview();
+        clearCurrentPopup();
+
+        // 新增一個 marker 來顯示目前選中的景點
+        spotPreviewMarker = new google.maps.Marker({
+          map,
+          position: location,
+          title: spot.name || "景點",
+          animation: google.maps.Animation.DROP,
+        });
+
+        currentInfoWindow = new google.maps.InfoWindow({
+          content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(
+            spot,
+            openingHoursText,
+            priceRangeText,
+          )}</div>`,
+          maxWidth: 360,
+        });
+
+        // 打開資訊視窗並把地圖中心移到這個景點
+        currentInfoWindow.open({ map, anchor: spotPreviewMarker });
+        map.panTo(location);
+        if ((map.getZoom() || 0) < 15) {
+          map.setZoom(15);
+        }
+      }
+
+      // 在搜尋結果區顯示提示訊息（例如錯誤訊息或「沒有找到結果」的提示）
+      function showSearchMessage(message) {
+        spotSearchResults.innerHTML = `<div class="spot-search-message">${escapeHtml(message)}</div>`;
+      }
+
+      function buildActivityFromSpot(spot) {
+        const location = normalizePlaceLocation(spot) || { lat: 0, lng: 0 };
+        const types = Array.isArray(spot.types) ? spot.types : [];
+
+        return {
+          activityId: spot.place_id || `${spot.name || "spot"}-${Date.now()}`,
+          place_name: spot.name || "未命名地點",
+          time: "待安排",
+          description: spot.address || "從搜尋新增的景點",
+          cost: "",
+          type: types[0] || "景點",
+          address: spot.address || "",
+          location,
+          photos: spot.photos || [],
+        };
+      }
+
+      // 把選中的景點加入行程
+      async function addSpotToItinerary(spot, evt) {
+        if (evt) evt.stopPropagation();
+        if (!spot) return;
+
+        // 看 currentDayIndex 決定要加到哪一天
+        const targetDays = getActiveDays();
+        if (!Array.isArray(targetDays) || !targetDays.length) return;
+
+        const targetDayIndex =
+          currentDayIndex >= 0 && currentDayIndex < targetDays.length
+            ? currentDayIndex
+            : 0;
+
+        const targetDay = targetDays[targetDayIndex];
+        if (!targetDay || !Array.isArray(targetDay.activities)) return;
+
+        const newActivity = buildActivityFromSpot(spot);
+        targetDay.activities.push(newActivity);
+
+        if (isEditMode && editedDays) {
+          isDragChanged = true;
+          document.getElementById("dragConfirmBtn").classList.add("show");
+        }
+
+        if (currentDayIndex === -1) {
+          displayAllDays();
+        } else {
+          displayDay(currentDayIndex);
+        }
+
+        openSheet();
+        closeSpotSearchModal();
+      }
 
       // --- SortableJS 設定 (拖拽功能) ---
       const timelineList = document.getElementById("timelineList");
@@ -874,6 +1292,28 @@
 
       // 初始化聊天
       function showGeneratedRawOutputInChat() {
+        // 先發送 coordinatesData（本地存儲的坐標數據）
+        const coordinatesData = localStorage.getItem("data_latlng");
+        if (coordinatesData) {
+          try {
+            const data = JSON.parse(coordinatesData);
+
+            // 自動切到聊天視圖
+            if (!isChatMode) {
+              toggleChatMode();
+            }
+
+            // 發送坐標數據訊息
+            const displayText = JSON.stringify(data, null, 2);
+            appendMsg("📍 行程坐標信息已加載:\n" + displayText, "bot");
+
+            console.log("✓ 已發送 data_latlng 到聊天");
+          } catch (e) {
+            console.error("解析 data_latlng 失敗:", e);
+          }
+        }
+
+        // 然後顯示之前保存的行程回應
         const raw = localStorage.getItem("last_itinerary_response");
         if (!raw) return;
 
@@ -904,9 +1344,377 @@
         }
       }
 
-      // 初始化聊天（原本的測試訊息請移除）
-      window.onload = function () {
-        showGeneratedRawOutputInChat();
+      // 通過Gemini補充詳細信息
+      async function getDetailedItineraryFromDb(itineraryId) {
+        try {
+          const token = localStorage.getItem("userToken");
+          const projectId = Number(
+            sessionStorage.getItem("currentProjectId") ||
+              localStorage.getItem("currentProjectId") ||
+              0,
+          );
+
+          if (!token || !projectId || !itineraryId) return null;
+
+          const res = await fetch(
+            `${API_BASE}/api/travel/itineraries/${projectId}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+          const body = await res.json().catch(() => ({}));
+          if (redirectToLoginIfUnauthorized(res.status, body)) return null;
+          if (!res.ok) return null;
+          if (body.code !== 200 || !Array.isArray(body.data)) return null;
+
+          const row = body.data.find(
+            (item) => Number(item.itinerary_id) === Number(itineraryId),
+          );
+          const detailed = row?.detailed_itinerary;
+
+          if (
+            detailed &&
+            typeof detailed === "object" &&
+            Object.keys(detailed).length > 0
+          ) {
+            return detailed;
+          }
+
+          return null;
+        } catch (e) {
+          console.warn("查詢 DB detailed_itinerary 失敗:", e);
+          return null;
+        }
+      }
+
+      async function generateDetailedItinerary() {
+        try {
+          console.log("第二步：調用 Gemini 補充詳細信息");
+
+          // 從 localStorage 讀取坐標數據
+          const dataLatLng = localStorage.getItem("data_latlng");
+          if (!dataLatLng) {
+            console.warn("找不到坐標數據");
+            return false;
+          }
+          const tripSetup =
+            localStorage.getItem("tripSetup") ||
+            localStorage.getItem("trip_setup");
+          const generatedItinerary = localStorage.getItem("generatedItinerary");
+          const itineraryInfo = generatedItinerary
+            ? JSON.parse(generatedItinerary)
+            : null;
+          const itineraryId =
+            itineraryInfo?.itinerary_id ||
+            itineraryInfo?.id ||
+            Number(localStorage.getItem("currentItineraryId")) ||
+            null;
+
+          // 先查 DB：若已有 detailed_itinerary，就不要重送 /api/itinerary/detail
+          const dbDetailed = await getDetailedItineraryFromDb(itineraryId);
+          if (dbDetailed) {
+            console.log("✓ DB 已有 detailed_itinerary，跳過重新生成");
+            localStorage.setItem(
+              "detailed_itinerary",
+              JSON.stringify(dbDetailed),
+            );
+            return dbDetailed;
+          }
+
+          // 合併坐標數據和旅行配置
+          const payload = {
+            data_latlng: JSON.parse(dataLatLng),
+            trip_setup: tripSetup ? JSON.parse(tripSetup) : {},
+            itinerary_id: itineraryId,
+          };
+
+          // 調用後端端點來生成詳細行程
+          const response = await fetch(`${API_BASE}/api/itinerary/detail`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API 呼叫失敗 ${response.status}`);
+          }
+
+          const result = await response.json();
+
+          if (result.code !== 200) {
+            throw new Error(result.error || "生成詳細行程失敗");
+          }
+
+          console.log("✓ 詳細行程已生成");
+
+          // 存儲原始詳細行程
+          localStorage.setItem(
+            "detailed_itinerary",
+            JSON.stringify(result.data),
+          );
+
+          return result.data;
+        } catch (error) {
+          console.error("生成詳細行程失敗：", error);
+          return false;
+        }
+      }
+
+      // 補充圖片信息
+      async function enrichWithPictureInfo(detailedData) {
+        try {
+          console.log("第三步：調用 /api/itinerary 補充圖片信息");
+
+          const itineraryId =
+            Number(localStorage.getItem("currentItineraryId")) ||
+            Number(
+              (() => {
+                try {
+                  const raw = localStorage.getItem("generatedItinerary");
+                  if (!raw) return 0;
+                  const parsed = JSON.parse(raw);
+                  return parsed?.itinerary_id || parsed?.id || 0;
+                } catch (_) {
+                  return 0;
+                }
+              })(),
+            ) ||
+            null;
+
+          const daysSource =
+            detailedData?.parsed?.days || detailedData?.days || [];
+          if (!Array.isArray(daysSource) || daysSource.length === 0) {
+            console.warn("沒有可補圖的 days 資料");
+            return false;
+          }
+
+          // 以目前 allDays 的座標回填到 detailed days，避免補圖後丟失地圖座標
+          const daysWithLocation = daysSource.map((day, dayIndex) => {
+            const currentDay = allDays.find(
+              (d, idx) =>
+                Number(d?.day) === Number(day?.day) || idx === dayIndex,
+            );
+            const currentActivities = Array.isArray(currentDay?.activities)
+              ? currentDay.activities
+              : [];
+
+            const list = day.location || day.activities || [];
+            const normalizedList = list.map((item, itemIndex) => {
+              let matched = currentActivities.find(
+                (a) => a?.place_name === item?.place_name,
+              );
+              if (!matched) matched = currentActivities[itemIndex];
+
+              return {
+                ...item,
+                location: item.location || matched?.location || null,
+              };
+            });
+
+            if (Array.isArray(day.location)) {
+              return { ...day, location: normalizedList };
+            }
+            return { ...day, activities: normalizedList };
+          });
+
+          // 先POST保存到後端
+          const response = await fetch(`${API_BASE}/api/itinerary`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              days: daysWithLocation,
+              itinerary_id: itineraryId,
+            }),
+          });
+          if (!response.ok) {
+            throw new Error(`POST 失敗 ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.code !== 200 || !Array.isArray(result?.data?.days)) {
+            throw new Error(result.error || "圖片補充回傳格式錯誤");
+          }
+
+          console.log("✓ 圖片信息已補充");
+
+          // 轉換為 allDays 格式並更新畫面
+          allDays = convertToAllDaysFormat(result.data.days);
+          createDayButtons();
+          if (currentDayIndex === -1) {
+            displayAllDays();
+          } else {
+            displayDay(currentDayIndex);
+          }
+
+          return true;
+        } catch (error) {
+          console.error("補充圖片信息失敗：", error);
+          return false;
+        }
+      }
+
+      // 轉換為 allDays 期望的格式
+      function convertToAllDaysFormat(days) {
+        if (!days) return [];
+
+        return days.map((day) => ({
+          day: day.day,
+          weekday: day.weekday,
+          activities: (day.location || day.activities || []).map((item) => ({
+            time: item.time,
+            place_name: item.place_name,
+            description: item.description || "",
+            type: item.type || "景點",
+            cost: item.cost || "未知",
+            location: item.location || null,
+            photos: item.photos,
+            rating: item.rating,
+            address: item.address,
+            phone: item.phone,
+          })),
+        }));
+      }
+
+      function normalizeItineraryRowToAllDays(item) {
+        if (!item || typeof item !== "object") return [];
+
+        const rawLatLng =
+          item?.data_latlng?.data && Array.isArray(item.data_latlng.data)
+            ? item.data_latlng.data
+            : Array.isArray(item?.data_latlng)
+              ? item.data_latlng
+              : [];
+
+        const mergeDaysWithLatLng = (daysSource) => {
+          const days = convertToAllDaysFormat(daysSource);
+          if (!Array.isArray(days) || !days.length) return [];
+
+          if (!rawLatLng.length) return days;
+
+          return days.map((day, dayIndex) => {
+            const dayLatLng =
+              rawLatLng.find((d) => Number(d?.day) === Number(day?.day)) ||
+              rawLatLng[dayIndex];
+            const locations = Array.isArray(dayLatLng?.locations)
+              ? dayLatLng.locations
+              : [];
+
+            return {
+              ...day,
+              activities: (day.activities || []).map((activity, actIndex) => {
+                const hasValidLocation =
+                  activity?.location &&
+                  typeof activity.location.lat === "number" &&
+                  typeof activity.location.lng === "number" &&
+                  !(activity.location.lat === 0 && activity.location.lng === 0);
+
+                if (hasValidLocation) return activity;
+
+                let matched = locations.find(
+                  (loc) => loc?.location_name === activity?.place_name,
+                );
+                if (!matched) matched = locations[actIndex];
+
+                if (!matched?.location) return activity;
+
+                return {
+                  ...activity,
+                  location: {
+                    lat:
+                      typeof matched.location.latitude === "number"
+                        ? matched.location.latitude
+                        : null,
+                    lng:
+                      typeof matched.location.longitude === "number"
+                        ? matched.location.longitude
+                        : null,
+                  },
+                };
+              }),
+            };
+          });
+        };
+
+        const fromDetailedParsed = item?.detailed_itinerary?.parsed?.days;
+        if (
+          Array.isArray(fromDetailedParsed) &&
+          fromDetailedParsed.length > 0
+        ) {
+          return mergeDaysWithLatLng(fromDetailedParsed);
+        }
+
+        const fromDetailedDays = item?.detailed_itinerary?.days;
+        if (Array.isArray(fromDetailedDays) && fromDetailedDays.length > 0) {
+          return mergeDaysWithLatLng(fromDetailedDays);
+        }
+
+        const fromDataJson = item?.data_json?.days;
+        if (Array.isArray(fromDataJson) && fromDataJson.length > 0) {
+          return mergeDaysWithLatLng(fromDataJson);
+        }
+
+        if (rawLatLng.length > 0) {
+          return rawLatLng.map((dayObj) => ({
+            day: dayObj.day,
+            weekday: dayObj.weekday || `第${dayObj.day}天`,
+            activities: (dayObj.locations || []).map((loc) => ({
+              place_name: loc.location_name,
+              location: {
+                lat:
+                  typeof loc?.location?.latitude === "number"
+                    ? loc.location.latitude
+                    : null,
+                lng:
+                  typeof loc?.location?.longitude === "number"
+                    ? loc.location.longitude
+                    : null,
+              },
+              time: "",
+              description: "",
+              type: "",
+              cost: "",
+            })),
+          }));
+        }
+
+        return [];
+      }
+
+      // 初始化頁面
+      window.onload = async function () {
+        try {
+          const coordinatesLoaded = await loadCoordinatesFirst();
+
+          await initMap();
+
+          // 使用既有資料先渲染
+          displayAllDays();
+
+          // 自動補充 detailed_itinerary（僅觸發生成/存檔，不覆蓋當前地圖資料）
+          if (coordinatesLoaded) {
+            const detailedData = await generateDetailedItinerary();
+            if (detailedData) {
+              console.log("✓ detailed_itinerary 生成完成");
+
+              await enrichWithPictureInfo(detailedData);
+            } else {
+              console.warn("⚠️ detailed_itinerary 生成失敗或未執行");
+            }
+          } else {
+            console.warn("⚠️ 座標資料未載入，跳過 detailed_itinerary 生成");
+          }
+
+          console.log("=== 頁面初始化完成 ===");
+        } catch (error) {
+          console.error("初始化失敗:", error);
+        }
       };
 
       // 切換聊天模式
@@ -1127,12 +1935,16 @@
         spotSearchState.isOpen = true;
         spotSearchState.results = [];
         spotSearchState.selectedIndex = -1;
+        selectedSpotForAdd = null;
 
         spotSearchOverlay.classList.add("active");
         spotSearchOverlay.setAttribute("aria-hidden", "false");
         spotSearchResults.innerHTML = "";
-        spotSearchStatus.textContent = "";
         spotSearchInput.value = "";
+
+        // 搜尋時先收起下方面板，避免遮住地圖
+        sheet.classList.remove("expanded", "half");
+        syncSheetState("sheet-collapsed");
 
         setTimeout(() => {
           spotSearchInput.focus(); // 動畫結束後才聚焦
@@ -1143,11 +1955,6 @@
         spotSearchState.isOpen = false;
         spotSearchOverlay.classList.remove("active");
         spotSearchOverlay.setAttribute("aria-hidden", "true");
-
-        if (spotSearchState.debounceTimer) {
-          clearTimeout(spotSearchState.debounceTimer);
-          spotSearchState.debounceTimer = null;
-        }
       }
 
       // 渲染搜尋結果列表
@@ -1185,9 +1992,29 @@
         spotSearchResults.innerHTML = html;
       }
 
-      function selectSpotSearchResult(index) {
+      async function selectSpotSearchResult(index) {
         spotSearchState.selectedIndex = index;
         renderSpotSearchResults();
+
+        // 根據選中的搜尋結果在地圖上顯示資訊，並準備加入行程
+        const selectedSpot = spotSearchState.results[index];
+        if (!selectedSpot) return;
+
+        selectedSpotForAdd = selectedSpot;
+        // 只收起景點清單，不關閉搜尋框
+        spotSearchResults.innerHTML = "";
+
+        // 收起 bottom sheet
+        sheet.classList.remove("expanded", "half");
+        syncSheetState("sheet-collapsed");
+
+        openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
+
+        const { openingHoursText, priceRangeText } =
+          await getBusinessInfo(selectedSpot);
+        if (selectedSpotForAdd === selectedSpot) {
+          openSpotInfoOnMap(selectedSpot, openingHoursText, priceRangeText);
+        }
       }
       // 從行程活動中嘗試獲取一個有效的座標位置，作為搜尋的錨點
       function normalizeActivityLocation(location) {
@@ -1251,11 +2078,8 @@
         showNoResultMessage = false,
       ) {
         try {
-          // 嘗試使用錨點位置進行附近搜尋，若失敗或無結果則退回文字搜尋
           const anchorLocation = getSearchAnchorLocation();
-          let response;
-          let payload;
-          let useNearbyEndpoint = false;
+          let response, payload;
 
           if (anchorLocation) {
             response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
@@ -1269,12 +2093,7 @@
                 maxResultCount: 8,
               }),
             });
-            payload = await response.json();
-            useNearbyEndpoint = response.ok && payload.success;
-          }
-
-          // nearby 無結果/失敗時，退回原本文字搜尋
-          if (!useNearbyEndpoint) {
+          } else {
             response = await fetch(`${API_BASE}/api/maps/search`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1284,9 +2103,9 @@
                 maxResultCount: 10,
               }),
             });
-
-            payload = await response.json();
           }
+
+          payload = await response.json();
 
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
@@ -1297,37 +2116,32 @@
           spotSearchState.selectedIndex = -1;
 
           if (!response.ok || !payload.success) {
-            spotSearchStatus.textContent =
-              payload.error || "搜尋失敗，請稍後再試";
-            spotSearchResults.innerHTML = "";
+            showSearchMessage(payload.error || "搜尋失敗，請稍後再試");
             return;
           }
 
           if (!places.length) {
-            spotSearchStatus.textContent = showNoResultMessage
-              ? "找不到相關景點，請嘗試其他關鍵字"
-              : "";
-            spotSearchResults.innerHTML = "";
+            if (showNoResultMessage) {
+              showSearchMessage("找不到相關景點，請嘗試其他關鍵字");
+            } else {
+              spotSearchResults.innerHTML = "";
+            }
             return;
           }
-
-          spotSearchStatus.textContent = "";
 
           renderSpotSearchResults();
         } catch (error) {
           if (reqId !== spotSearchState.requestId || !spotSearchState.isOpen) {
             return;
           }
-          spotSearchStatus.textContent = "搜尋失敗，請檢查網路或稍後再試";
-          spotSearchResults.innerHTML = "";
+          showSearchMessage("搜尋失敗，請檢查網路或稍後再試");
         }
       }
 
       function triggerSpotSearch(showNoResultMessage = false) {
         const keyword = spotSearchInput.value.trim();
         if (!keyword) {
-          spotSearchStatus.textContent = "";
-          spotSearchResults.innerHTML = "";
+          showSearchMessage("請先輸入關鍵字");
           return;
         }
 
@@ -1341,21 +2155,8 @@
 
         spotSearchState.requestId += 1;
         const currentReqId = spotSearchState.requestId;
-
-        spotSearchStatus.textContent = "";
         spotSearchResults.innerHTML = "";
         performSpotSearch(keyword, currentReqId, showNoResultMessage);
-      }
-
-      function onSpotSearchInput() {
-        if (spotSearchState.debounceTimer) {
-          clearTimeout(spotSearchState.debounceTimer);
-        }
-
-        spotSearchState.debounceTimer = setTimeout(() => {
-          if (!spotSearchState.isOpen) return;
-          triggerSpotSearch();
-        }, 350);
       }
 
       function onSpotSearchKeydown(e) {
@@ -1668,7 +2469,11 @@
         }
       }
 
-      function navigateToSetup() {
+      function navigateToSetup(projectId, projectTitle) {
+        if (projectId) {
+          sessionStorage.setItem("currentProjectId", projectId);
+          sessionStorage.setItem("currentProjectTitle", projectTitle || "");
+        }
         sessionStorage.setItem("navigationType", "forward");
         window.location.href = "setup.html";
       }
@@ -1678,8 +2483,7 @@
           closeSpotSearchModal();
         }
       });
-      
-      spotSearchInput.addEventListener("input", onSpotSearchInput);
+
       spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 
       // 處理鍵盤彈出時的視窗大小變化
@@ -1700,6 +2504,178 @@
           inputBar.style.bottom = "0px";
         }
       });
+
+      const userId = Number(localStorage.getItem("userId"));
+      const token = localStorage.getItem("userToken");
+      if (!userId || !token) window.location.href = "login.html";
+      let isRedirectingToLogin = false;
+
+      function redirectToLoginIfUnauthorized(status, body) {
+        if (isRedirectingToLogin) return true;
+        if (status === 401 || body?.code === 401) {
+          isRedirectingToLogin = true;
+          localStorage.removeItem("userToken");
+          localStorage.removeItem("userId");
+          sessionStorage.clear();
+          alert("登入已過期，請重新登入");
+          window.location.href = "login.html";
+          return true;
+        }
+        return false;
+      }
+
+      function renderProjects(projects) {
+        const list = document.querySelector(".trip-list");
+        if (!list) return console.error("trip-list 不存在");
+        list.innerHTML = "";
+        if (!Array.isArray(projects) || projects.length === 0) {
+          list.innerHTML = "<div class='empty'>尚無行程</div>";
+          return;
+        }
+
+        projects.forEach((project) => {
+          const item = document.createElement("div");
+          item.className = "trip-item";
+          item.innerHTML = `
+      <div class="trip-info">
+        <i class="far fa-bookmark bookmark-icon"></i>
+        <div class="trip-text">
+          <h4>${project.title || "未命名行程"}</h4>
+          <span>${(project.created_at || "").split("T")[0] || ""}</span>
+        </div>
+      </div>`;
+          item.addEventListener("click", () => openProject(project));
+          list.appendChild(item);
+        });
+      }
+
+      async function createNewProject() {
+        if (!userId) {
+          alert("請先登入再新增行程");
+          window.location.href = "login.html";
+          return;
+        }
+
+        const title = window.prompt("請輸入新行程標題", "我的行程");
+        if (!title || !title.trim()) return;
+
+        try {
+          const resp = await fetch(`${API_BASE}/api/travel/project`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              title: title.trim(),
+            }),
+          });
+
+          const result = await resp.json().catch(() => ({}));
+          if (redirectToLoginIfUnauthorized(resp.status, result)) return;
+          if (resp.ok && result.code === 201) {
+            const projectId = result.data.project_id;
+            const projectTitle = title.trim();
+
+            navigateToSetup(projectId, projectTitle);
+          } else {
+            alert(result.message || result.error || "新增失敗");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("新增失敗，請檢查網路或後端");
+        }
+      }
+
+      async function loadProjects() {
+        if (!userId || !token) {
+          console.log("userId/token 未設定，將導向 login");
+          window.location.href = "login.html";
+          return;
+        }
+
+        const res = await fetch(
+          `${API_BASE}/api/travel/projects?user_id=${userId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        const body = await res.json().catch(() => ({}));
+        if (redirectToLoginIfUnauthorized(res.status, body)) return;
+        console.log("loadProjects", res.status, body);
+        if (res.ok && body.code === 200) {
+          renderProjects(body.data);
+        } else {
+          console.warn("loadProjects 錯誤", res.status, body);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadProjects();
+      });
+
+      async function openProject(project) {
+        const token = localStorage.getItem("userToken");
+        sessionStorage.setItem("currentProjectId", String(project.project_id));
+        localStorage.setItem("currentProjectId", String(project.project_id));
+        const res = await fetch(
+          `${API_BASE}/api/travel/itineraries/${project.project_id}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        const body = await res.json().catch(() => ({}));
+        if (redirectToLoginIfUnauthorized(res.status, body)) return;
+        console.log("openProject", res.status, body);
+
+        if (res.ok && body.code === 200 && body.data && body.data.length > 0) {
+          // 保存目前選中的 itinerary，供後續 /data/latlng 與 /api/itinerary/detail 使用
+          const latestItinerary = body.data[0];
+          if (latestItinerary?.itinerary_id) {
+            localStorage.setItem(
+              "generatedItinerary",
+              JSON.stringify({ itinerary_id: latestItinerary.itinerary_id }),
+            );
+            localStorage.setItem(
+              "currentItineraryId",
+              String(latestItinerary.itinerary_id),
+            );
+          }
+
+          // 有 itinerary，優先使用 detailed_itinerary，其次 data_json，再退回 data_latlng
+          allDays = body.data.flatMap((item) =>
+            normalizeItineraryRowToAllDays(item),
+          );
+          console.log("AllDAYS", allDays);
+
+          if (!allDays.length) {
+            console.warn(
+              "此專案 itinerary 存在，但無可渲染 days，將導向 setup",
+            );
+            sessionStorage.setItem("currentProjectId", project.project_id);
+            sessionStorage.setItem("currentProjectTitle", project.title);
+            sessionStorage.setItem("navigationType", "forward");
+            window.location.href = "setup.html";
+            return;
+          }
+
+          createDayButtons();
+          displayAllDays();
+        } else {
+          // 沒 itinerary -> 轉 setup
+          sessionStorage.setItem("currentProjectId", project.project_id);
+          sessionStorage.setItem("currentProjectTitle", project.title);
+          sessionStorage.setItem("navigationType", "forward");
+          window.location.href = "setup.html";
+        }
+      }
 
       // 跳轉到對應景點並開啟簡介
       function focusMarker(id) {

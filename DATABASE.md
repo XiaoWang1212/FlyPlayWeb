@@ -113,3 +113,20 @@ curl -X POST http://localhost:5001/api/travel/project \
   -H "Content-Type: application/json" \
   -d '{"user_id":1, "title":"環球行程"}'
 ```
+
+## PgAdmin設定
+
+### 登入
+
+<admin@flyplay.com> / admin
+
+### Add Server
+
+#### General: name flyplay_pg (自訂)
+
+#### Connection
+
+- Host name/address: postgres（容器內部網路)
+- Port: 5432
+- Username: flyplay
+- Password: flyplay

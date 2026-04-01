@@ -16,3 +16,8 @@ class Config:
     
     # Firestore
     GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+
+    # JWT 配置
+    JWT_SECRET = os.getenv("JWT_SECRET", "changeme")
+    JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_EXPIRE_SECONDS = int(os.getenv("JWT_EXPIRE_SECONDS", 3600))

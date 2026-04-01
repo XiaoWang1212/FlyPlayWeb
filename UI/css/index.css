@@ -425,11 +425,6 @@
         }
         .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
 
-        .location-block {
-            display: flex;
-            padding-top: 10px;
-        }
-
         /* 獨立出來的交通區塊 */
         .transit-block {
             display: flex;
@@ -886,8 +881,8 @@
 
         .spot-search-input-row {
             display: flex;
-            gap: 8px;
-            padding: 2px 2px 0;
+            gap: 6px;
+            padding: 2px;
             flex-shrink: 0;
         }
 
@@ -906,21 +901,22 @@
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .spot-search-status {
-            font-size: 13px;
-            color: #777;
-            padding: 6px 6px 2px;
-            flex-shrink: 0;
-        }
-
         .spot-search-results {
             overflow-y: auto;
             padding: 0;
+            margin-top: 6px;
             border-radius: 12px;
             background: #fff;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
             min-height: 0;
             max-height: min(52vh, 440px);
+        }
+
+        .spot-search-message {
+            padding: 16px;
+            font-size: 14px;
+            color: #5f6368;
+            text-align: center;
         }
 
         .spot-search-item {
@@ -995,10 +991,141 @@
             padding: 2px 8px;
         }
 
-        .location-block {
+        /* --- 地圖資訊卡片樣式 (InfoWindow) --- */
+        .spot-map-info-wrapper {
+            max-width: 320px;
+            padding: 2px 2px 0;
+        }
+
+        .spot-map-card {
+            font-family: inherit;
+            color: #1f2937;
+        }
+
+        .spot-map-card-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .spot-map-card-thumb {
+            width: 64px;
+            height: 64px;
+            border-radius: 10px;
+            background: #eef1f5;
+            color: #9aa0a6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .spot-map-card-thumb.has-photo {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .spot-map-card-main {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .spot-map-card-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .spot-map-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 4px;
+            color: #0f172a;
+            min-width: 0;
+        }
+
+        .spot-map-close-btn {
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-size: 12px;
+            line-height: 1;
             cursor: pointer;
-            transition: background 0.2s ease; /* 加上 ease 讓顏色漸變更柔和 */
-            border-radius: 8px; /* 加上一點圓角，反白的時候才不會是死板的方形 */
+            padding: 2px 0 0;
+            flex-shrink: 0;
+        }
+
+        .spot-map-close-btn:hover {
+            color: #111827;
+        }
+
+        .spot-map-card-address {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #5f6368;
+        }
+
+        .spot-map-card-metrics {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .spot-map-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            max-width: 100%;
+            font-size: 12px;
+            line-height: 1.3;
+            color: #334155;
+            background: #f5f7fb;
+            border-radius: 999px;
+            padding: 6px 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .spot-map-chip i {
+            color: #0f1a3a;
+            font-size: 11px;
+        }
+
+        .spot-map-add-btn {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            background: #0f1a3a;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 12px;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(15, 26, 58, 0.25);
+            transition: transform 0.18s ease, opacity 0.18s ease;
+        }
+
+        .spot-map-add-btn:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        /* 隱藏 Google InfoWindow 預設右上角關閉按鈕，改用卡片內同列 x */
+        .gm-style .gm-ui-hover-effect {
+            display: none !important;
+        }
+
+        .location-block {
+            display: flex;
+            padding-top: 10px;
+            border-radius: 8px;
         }
 
         /* 🖱️ 滑鼠移上去時 (Hover) 變淺灰色 */
