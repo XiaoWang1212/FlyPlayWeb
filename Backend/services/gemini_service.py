@@ -289,7 +289,7 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
-
+            print(parsed_json)
             return {
                 'success': True,
                 'data': {

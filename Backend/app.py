@@ -200,56 +200,33 @@ def create_app():
                 'error': f'詳細行程生成失敗: {str(e)}'
             }), 500
 
-    @app.route('/api/itinerary', methods=['POST', 'GET'])  
+    @app.route('/api/itinerary', methods=['POST'])  
     def parse_itinerary():
-        global stored_itinerary_data
-        
         try:
-            if request.method == 'POST':
-                incoming_data = request.get_json()
-                if incoming_data:
-                    stored_itinerary_data = incoming_data
-                    print(stored_itinerary_data)
-                    return jsonify({
-                        'code': 200,
-                        'message': '數據已接收'
-                    }), 200
-            
-            # GET 方法：返回完整的行程數據
-            if stored_itinerary_data:
-                response_data = stored_itinerary_data
-                message = response_data.get('message', '')
-                raw_output = response_data.get('data', {}).get('raw_output', '')
-            else:
-                response_data = test_data
-                message = ''
-                raw_output = ''
-                print("→ 使用默认 testdata")
-            
-            if not response_data or ('data' not in response_data and 'parsed' not in response_data):
+            request_data = request.get_json()
+            if not request_data:
                 return jsonify({
                     'success': False,
-                    'error': '無效的請求格式'
+                    'error': '請求內容為空或不是合法 JSON'
                 }), 400
-            
-            if 'data' in response_data:
-                parsed_data = response_data.get('data', {})
-                days = parsed_data.get('parsed', {}).get('days', [])
+
+            # 只支援 { days: [...] } 格式
+            if 'days' in request_data and isinstance(request_data['days'], list):
+                days = request_data['days']
             else:
-                days = response_data.get('parsed', {}).get('days', []) if 'parsed' in response_data else []
-            
+                return jsonify({
+                    'success': False,
+                    'error': '請求格式錯誤，必須包含 days 陣列'
+                }), 400
 
             modified_days = data_fix_service.enrich_data_with_picture(days)
-            
-            print("✓ 行程數據已處理完成")  
-            
-            # 返回修改後的數據 + 原始信息
+
+            print("✓ 行程數據已處理完成")
+
             return jsonify({
                 'code': 200,
-                'message': message,
                 'data': {
                     'days': modified_days,
-                    'raw_output': raw_output
                 }
             }), 200
             
