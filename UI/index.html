@@ -588,7 +588,8 @@
               destination: destination,
               waypoints: waypoints,
               optimizeWaypoints: false,
-              travelMode: google.maps.TravelMode.DRIVING,
+              travelMode: "WALKING",
+              // travelMode: google.maps.TravelMode.DRIVING || "WALKING",
             },
             (result, status) => {
               if (status === "OK") {
@@ -666,7 +667,8 @@
             destination: destination,
             waypoints: waypoints,
             optimizeWaypoints: false,
-            travelMode: google.maps.TravelMode.DRIVING,
+            // travelMode: google.maps.TravelMode.DRIVING,
+            travelMode: "WALKING",
           },
           (result, status) => {
             if (status === "OK") {
@@ -1455,23 +1457,88 @@
         try {
           console.log("第三步：調用 /api/itinerary 補充圖片信息");
 
+          const itineraryId =
+            Number(localStorage.getItem("currentItineraryId")) ||
+            Number(
+              (() => {
+                try {
+                  const raw = localStorage.getItem("generatedItinerary");
+                  if (!raw) return 0;
+                  const parsed = JSON.parse(raw);
+                  return parsed?.itinerary_id || parsed?.id || 0;
+                } catch (_) {
+                  return 0;
+                }
+              })(),
+            ) ||
+            null;
+
+          const daysSource =
+            detailedData?.parsed?.days || detailedData?.days || [];
+          if (!Array.isArray(daysSource) || daysSource.length === 0) {
+            console.warn("沒有可補圖的 days 資料");
+            return false;
+          }
+
+          // 以目前 allDays 的座標回填到 detailed days，避免補圖後丟失地圖座標
+          const daysWithLocation = daysSource.map((day, dayIndex) => {
+            const currentDay = allDays.find(
+              (d, idx) =>
+                Number(d?.day) === Number(day?.day) || idx === dayIndex,
+            );
+            const currentActivities = Array.isArray(currentDay?.activities)
+              ? currentDay.activities
+              : [];
+
+            const list = day.location || day.activities || [];
+            const normalizedList = list.map((item, itemIndex) => {
+              let matched = currentActivities.find(
+                (a) => a?.place_name === item?.place_name,
+              );
+              if (!matched) matched = currentActivities[itemIndex];
+
+              return {
+                ...item,
+                location: item.location || matched?.location || null,
+              };
+            });
+
+            if (Array.isArray(day.location)) {
+              return { ...day, location: normalizedList };
+            }
+            return { ...day, activities: normalizedList };
+          });
+
           // 先POST保存到後端
-          let response = await fetch(`${API_BASE}/api/itinerary`, {
+          const response = await fetch(`${API_BASE}/api/itinerary`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(detailedData.days),
+            body: JSON.stringify({
+              days: daysWithLocation,
+              itinerary_id: itineraryId,
+            }),
           });
           if (!response.ok) {
             throw new Error(`POST 失敗 ${response.status}`);
           }
 
+          const result = await response.json();
+          if (result.code !== 200 || !Array.isArray(result?.data?.days)) {
+            throw new Error(result.error || "圖片補充回傳格式錯誤");
+          }
+
           console.log("✓ 圖片信息已補充");
 
-          // 轉換為 allDays 格式並存儲
+          // 轉換為 allDays 格式並更新畫面
           allDays = convertToAllDaysFormat(result.data.days);
-          localStorage.setItem("complete_itinerary", JSON.stringify(allDays));
+          createDayButtons();
+          if (currentDayIndex === -1) {
+            displayAllDays();
+          } else {
+            displayDay(currentDayIndex);
+          }
 
           return true;
         } catch (error) {
@@ -1623,15 +1690,7 @@
             if (detailedData) {
               console.log("✓ detailed_itinerary 生成完成");
 
-              const currentProjectId = Number(
-                sessionStorage.getItem("currentProjectId") || 0,
-              );
-              if (currentProjectId) {
-                await openProject({
-                  project_id: currentProjectId,
-                  title: sessionStorage.getItem("currentProjectTitle") || "",
-                });
-              }
+              await enrichWithPictureInfo(detailedData);
             } else {
               console.warn("⚠️ detailed_itinerary 生成失敗或未執行");
             }
