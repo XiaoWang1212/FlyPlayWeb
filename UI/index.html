@@ -13,9 +13,12 @@
     />
     <link rel="stylesheet" href="css/index.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       #map {
         height: 100%;
@@ -182,8 +185,7 @@
       </div>
     </div>
 
-    <div id="pdf-export-container">
-      </div>
+    <div id="pdf-export-container"></div>
     <script>
       let map;
       let allDays = [];
@@ -310,7 +312,8 @@
             title: activity.place_name,
           });
 
-          marker.activityId = activity.activityId || activity.place_name || String(actIndex);
+          marker.activityId =
+            activity.activityId || activity.place_name || String(actIndex);
           currentMarkers.push(marker);
 
           marker.addListener("click", (e) => {
@@ -2084,7 +2087,10 @@
           if (anchorLocation) {
             response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
               body: JSON.stringify({
                 textQuery: keyword,
                 location: anchorLocation,
@@ -2335,9 +2341,15 @@
         document.body.appendChild(loadingOverlay);
 
         // 💡 重要：稍微等待 100 毫秒，讓瀏覽器有時間把 Loading 畫面顯示出來，再開始轉檔
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const sidebarColors = ["#507A8A", "#688B58", "#B85438", "#A47E4A", "#513653"];
+        const sidebarColors = [
+          "#507A8A",
+          "#688B58",
+          "#B85438",
+          "#A47E4A",
+          "#513653",
+        ];
 
         // 1. 建立純 HTML 字串
         let htmlContent = `
@@ -2386,23 +2398,27 @@
         // 2. 塞入景點資料
         allDays.forEach((day, dayIndex) => {
           const bgColor = sidebarColors[dayIndex % sidebarColors.length];
-          const topPlaces = day.activities && day.activities.length > 0 
-            ? day.activities.slice(0, 3).map(a => a.place_name).join('・') 
-            : "自由活動";
-          
+          const topPlaces =
+            day.activities && day.activities.length > 0
+              ? day.activities
+                  .slice(0, 3)
+                  .map((a) => a.place_name)
+                  .join("・")
+              : "自由活動";
+
           let activitiesHtml = "";
           if (day.activities) {
             day.activities.forEach((act, actIndex) => {
               const isLast = actIndex === day.activities.length - 1;
               activitiesHtml += `
                 <div class="pdf-item">
-                  <div class="pdf-item-time">${act.time || '未定'}</div>
+                  <div class="pdf-item-time">${act.time || "未定"}</div>
                   <div class="pdf-item-detail">
                     <div class="pdf-item-title">
                       ${act.place_name}
-                      ${act.cost ? `<span class="pdf-item-tag">${act.cost}</span>` : ''}
+                      ${act.cost ? `<span class="pdf-item-tag">${act.cost}</span>` : ""}
                     </div>
-                    <div class="pdf-item-desc">${act.description || ''}</div>
+                    <div class="pdf-item-desc">${act.description || ""}</div>
                   </div>
                 </div>
               `;
@@ -2422,8 +2438,8 @@
             <div class="pdf-day-page">
               <div class="pdf-sidebar" style="background-color: ${bgColor};">
                 <div class="day-label">DAY</div>
-                <div class="day-num">${String(day.day).padStart(2, '0')}</div>
-                <div class="day-date">${day.weekday || ''}</div>
+                <div class="day-num">${String(day.day).padStart(2, "0")}</div>
+                <div class="day-date">${day.weekday || ""}</div>
               </div>
               <div class="pdf-content">
                 <div class="pdf-day-title">${topPlaces}</div>
@@ -2442,18 +2458,18 @@
         // 4. 設定參數
         const opt = {
           margin: 0,
-          filename: '飛遊_精美行程表.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2, 
+          filename: "飛遊_精美行程表.pdf",
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
             useCORS: true,
             scrollY: 0,
             scrollX: 0,
-            windowWidth: 800
+            windowWidth: 800,
           },
-          jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' },
+          jsPDF: { unit: "px", format: [800, 1131], orientation: "portrait" },
           // 💡 修正 2：利用 jsPDF 內建的換頁功能，強制在每一個 `.pdf-day-page` 前面切一刀
-          pagebreak: { mode: 'css', before: '.pdf-day-page' } 
+          pagebreak: { mode: "css", before: ".pdf-day-page" },
         };
 
         try {
@@ -2461,7 +2477,7 @@
         } catch (err) {
           console.error("PDF 生成失敗:", err);
           alert("抱歉，PDF 產生過程中發生錯誤，請看控制台 (F12) 的詳細訊息。");
-        }finally {
+        } finally {
           // ==========================================
           // 3. 不管成功或失敗，最後一定要把 Loading 畫面移除
           // ==========================================
@@ -2680,18 +2696,18 @@
       // 跳轉到對應景點並開啟簡介
       function focusMarker(id) {
         // 1. 在地圖標記陣列中找到對應的 marker
-        const marker = currentMarkers.find(m => m.activityId === id);
-        
+        const marker = currentMarkers.find((m) => m.activityId === id);
+
         if (marker) {
           // 2. 地圖平移到該座標
           map.panTo(marker.position);
-          
+
           // 3. 稍微放大地圖 (可選，增加視覺感)
           map.setZoom(16);
 
           // 4. 觸發該標記的點擊事件，藉此打開 InfoWindow (簡介)
           // 注意：如果想直接打開，也可以手動調用 currentInfoWindow.open
-          google.maps.event.trigger(marker, 'click');
+          google.maps.event.trigger(marker, "click");
 
           // 5. 自動收起下邊欄 (可選，讓使用者看清楚地圖)
           // 如果不想點了就收起，可以註解掉下面這行
