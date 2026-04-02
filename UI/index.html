@@ -276,34 +276,15 @@
           markerDiv.style.backgroundColor = color;
           markerDiv.innerHTML = `<span>${actIndex + 1}</span>`;
 
-          const photoUrl =
-            activity.photos && activity.photos[0]
-              ? activity.photos[0].photo_url
-              : "";
-
-          const popupCardHTML = `
-            <div class="popup-card-content">
-              <div class="info-img-wrapper">
-                ${
-                  photoUrl
-                    ? `<img src="${photoUrl}" class="info-img" alt="景點圖片">`
-                    : `<div class="info-img" style="display:flex; align-items:center; justify-content:center; color:white;"><i class="far fa-image"></i></div>`
-                }
-              </div>
-              <div class="info-content">
-                <div class="info-header">
-                  <div class="info-title">${activity.place_name || "未知景點"}</div>
-                  <div class="info-time">${activity.time || "時間未定"}</div>
-                </div>
-                <div class="info-desc" style="-webkit-line-clamp: 1;">${activity.description || "暫無簡介資訊"}</div>
-                <div class="info-meta">
-                  <div class="info-meta-item"><i class="fas fa-clock"></i> ${activity.opening_hours || activity.time || "營業時間未定"}</div>
-                  <div class="info-meta-item"><i class="fas fa-map-marker-alt"></i> ${activity.address || "尚未提供詳細地址"}</div>
-                </div>
-                ${activity.cost ? `<div class="info-cost">💰 ${activity.cost}</div>` : ""}
-              </div>
-            </div>
-          `;
+          const activitySpot = {
+            place_id: activity.place_id || "",
+            name: activity.place_name || "未命名地點",
+            address: activity.address || "尚未提供詳細地址",
+            photos: activity.photos || [],
+            rating: activity.rating,
+            user_rating_count: activity.user_rating_count,
+            _businessInfo: activity._businessInfo || null,
+          };
 
           const marker = new AdvancedMarkerElement({
             map: map,
@@ -316,19 +297,34 @@
             activity.activityId || activity.place_name || String(actIndex);
           currentMarkers.push(marker);
 
-          marker.addListener("click", (e) => {
+          marker.addListener("click", async (e) => {
             justClickedMarker = true;
 
             if (currentInfoWindow) {
               currentInfoWindow.close();
             }
 
-            currentInfoWindow = new google.maps.InfoWindow({
-              content: `<div style="max-width: 280px;">${popupCardHTML}</div>`,
-              maxWidth: 320,
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, "載入中...", "載入中...", { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
+              maxWidth: 360,
             });
+            currentInfoWindow = infoWindow;
 
-            currentInfoWindow.open({ map, anchor: marker });
+            infoWindow.open({ map, anchor: marker });
+
+            const { openingHoursText, priceRangeText } =
+              await getBusinessInfo(activitySpot);
+            if (activitySpot._businessInfo) {
+              activity._businessInfo = activitySpot._businessInfo;
+            }
+
+            if (currentInfoWindow !== infoWindow) {
+              return;
+            }
+
+            infoWindow.setContent(
+              `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, openingHoursText, priceRangeText, { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
+            );
           });
         });
       }
@@ -1084,17 +1080,29 @@
         spot,
         openingHoursText = "載入中...",
         priceRangeText = "載入中...",
+        options = {},
       ) {
+        const {
+          showAddButton = true,
+          closeHandler = "closeSpotPreviewInfo()",
+        } = options;
         const photoUrl =
           spot.photos && spot.photos[0] && spot.photos[0].photo_url
             ? spot.photos[0].photo_url
             : "";
         const name = escapeHtml(spot.name || "未命名地點");
         const address = escapeHtml(spot.address || "無地址資訊");
+        const businessInfo = spot._businessInfo || {};
+        const ratingValue =
+          typeof businessInfo.rating === "number"
+            ? businessInfo.rating
+            : spot.rating;
+        const ratingCount =
+          businessInfo.user_rating_count || spot.user_rating_count || 0;
         const ratingText =
-          typeof spot.rating === "number"
-            ? `${spot.rating.toFixed(1)}${
-                spot.user_rating_count ? ` (${spot.user_rating_count})` : ""
+          typeof ratingValue === "number"
+            ? `${ratingValue.toFixed(1)}${
+                ratingCount ? ` (${ratingCount})` : ""
               }`
             : "未提供";
         const openingHoursDisplay = escapeHtml(openingHoursText);
@@ -1115,7 +1123,7 @@
                     type="button"
                     class="spot-map-close-btn"
                     aria-label="關閉景點資訊"
-                    onclick="closeSpotPreviewInfo()"
+                    onclick="${closeHandler}"
                   >
                     <i class="fas fa-times"></i>
                   </button>
@@ -1128,9 +1136,13 @@
               <div class="spot-map-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
               <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
             </div>
-            <button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
+            ${
+              showAddButton
+                ? `<button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
               <i class="fas fa-plus"></i> 加入行程
-            </button>
+            </button>`
+                : ""
+            }
           </div>
         `;
       }
@@ -1185,10 +1197,13 @@
 
         return {
           activityId: spot.place_id || `${spot.name || "spot"}-${Date.now()}`,
+          place_id: spot.place_id || "",
           place_name: spot.name || "未命名地點",
           time: "待安排",
           description: spot.address || "從搜尋新增的景點",
           cost: "",
+          rating: spot.rating,
+          user_rating_count: spot.user_rating_count,
           type: types[0] || "景點",
           address: spot.address || "",
           location,
