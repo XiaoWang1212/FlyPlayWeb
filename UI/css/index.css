@@ -78,7 +78,7 @@
 
         .sidebar {
             position: fixed; top: 0; left: 0;
-            width: 85%; max-width: var(--sidebar-width); height: 100%;
+            width: 60%; max-width: var(--sidebar-width); height: 100%;
             background: white; z-index: 2002;
             transform: translateX(-100%); transition: transform 0.3s ease-in-out;
             display: flex; flex-direction: column;
@@ -425,11 +425,6 @@
         }
         .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
 
-        .location-block {
-            display: flex;
-            padding-top: 10px;
-        }
-
         /* 獨立出來的交通區塊 */
         .transit-block {
             display: flex;
@@ -513,8 +508,16 @@
             padding: 15px;
             justify-content: center;
             flex-wrap: wrap;
-            border-bottom: 1px solid #e0e0e0;
             background: white;
+
+            position: sticky;
+            top: -20px;
+            z-index: 10;
+            margin-top: -10px;  
+            margin-left: -20px;  
+            margin-right: -20px;
+            box-sizing: border-box; 
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
         }
 
         #dayButtonContainer button {
@@ -624,14 +627,9 @@
             transform: rotate(45deg); /* 反向旋轉 45 度把文字轉正 */
             color: white;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 14px;
             line-height: 1;
-            /* ✨ 👇 加上深色內圈的關鍵設定 👇 ✨ */
-            background-color: rgba(0, 0, 0, 0.25); /* 半透明黑色，自動變成圖釘底色的深色版！ */
-            width: 16px;  /* 內圈圓形的寬度 */
-            height: 16px; /* 內圈圓形的高度 */
-            border-radius: 50%; /* 把背景變成完美的圓形 */
-    
+            
             /* 讓文字在圓圈內絕對置中 */
             display: flex;
             align-items: center;
@@ -835,8 +833,6 @@
         from { opacity: 0; transform: translate(-50%, -90%) scale(0.9); }
         to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
         }
-
-
 
         .spot-search-overlay {
             position: fixed;
@@ -1124,4 +1120,15 @@
         /* 隱藏 Google InfoWindow 預設右上角關閉按鈕，改用卡片內同列 x */
         .gm-style .gm-ui-hover-effect {
             display: none !important;
+        }
+
+        .location-block {
+            display: flex;
+            padding-top: 10px;
+            border-radius: 8px;
+        }
+
+        /* 🖱️ 滑鼠移上去時 (Hover) 變淺灰色 */
+        .location-block:hover {
+            background-color: #f0f0f0; 
         }

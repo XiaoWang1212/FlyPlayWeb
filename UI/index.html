@@ -13,6 +13,12 @@
     />
     <link rel="stylesheet" href="css/index.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       #map {
         height: 100%;
@@ -179,6 +185,7 @@
       </div>
     </div>
 
+    <div id="pdf-export-container"></div>
     <script>
       let map;
       let allDays = [];
@@ -297,6 +304,8 @@
             title: activity.place_name,
           });
 
+          marker.activityId =
+            activity.activityId || activity.place_name || String(actIndex);
           currentMarkers.push(marker);
 
           marker.addListener("click", (e) => {
@@ -429,7 +438,7 @@
           const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
             
-            <div class="location-block">
+            <div class="location-block" onclick="focusMarker('${activity.activityId || activity.place_name || String(actIndex)}')">
               <div class="timeline-left">
                 <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
                   <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
@@ -437,7 +446,7 @@
               </div>
               <div class="timeline-right">
                 <div class="timeline-title">
-                  ${activity.place_name}
+                  ${actIndex + 1}. ${activity.place_name}
                   <span class="time-badge">${activity.time}</span>
                 </div>
                 <div class="timeline-desc">${activity.description}</div>
@@ -495,7 +504,7 @@
             const newItemHTML = `
             <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
             
-            <div class="location-block">
+            <div class="location-block" onclick="focusMarker('${activity.activityId || activity.place_name || String(actIndex)}')">
               <div class="timeline-left">
                 <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
                   <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
@@ -503,7 +512,7 @@
               </div>
               <div class="timeline-right">
                 <div class="timeline-title">
-                  ${activity.place_name}
+                  ${actIndex + 1}. ${activity.place_name}
                   <span class="time-badge">${activity.time}</span>
                 </div>
                 <div class="timeline-desc">${activity.description}</div>
@@ -1293,6 +1302,13 @@
         timelineView.classList.remove("editing");
         editFab.classList.remove("fa-times");
         editFab.classList.add("fa-pen");
+
+        // ✨ 👇 新增這一段：確認後重新繪製地圖圖標、路線與行程表數字 👇 ✨
+        if (currentDayIndex === -1) {
+          displayAllDays();
+        } else {
+          displayDay(currentDayIndex);
+        }
       }
 
       // 初始化聊天
@@ -2089,7 +2105,10 @@
           if (anchorLocation) {
             response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
               body: JSON.stringify({
                 textQuery: keyword,
                 location: anchorLocation,
@@ -2324,18 +2343,165 @@
         }
       });
 
-      function downloadPDF() {
-        alert("正在下載行程 PDF 檔案...");
-      }
+      async function downloadPDF() {
+        if (!allDays || allDays.length === 0) {
+          alert("目前沒有行程資料可以下載喔！");
+          return;
+        }
 
-      document
-        .getElementById("chatInput")
-        .addEventListener("keypress", function (e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            sendMessage();
+        const loadingOverlay = document.createElement("div");
+        loadingOverlay.innerHTML = `
+          <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-family: 'Noto Serif TC', sans-serif;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 50px; margin-bottom: 20px; color: #D4C9A8;"></i>
+            <div style="font-size: 18px; letter-spacing: 2px;">正在為您生成精美行程 PDF，請稍候...</div>
+          </div>
+        `;
+        document.body.appendChild(loadingOverlay);
+
+        // 💡 重要：稍微等待 100 毫秒，讓瀏覽器有時間把 Loading 畫面顯示出來，再開始轉檔
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const sidebarColors = [
+          "#507A8A",
+          "#688B58",
+          "#B85438",
+          "#A47E4A",
+          "#513653",
+        ];
+
+        // 1. 建立純 HTML 字串
+        let htmlContent = `
+          <div style="background-color: #FAF8F5; width: 800px; font-family: 'Noto Serif TC', serif; color: #333;">
+            <style>
+              /* 💡 修正 1：將高度從 1131 改為 1120，並移除 page-break-after，避免溢出產生白紙 */
+              .pdf-cover {
+                width: 800px; height: 1130px;
+                background-color: #2D2722;
+                background-image: linear-gradient(135deg, #1A1513, #2D2722);
+                color: #FFFFFF;
+                display: flex; flex-direction: column; justify-content: center; align-items: center;
+              }
+              .pdf-cover h1 { font-size: 56px; letter-spacing: 4px; margin-bottom: 20px; color: #FFFFFF;}
+              .pdf-cover p { font-size: 18px; color: #D4C9A8; letter-spacing: 2px; }
+              
+              .pdf-day-page {
+                display: flex; width: 800px; min-height: 1120px; /* 這裡也改成 1120px */
+                background-color: #FAF8F5;
+              }
+              
+              /* ... 保留其他原本的樣式 ... */
+              .pdf-sidebar { width: 140px; padding-top: 60px; text-align: center; color: #FFFFFF; flex-shrink: 0; }
+              .pdf-sidebar .day-label { font-size: 14px; letter-spacing: 2px; opacity: 0.8; }
+              .pdf-sidebar .day-num { font-size: 64px; font-weight: 700; line-height: 1; margin: 10px 0; }
+              .pdf-sidebar .day-date { font-size: 14px; opacity: 0.8; }
+              .pdf-content { flex-grow: 1; padding: 60px 50px; }
+              .pdf-day-title { font-size: 24px; font-weight: 700; border-bottom: 1px solid #E0D8C8; padding-bottom: 20px; margin-bottom: 40px; }
+              .pdf-item { display: flex; margin-bottom: 30px; }
+              .pdf-item-time { width: 70px; font-size: 16px; color: #888; font-style: italic; flex-shrink: 0; }
+              .pdf-item-detail { flex-grow: 1; }
+              .pdf-item-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+              .pdf-item-tag { font-size: 10px; background-color: #EAE3D1; color: #665A48; padding: 2px 8px; border-radius: 4px; }
+              .pdf-item-desc { font-size: 15px; color: #666; line-height: 1.6; }
+              .pdf-transit { margin: 15px 0 15px 70px; padding-left: 20px; border-left: 1px dashed #CCC; font-size: 14px; color: #A09481; }
+              .pdf-transit-badge { background-color: #F4EFEB; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+            </style>
+
+            <div class="pdf-cover">
+              <p style="margin-bottom: 10px;">JAPAN TRAVEL ITINERARY</p>
+              <h1>日本九州之旅</h1>
+              <p>${allDays.length} 天深度遊</p>
+            </div>
+        `;
+
+        // 2. 塞入景點資料
+        allDays.forEach((day, dayIndex) => {
+          const bgColor = sidebarColors[dayIndex % sidebarColors.length];
+          const topPlaces =
+            day.activities && day.activities.length > 0
+              ? day.activities
+                  .slice(0, 3)
+                  .map((a) => a.place_name)
+                  .join("・")
+              : "自由活動";
+
+          let activitiesHtml = "";
+          if (day.activities) {
+            day.activities.forEach((act, actIndex) => {
+              const isLast = actIndex === day.activities.length - 1;
+              activitiesHtml += `
+                <div class="pdf-item">
+                  <div class="pdf-item-time">${act.time || "未定"}</div>
+                  <div class="pdf-item-detail">
+                    <div class="pdf-item-title">
+                      ${act.place_name}
+                      ${act.cost ? `<span class="pdf-item-tag">${act.cost}</span>` : ""}
+                    </div>
+                    <div class="pdf-item-desc">${act.description || ""}</div>
+                  </div>
+                </div>
+              `;
+              if (!isLast) {
+                activitiesHtml += `
+                  <div class="pdf-transit">
+                    <div class="pdf-transit-badge">
+                      <i class="fas fa-train"></i> 前往下一站
+                    </div>
+                  </div>
+                `;
+              }
+            });
           }
+
+          htmlContent += `
+            <div class="pdf-day-page">
+              <div class="pdf-sidebar" style="background-color: ${bgColor};">
+                <div class="day-label">DAY</div>
+                <div class="day-num">${String(day.day).padStart(2, "0")}</div>
+                <div class="day-date">${day.weekday || ""}</div>
+              </div>
+              <div class="pdf-content">
+                <div class="pdf-day-title">${topPlaces}</div>
+                ${activitiesHtml}
+              </div>
+            </div>
+          `;
         });
+
+        htmlContent += `</div>`;
+
+        // 3. 將 HTML 字串轉為純粹的虛擬 DOM 節點
+        const printElement = document.createElement("div");
+        printElement.innerHTML = htmlContent;
+
+        // 4. 設定參數
+        const opt = {
+          margin: 0,
+          filename: "飛遊_精美行程表.pdf",
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            scrollY: 0,
+            scrollX: 0,
+            windowWidth: 800,
+          },
+          jsPDF: { unit: "px", format: [800, 1131], orientation: "portrait" },
+          // 💡 修正 2：利用 jsPDF 內建的換頁功能，強制在每一個 `.pdf-day-page` 前面切一刀
+          pagebreak: { mode: "css", before: ".pdf-day-page" },
+        };
+
+        try {
+          await html2pdf().set(opt).from(printElement).save();
+        } catch (err) {
+          console.error("PDF 生成失敗:", err);
+          alert("抱歉，PDF 產生過程中發生錯誤，請看控制台 (F12) 的詳細訊息。");
+        } finally {
+          // ==========================================
+          // 3. 不管成功或失敗，最後一定要把 Loading 畫面移除
+          // ==========================================
+          document.body.removeChild(loadingOverlay);
+        }
+      }
 
       function navigateToSetup(projectId, projectTitle) {
         if (projectId) {
@@ -2529,6 +2695,28 @@
           sessionStorage.setItem("currentProjectTitle", project.title);
           sessionStorage.setItem("navigationType", "forward");
           window.location.href = "setup.html";
+        }
+      }
+
+      // 跳轉到對應景點並開啟簡介
+      function focusMarker(id) {
+        // 1. 在地圖標記陣列中找到對應的 marker
+        const marker = currentMarkers.find((m) => m.activityId === id);
+
+        if (marker) {
+          // 2. 地圖平移到該座標
+          map.panTo(marker.position);
+
+          // 3. 稍微放大地圖 (可選，增加視覺感)
+          map.setZoom(16);
+
+          // 4. 觸發該標記的點擊事件，藉此打開 InfoWindow (簡介)
+          // 注意：如果想直接打開，也可以手動調用 currentInfoWindow.open
+          google.maps.event.trigger(marker, "click");
+
+          // 5. 自動收起下邊欄 (可選，讓使用者看清楚地圖)
+          // 如果不想點了就收起，可以註解掉下面這行
+          closeSheet();
         }
       }
     </script>

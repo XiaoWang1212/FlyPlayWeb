@@ -381,8 +381,8 @@ function generateTravelTypeCards(container) {
           travelTypes: [],
           travelTypeLabels: [],
           travelTypeAny: true,
-          travelType: "",
-          travelTypeLabel: "",
+          travelType: "any",
+          travelTypeLabel: opt.label,
         });
       } else {
         // 點擊具體類型時，先取消「任何類型」的選中狀態
@@ -726,25 +726,35 @@ function buildItineraryPayload() {
   const destination = destinations?.[0]?.city || destinations?.[0]?.name || "";
 
   const days = Number(tripSetup.daysValue || 0);
+  const selectedTravelTypes = Array.isArray(tripSetup.travelTypes)
+    ? tripSetup.travelTypes.filter(Boolean)
+    : [];
+
   const type =
-    (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0
-      ? tripSetup.travelTypes[0]
-      : tripSetup.travelType) || "relax";
+    selectedTravelTypes[0] ||
+    (tripSetup.travelTypeAny ? "any" : tripSetup.travelType) ||
+    "any";
 
   const projectId = Number(sessionStorage.getItem("currentProjectId") || 0);
 
-  // 修正這三個欄位，空字串時給預設
   const departure_airport =
-    tripSetup.departureLabel || tripSetup.departure || "未填";
+    tripSetup.departure || tripSetup.departureLabel || "未填";
   const companion =
-    tripSetup.companionLabel || tripSetup.companion || "任何旅伴";
-  const travel_style =
-    (Array.isArray(tripSetup.travelTypeLabels) &&
-    tripSetup.travelTypeLabels.length > 0
-      ? tripSetup.travelTypeLabels[0]
-      : tripSetup.travelTypeLabel || tripSetup.travelType) || "任何類型";
+    tripSetup.companion && tripSetup.companion !== ""
+      ? tripSetup.companion
+      : "any";
 
   const budget = tripSetup.budgetLabel || tripSetup.budget || "中等";
+  const interests =
+    selectedTravelTypes.length > 0
+      ? selectedTravelTypes
+      : tripSetup.travelTypeAny || tripSetup.travelType === "any"
+        ? ["any"]
+        : tripSetup.travelType
+          ? [tripSetup.travelType]
+          : ["any"];
+
+  const startDateDefault = new Date().toISOString().slice(0, 10);
 
   return {
     project_id: projectId,
@@ -753,20 +763,9 @@ function buildItineraryPayload() {
     destination,
     type,
     companion,
-    travel_style,
     budget,
-
-    // 下面這些是給 AI 生成用的參數（可保留）
-    location: destination,
-    travelerType: companion,
-    interests:
-      Array.isArray(tripSetup.travelTypeLabels) &&
-      tripSetup.travelTypeLabels.length > 0
-        ? tripSetup.travelTypeLabels
-        : tripSetup.travelType
-          ? [tripSetup.travelType]
-          : [],
-    start_date: tripSetup.startDate || "2024-01-01",
+    interests,
+    start_date: tripSetup.startDate || startDateDefault,
   };
 }
 
@@ -782,7 +781,7 @@ async function submitAIRecommendation() {
   }
 
   const payload = buildItineraryPayload();
-  if (!payload.location || !payload.days) {
+  if (!payload.destination || !payload.days) {
     alert("請先完成目的地與天數");
     return;
   }
@@ -806,7 +805,7 @@ async function submitAIRecommendation() {
 
     if (result.code !== 200 && result.code !== 201)
       throw new Error(result.message || "AI 生成錯誤");
-    
+
     localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
 
     console.log("✓ 準備跳轉至 index.html");
@@ -923,8 +922,8 @@ if (
     travelTypeAny: true,
     travelTypes: [],
     travelTypeLabels: [],
-    travelType: "",
-    travelTypeLabel: "",
+    travelType: "any",
+    travelTypeLabel: "任何類型",
   });
 }
 
