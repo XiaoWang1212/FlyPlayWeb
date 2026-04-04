@@ -184,6 +184,8 @@
       let allDays = [];
       let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
+      let avgLat = 35.6762; 
+      let avgLng = 139.6503; 
 
       // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
       let currentRenderers = [];
@@ -193,16 +195,6 @@
       let spotPreviewMarker = null;
       let selectedSpotForAdd = null;
 
-      // 新增：清除地圖上現有路線的函數
-      function clearMapRoutes() {
-        // 清除路線
-        currentRenderers.forEach((renderer) => renderer.setMap(null));
-        currentRenderers = [];
-
-        // 清除標記
-        currentMarkers.forEach((marker) => (marker.map = null));
-        currentMarkers = [];
-      }
 
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
@@ -335,19 +327,25 @@
         clearCurrentPopup();
       }
 
-      function isValidRouteLocation(location) {
-        if (!location) return false;
+      function isValidRouteLocation(activity) {
+        // 如果有 place_id，直接认为有效
+        if (activity.place_id) {
+          return true;
+        }
+        
+        // 否则检查 location 中是否有坐标
+        if (!activity.location) return false;
         const lat =
-          typeof location.lat === "number"
-            ? location.lat
-            : typeof location.latitude === "number"
-              ? location.latitude
+          typeof activity.location.lat === "number"
+            ? activity.location.lat
+            : typeof activity.location.latitude === "number"
+              ? activity.location.latitude
               : null;
         const lng =
-          typeof location.lng === "number"
-            ? location.lng
-            : typeof location.longitude === "number"
-              ? location.longitude
+          typeof activity.location.lng === "number"
+            ? activity.location.lng
+            : typeof activity.location.longitude === "number"
+              ? activity.location.longitude
               : null;
         if (lat === null || lng === null) return false;
         if (lat === 0 && lng === 0) return false;
@@ -535,25 +533,47 @@
         });
       }
 
+      // Helper: 取得 Directions API 需要的地點格式
+      function getLocationForDirections(activity) {
+        if (activity && activity.place_id && typeof activity.place_id === "string" && activity.place_id.length > 0) {
+          return { placeId: activity.place_id };
+        }
+        if (activity && activity.location && typeof activity.location.lat === "number" && typeof activity.location.lng === "number") {
+          return { lat: activity.location.lat, lng: activity.location.lng };
+        }
+        return null;
+      }
+
       // 顯示所有天的行程
       function displayAllDays() {
         clearMapRoutes(); // 先清除舊路線
 
         const { DirectionsService, DirectionsRenderer } = google.maps;
-        const directionsService = new DirectionsService();
+
 
         getActiveDays().forEach((day, dayIndex) => {
-          if (!day || !day.activities || day.activities.length < 2) {
-            console.warn(`第 ${dayIndex + 1} 天沒有足夠的活動`);
+          if (!day || !day.activities) {
+            console.warn(`[ALL] 第 ${dayIndex + 1} 天資料異常`, day);
             return;
           }
 
           const activities = day.activities;
-          const routeActivities = activities.filter((a) =>
-            isValidRouteLocation(a.location),
-          );
-          const directionsService = new DirectionsService();
+          const routeActivities = activities.filter((a) => isValidRouteLocation(a));
 
+          if (activities.length < 2) {
+            console.warn(`[ALL] 第 ${dayIndex + 1} 天活動數量不足`, activities);
+            return;
+          }
+          if (routeActivities.length < 2) {
+            console.warn(`[ALL] 第 ${dayIndex + 1} 天有效路線點不足`, {
+              activities,
+              routeActivities,
+              判斷結果: activities.map(a => isValidRouteLocation(a)),
+            });
+            return;
+          }
+
+          const directionsService = new DirectionsService();
           const directionsRenderer = new DirectionsRenderer({
             map: map,
             suppressMarkers: true,
@@ -566,37 +586,36 @@
           });
           currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
-          const origin = routeActivities[0]?.location;
-          const destination =
-            routeActivities[routeActivities.length - 1]?.location;
+          const origin = getLocationForDirections(routeActivities[0]);
+          const destination = getLocationForDirections(routeActivities[routeActivities.length - 1]);
           if (!origin || !destination) {
             console.warn(
-              `第 ${dayIndex + 1} 天缺少地點座標，無法規劃路線`,
-              activities,
+              `[ALL] 第 ${dayIndex + 1} 天缺少地點座標或 place_id，無法規劃路線`,
+              { activities, routeActivities, origin, destination }
             );
             addCustomMarkers(routeActivities, dayIndex);
             return;
           }
           const waypoints = routeActivities.slice(1, -1).map((act) => ({
-            location: act.location,
+            location: getLocationForDirections(act),
             stopover: true,
           }));
-
+          map.panTo({ lat: avgLat - 0.07, lng: avgLng });
+          map.setZoom(12);
           directionsService.route(
             {
               origin: origin,
               destination: destination,
               waypoints: waypoints,
-              optimizeWaypoints: false,
+              optimizeWaypoints: true,
               travelMode: "WALKING",
-              // travelMode: google.maps.TravelMode.DRIVING || "WALKING",
             },
             (result, status) => {
               if (status === "OK") {
                 directionsRenderer.setDirections(result);
                 addCustomMarkers(routeActivities, dayIndex);
               } else {
-                console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+                console.error(`[ALL] 路線規劃失敗 (Day ${dayIndex + 1})`, {
                   status: status,
                   origin: origin,
                   destination: destination,
@@ -604,6 +623,7 @@
                   activities: routeActivities.map((a) => ({
                     name: a.place_name,
                     location: a.location,
+                    place_id: a.place_id
                   })),
                 });
                 addCustomMarkers(routeActivities, dayIndex);
@@ -641,23 +661,20 @@
         currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
         const activities = day.activities;
-        const routeActivities = activities.filter((a) =>
-          isValidRouteLocation(a.location),
-        );
+        const routeActivities = activities.filter((a) => isValidRouteLocation(a));
 
         // 先更新該天時間線，避免路線失敗時仍顯示全部內容
         loadSingleDayTimeline(day, dayIndex);
 
-        const origin = routeActivities[0]?.location;
-        const destination =
-          routeActivities[routeActivities.length - 1]?.location;
+        const origin = getLocationForDirections(routeActivities[0]);
+        const destination = getLocationForDirections(routeActivities[routeActivities.length - 1]);
         if (!origin || !destination) {
           addCustomMarkers(routeActivities, dayIndex);
           return;
         }
 
         const waypoints = routeActivities.slice(1, -1).map((act) => ({
-          location: act.location,
+          location: getLocationForDirections(act),
           stopover: true,
         }));
 
@@ -667,7 +684,6 @@
             destination: destination,
             waypoints: waypoints,
             optimizeWaypoints: false,
-            // travelMode: google.maps.TravelMode.DRIVING,
             travelMode: "WALKING",
           },
           (result, status) => {
@@ -686,6 +702,7 @@
                 activities: routeActivities.map((a) => ({
                   name: a.place_name,
                   location: a.location,
+                  place_id: a.place_id
                 })),
               });
               addCustomMarkers(routeActivities, dayIndex);
@@ -787,6 +804,7 @@
                   lat: loc.location.latitude || 0,
                   lng: loc.location.longitude || 0,
                 },
+                place_id: loc.place_id || "",
                 time: "",
                 description: "",
                 type: "",
@@ -805,7 +823,6 @@
 
       async function initMap() {
         try {
-          // 1. 先嘗試從 localStorage 取得 ai_itinerary
           let aiItinerary = localStorage.getItem("data_latlng");
           let usedLocal = false;
           if (aiItinerary) {
@@ -825,6 +842,7 @@
                       lat: loc.location.latitude || 0,
                       lng: loc.location.longitude || 0,
                     },
+                    place_id: loc.place_id || "",
                   })),
                 }));
                 usedLocal = true;
@@ -859,8 +877,8 @@
             });
           });
 
-          const avgLat = pointCount > 0 ? totalLat / pointCount : 35.6762;
-          const avgLng = pointCount > 0 ? totalLng / pointCount : 139.6503;
+          avgLat = pointCount > 0 ? totalLat / pointCount : 35.6762;
+          avgLng = pointCount > 0 ? totalLng / pointCount : 139.6503;
 
           const { Map } = await google.maps.importLibrary("maps");
           map = new Map(document.getElementById("map"), {
@@ -2499,25 +2517,12 @@
             );
           }
 
-          // 有 itinerary，優先使用 detailed_itinerary，其次 data_json，再退回 data_latlng
-          allDays = body.data.flatMap((item) =>
-            normalizeItineraryRowToAllDays(item),
-          );
-          console.log("AllDAYS", allDays);
-
-          if (!allDays.length) {
-            console.warn(
-              "此專案 itinerary 存在，但無可渲染 days，將導向 setup",
-            );
-            sessionStorage.setItem("currentProjectId", project.project_id);
-            sessionStorage.setItem("currentProjectTitle", project.title);
-            sessionStorage.setItem("navigationType", "forward");
-            window.location.href = "setup.html";
-            return;
-          }
-
+          // 強制重新載入資料庫資料
+          await loadCoordinatesFirst();
+          await initMap();
           createDayButtons();
           displayAllDays();
+
         } else {
           // 沒 itinerary -> 轉 setup
           sessionStorage.setItem("currentProjectId", project.project_id);
