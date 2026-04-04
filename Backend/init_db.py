@@ -4,6 +4,7 @@ from psycopg2 import connect, sql
 from psycopg2.extras import RealDictCursor
 from config import Config
 
+
 class DatabaseInitializer:
     def __init__(self, database_url=None):
         self.database_url = Config.DATABASE_URL
@@ -16,7 +17,8 @@ class DatabaseInitializer:
             with connect(self.database_url) as conn:
                 with conn.cursor() as cursor:
                     # 1. User 表 (支援 Google 登入)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS users (
                             user_id SERIAL PRIMARY KEY,
                             email VARCHAR(255) UNIQUE NOT NULL,
@@ -26,19 +28,23 @@ class DatabaseInitializer:
                             auth_provider VARCHAR(20) DEFAULT 'local', -- local 或 google
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 2. Hash 表 (若有額外驗證需求)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS user_hashes (
                             user_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
                             hash_value TEXT NOT NULL,
                             updated_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 3. Project 表 (專案/旅行計畫)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS projects (
                             project_id SERIAL PRIMARY KEY,
                             user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -46,10 +52,12 @@ class DatabaseInitializer:
                             created_at TIMESTAMPTZ DEFAULT NOW(),
                             updated_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 4. Itineraries 表 (具體行程產出)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS itineraries (
                             itinerary_id SERIAL PRIMARY KEY,
                             project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
@@ -58,26 +66,31 @@ class DatabaseInitializer:
                             destination VARCHAR(255),
                             type VARCHAR(50),                       -- 旅遊類型
                             companion VARCHAR(50),                  -- 旅伴
-                            travel_style VARCHAR(50),               -- 旅遊類型詳細（如美食、冒險）
                             budget VARCHAR(50),                     -- 預算等級（中等、高等...）
+                            interests JSONB NOT NULL DEFAULT '[]'::jsonb, -- 興趣清單（list）
+                            start_date DATE,                        -- 出發日期
                             data_json JSONB NOT NULL DEFAULT '{}'::jsonb,  -- 詳細行程內容
                             data_latlng JSONB NOT NULL DEFAULT '{}'::jsonb, -- 經緯度補齊後資料
                             detailed_itinerary JSONB NOT NULL DEFAULT '{}'::jsonb, -- Gemini 詳細行程結果
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 5. Conversation 表 (對話紀錄)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS conversations (
                             conversation_id SERIAL PRIMARY KEY,
                             project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 6. Message 表 (具體訊息)
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         CREATE TABLE IF NOT EXISTS messages (
                             message_id SERIAL PRIMARY KEY,
                             conversation_id INTEGER NOT NULL REFERENCES conversations(conversation_id) ON DELETE CASCADE,
@@ -85,14 +98,22 @@ class DatabaseInitializer:
                             content TEXT NOT NULL,
                             created_at TIMESTAMPTZ DEFAULT NOW()
                         );
-                    ''')
+                    """
+                    )
 
                     # 建立索引以優化查詢效能
-                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);')
-                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_itineraries_project ON itineraries(project_id);')
-                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id);')
-                    
-                    cursor.execute('''
+                    cursor.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);"
+                    )
+                    cursor.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_itineraries_project ON itineraries(project_id);"
+                    )
+                    cursor.execute(
+                        "CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id);"
+                    )
+
+                    cursor.execute(
+                        """
                         CREATE OR REPLACE FUNCTION update_modified_column()
                         RETURNS TRIGGER AS $$
                         BEGIN
@@ -100,9 +121,11 @@ class DatabaseInitializer:
                             RETURN NEW;
                         END;
                         $$ LANGUAGE plpgsql;
-                        ''')
+                        """
+                    )
 
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                     DO $$
                     BEGIN
                         CREATE TRIGGER update_projects_modtime
@@ -111,20 +134,22 @@ class DatabaseInitializer:
                     EXCEPTION WHEN duplicate_object THEN NULL;
                     END
                     $$;
-                    ''')
+                    """
+                    )
 
                 conn.commit()
                 print("--- 所有資料表初始化成功 ---")
         except Exception as e:
             print(f"資料庫初始化失敗: {e}")
             raise
-    
+
     def seed_test_user(self):
         """初始化時加入一個測試帳號"""
         try:
             with connect(self.database_url) as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO users (email, name, hash_password, auth_provider)
                         VALUES (%s, %s, %s, %s)
                         ON CONFLICT (email) DO UPDATE
@@ -132,7 +157,9 @@ class DatabaseInitializer:
                               hash_password = EXCLUDED.hash_password,
                               auth_provider = EXCLUDED.auth_provider
                         RETURNING user_id;
-                    """, ('test@gmail.com', '測試用戶', 'password123', 'local'))
+                    """,
+                        ("test@gmail.com", "測試用戶", "password123", "local"),
+                    )
                     user_id = cursor.fetchone()[0]
                 conn.commit()
             print(f"--- 已初始化假用戶 test@gmail.com (user_id={user_id}) ---")
@@ -140,10 +167,12 @@ class DatabaseInitializer:
             print(f"假用戶插入失敗: {e}")
             raise
 
+
 def init_db():
     initializer = DatabaseInitializer()
     initializer.init_all_tables()
     initializer.seed_test_user()
+
 
 if __name__ == "__main__":
     init_db()
