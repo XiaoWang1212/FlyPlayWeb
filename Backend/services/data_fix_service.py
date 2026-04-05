@@ -9,6 +9,41 @@ class DataFixService:
     
     def __init__(self):
         self.google_map_service = GoogleMapService()
+
+    def _time_slots_for_count(self, count):
+        """依當天活動數量生成固定且遞增的時間槽。"""
+        presets = {
+            1: ["09:00"],
+            2: ["09:00", "14:00"],
+            3: ["09:00", "12:00", "15:00"],
+            4: ["09:00", "12:00", "15:00", "18:00"],
+            5: ["08:00", "11:00", "14:00", "17:00", "20:00"],
+        }
+        if count in presets:
+            return presets[count]
+
+        base_hour = 8
+        return [f"{(base_hour + i * 2):02d}:00" for i in range(count)]
+
+    def normalize_itinerary_times(self, days):
+        """依目前 location 順序重排 time，忽略原本錯誤或過期時間。"""
+        if not isinstance(days, list):
+            return days
+
+        for day in days:
+            if not isinstance(day, dict):
+                continue
+
+            locations = day.get('location', [])
+            if not isinstance(locations, list):
+                continue
+
+            slots = self._time_slots_for_count(len(locations))
+            for idx, loc in enumerate(locations):
+                if isinstance(loc, dict):
+                    loc['time'] = slots[idx] if idx < len(slots) else slots[-1]
+
+        return days
     
     def enrich_data_with_location(self, data):
         output_data = []
@@ -100,6 +135,8 @@ class DataFixService:
     
     def enrich_data_with_picture(self, days):
         """增強詳細行程格式 (location 字段) 的圖片信息"""
+        # 先統一時間，確保編輯/拖曳後 time 會自動對齊順序。
+        days = self.normalize_itinerary_times(days)
         modified_days = []
         
         for day in days:

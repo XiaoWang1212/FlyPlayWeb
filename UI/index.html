@@ -1215,6 +1215,7 @@
 
         const newActivity = buildActivityFromSpot(spot);
         targetDay.activities.push(newActivity);
+        applyAutoTimesToDay(targetDay);
 
         if (isEditMode && editedDays) {
           isDragChanged = true;
@@ -1264,8 +1265,14 @@
 
         if (currentDayIndex === -1) {
           saveAllDayOrder();
+          if (editedDays) {
+            editedDays.forEach((day) => applyAutoTimesToDay(day));
+          }
         } else {
           saveCurrentDayOrder(currentDayIndex);
+          if (editedDays && editedDays[currentDayIndex]) {
+            applyAutoTimesToDay(editedDays[currentDayIndex]);
+          }
         }
 
         // 將編輯草稿寫回正式資料
@@ -1800,6 +1807,33 @@
         return isEditMode && editedDays ? editedDays : allDays;
       }
 
+      function getTimeSlotsByCount(count) {
+        const presets = {
+          1: ["09:00"],
+          2: ["09:00", "14:00"],
+          3: ["09:00", "12:00", "15:00"],
+          4: ["09:00", "12:00", "15:00", "18:00"],
+          5: ["08:00", "11:00", "14:00", "17:00", "20:00"],
+        };
+
+        if (presets[count]) return presets[count];
+
+        const baseHour = 8;
+        return Array.from({ length: count }, (_, idx) => {
+          const hour = baseHour + idx * 2;
+          return `${String(hour).padStart(2, "0")}:00`;
+        });
+      }
+
+      function applyAutoTimesToDay(day) {
+        if (!day || !Array.isArray(day.activities)) return;
+
+        const slots = getTimeSlotsByCount(day.activities.length);
+        day.activities.forEach((activity, idx) => {
+          activity.time = slots[idx] || slots[slots.length - 1] || "09:00";
+        });
+      }
+
       function saveCurrentDayOrder(dayIndex) {
         if (dayIndex < 0 || !editedDays || !editedDays[dayIndex]) return;
 
@@ -1823,6 +1857,7 @@
 
         if (newOrder.length === oldActivities.length) {
           editedDays[dayIndex].activities = newOrder;
+          applyAutoTimesToDay(editedDays[dayIndex]);
         }
       }
 
@@ -1864,6 +1899,7 @@
 
           if (ordered.length === day.activities.length) {
             day.activities = ordered;
+            applyAutoTimesToDay(day);
           }
         });
       }
@@ -1927,6 +1963,7 @@
                   act.activityId !== activityId &&
                   act.place_name !== activityId,
               );
+              applyAutoTimesToDay(editedDays[currentDayIndex]);
               isDragChanged = true;
             }
           }, 300);
