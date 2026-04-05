@@ -617,7 +617,7 @@
               destination: destination,
               waypoints: waypoints,
               optimizeWaypoints: true,
-              travelMode: "WALKING",
+              travelMode: google.maps.TravelMode.WALKING,
             },
             (result, status) => {
               if (status === "OK") {
@@ -693,7 +693,7 @@
             destination: destination,
             waypoints: waypoints,
             optimizeWaypoints: false,
-            travelMode: "WALKING",
+            travelMode: google.maps.TravelMode.WALKING,
           },
           (result, status) => {
             if (status === "OK") {
