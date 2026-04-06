@@ -2,14 +2,13 @@ import os
 import json
 from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
-from services.gemini_service import GeminiService
+
 
 class TravelService:
     def __init__(self, database_url=None):
         self.database_url = database_url or os.getenv("DATABASE_URL")
         if not self.database_url:
             raise ValueError("未偵測到 DATABASE_URL")
-        self.gemini = GeminiService()
 
     def _conn(self):
         return connect(self.database_url, cursor_factory=RealDictCursor)
@@ -27,30 +26,39 @@ class TravelService:
                 )
                 return cur.fetchone()
 
-    def create_itinerary(
-        self, project_id, days, departure_airport, destination, type, companion, travel_style, budget, interests=None, start_date=None
+    def create_itinerary_record(
+        self,
+        project_id,
+        days,
+        departure_airport,
+        destination,
+        type,
+        companion,
+        budget,
+        interests,
+        start_date,
+        data_json,
     ):
-        ai_result = self.gemini.generate_itinerary(
-            location=destination,
-            days=days,
-            budget=budget,
-            traveler_type=companion,
-            interests=interests or [],
-            start_date=start_date,
-        )
-        if not ai_result["success"]:
-            raise Exception(ai_result["error"])
-        data_json = ai_result["data"]["parsed"]
-
         with self._conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    INSERT INTO itineraries (project_id, days, departure_airport, destination, type, data_json, companion, travel_style, budget)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO itineraries (project_id, days, departure_airport, destination, type, data_json, companion, budget, interests, start_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING itinerary_id
                     """,
-                    (project_id, days, departure_airport, destination, type, json.dumps(data_json), companion, travel_style, budget),
+                    (
+                        project_id,
+                        days,
+                        departure_airport,
+                        destination,
+                        type,
+                        json.dumps(data_json),
+                        companion,
+                        budget,
+                        json.dumps(interests if isinstance(interests, list) else []),
+                        start_date,
+                    ),
                 )
                 new_id = cur.fetchone()["itinerary_id"]
             conn.commit()
@@ -96,7 +104,9 @@ class TravelService:
                 )
                 return cur.fetchone()
 
-    def update_itinerary_ai_data(self, itinerary_id, detailed_itinerary=None, data_latlng=None):
+    def update_itinerary_ai_data(
+        self, itinerary_id, detailed_itinerary=None, data_latlng=None
+    ):
         set_items = []
         values = []
 
@@ -161,10 +171,3 @@ class TravelService:
                     (project_id,),
                 )
                 return cur.fetchone()
-
-    async def generate_itinerary(
-        self, location, days, budget, traveler_type, interests, start_date=None
-    ):
-        return await self.chatgpt.generate_itinerary(
-            location, days, budget, traveler_type, interests, start_date
-        )

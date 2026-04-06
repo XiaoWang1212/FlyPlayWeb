@@ -20,4 +20,4 @@ class Config:
     # JWT 配置
     JWT_SECRET = os.getenv("JWT_SECRET", "changeme")
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-    JWT_EXPIRE_SECONDS = int(os.getenv("JWT_EXPIRE_SECONDS", 3600))
+    JWT_EXPIRE_SECONDS = int(os.getenv("JWT_EXPIRE_SECONDS", 604800)) # 7天
