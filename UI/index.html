@@ -254,8 +254,8 @@
       let allDays = [];
       let currentDayIndex = -1;
       const API_BASE = "http://127.0.0.1:5001";
-      let avgLat = 35.6762; 
-      let avgLng = 139.6503; 
+      let avgLat = 35.6762;
+      let avgLng = 139.6503;
 
       // 新增：用來記錄目前畫在地圖上的所有路線，方便切換時清除
       let currentRenderers = [];
@@ -264,7 +264,6 @@
       let justClickedMarker = false;
       let spotPreviewMarker = null;
       let selectedSpotForAdd = null;
-
 
       // 根據日期索引獲取顏色
       function getColorByDay(dayIndex) {
@@ -320,7 +319,7 @@
         timelineView.insertBefore(buttonContainer, timelineView.firstChild);
       }
 
-      // 替換為以下這個 async 版本的 addCustomMarkers：
+      // 替換為以下這個 async 版本：
       async function addCustomMarkers(activities, dayIndex) {
         const { AdvancedMarkerElement } =
           await google.maps.importLibrary("marker");
@@ -356,6 +355,11 @@
 
           marker.addListener("click", async (e) => {
             justClickedMarker = true;
+
+            console.log("Marker clicked:", {
+              activity: activity,
+              activitySpot: activitySpot,
+            });
 
             if (currentInfoWindow) {
               currentInfoWindow.close();
@@ -406,7 +410,7 @@
         if (activity.place_id) {
           return true;
         }
-        
+
         // 否则检查 location 中是否有坐标
         if (!activity.location) return false;
         const lat =
@@ -609,10 +613,20 @@
 
       // Helper: 取得 Directions API 需要的地點格式
       function getLocationForDirections(activity) {
-        if (activity && activity.place_id && typeof activity.place_id === "string" && activity.place_id.length > 0) {
+        if (
+          activity &&
+          activity.place_id &&
+          typeof activity.place_id === "string" &&
+          activity.place_id.length > 0
+        ) {
           return { placeId: activity.place_id };
         }
-        if (activity && activity.location && typeof activity.location.lat === "number" && typeof activity.location.lng === "number") {
+        if (
+          activity &&
+          activity.location &&
+          typeof activity.location.lat === "number" &&
+          typeof activity.location.lng === "number"
+        ) {
           return { lat: activity.location.lat, lng: activity.location.lng };
         }
         return null;
@@ -624,7 +638,6 @@
 
         const { DirectionsService, DirectionsRenderer } = google.maps;
 
-
         getActiveDays().forEach((day, dayIndex) => {
           if (!day || !day.activities) {
             console.warn(`[ALL] 第 ${dayIndex + 1} 天資料異常`, day);
@@ -632,7 +645,9 @@
           }
 
           const activities = day.activities;
-          const routeActivities = activities.filter((a) => isValidRouteLocation(a));
+          const routeActivities = activities.filter((a) =>
+            isValidRouteLocation(a),
+          );
 
           if (activities.length < 2) {
             console.warn(`[ALL] 第 ${dayIndex + 1} 天活動數量不足`, activities);
@@ -642,7 +657,7 @@
             console.warn(`[ALL] 第 ${dayIndex + 1} 天有效路線點不足`, {
               activities,
               routeActivities,
-              判斷結果: activities.map(a => isValidRouteLocation(a)),
+              判斷結果: activities.map((a) => isValidRouteLocation(a)),
             });
             return;
           }
@@ -661,27 +676,21 @@
           currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
           const origin = getLocationForDirections(routeActivities[0]);
-          const destination = getLocationForDirections(routeActivities[routeActivities.length - 1]);
-          if (!origin || !destination) {
-            console.warn(
-              `[ALL] 第 ${dayIndex + 1} 天缺少地點座標或 place_id，無法規劃路線`,
-              { activities, routeActivities, origin, destination }
-            );
-            addCustomMarkers(routeActivities, dayIndex);
-            return;
-          }
+          const destination = getLocationForDirections(
+            routeActivities[routeActivities.length - 1],
+          );
           const waypoints = routeActivities.slice(1, -1).map((act) => ({
             location: getLocationForDirections(act),
             stopover: true,
           }));
           map.panTo({ lat: avgLat - 0.07, lng: avgLng });
-          map.setZoom(12);
+          map.setZoom(11.5);
           directionsService.route(
             {
               origin: origin,
               destination: destination,
               waypoints: waypoints,
-              optimizeWaypoints: true,
+              optimizeWaypoints: false,
               travelMode: google.maps.TravelMode.WALKING,
             },
             (result, status) => {
@@ -697,7 +706,7 @@
                   activities: routeActivities.map((a) => ({
                     name: a.place_name,
                     location: a.location,
-                    place_id: a.place_id
+                    place_id: a.place_id,
                   })),
                 });
                 addCustomMarkers(routeActivities, dayIndex);
@@ -735,13 +744,17 @@
         currentRenderers.push(directionsRenderer); // 記錄下來以便日後清除
 
         const activities = day.activities;
-        const routeActivities = activities.filter((a) => isValidRouteLocation(a));
+        const routeActivities = activities.filter((a) =>
+          isValidRouteLocation(a),
+        );
 
         // 先更新該天時間線，避免路線失敗時仍顯示全部內容
         loadSingleDayTimeline(day, dayIndex);
 
         const origin = getLocationForDirections(routeActivities[0]);
-        const destination = getLocationForDirections(routeActivities[routeActivities.length - 1]);
+        const destination = getLocationForDirections(
+          routeActivities[routeActivities.length - 1],
+        );
         if (!origin || !destination) {
           addCustomMarkers(routeActivities, dayIndex);
           return;
@@ -776,7 +789,7 @@
                 activities: routeActivities.map((a) => ({
                   name: a.place_name,
                   location: a.location,
-                  place_id: a.place_id
+                  place_id: a.place_id,
                 })),
               });
               addCustomMarkers(routeActivities, dayIndex);
@@ -799,11 +812,11 @@
 
         const editFabBtn = document.getElementById("editFab");
         if (dayIndex === -1) {
-            editFabBtn.style.display = "none"; // 「全部」時隱藏
+          editFabBtn.style.display = "none"; // 「全部」時隱藏
         } else {
-            if (!isChatMode) {
-                editFabBtn.style.display = "flex"; // 「單天」且「不在聊天室」時才顯示
-            }
+          if (!isChatMode) {
+            editFabBtn.style.display = "flex"; // 「單天」且「不在聊天室」時才顯示
+          }
         }
 
         // 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式）
@@ -968,6 +981,8 @@
             zoom: 10,
             center: { lat: avgLat, lng: avgLng },
             mapId: "DEMO_MAP_ID",
+            fullscreenControl: false,
+            mapTypeControl: false,
           });
 
           map.addListener("click", () => {
@@ -1096,6 +1111,14 @@
           };
         }
 
+        const token = localStorage.getItem("userToken");
+        const defaultHeaders = token
+          ? {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            }
+          : { "Content-Type": "application/json" };
+
         // 若先前已查過 business_info，優先使用快取結果，減少重複 API 請求。
         if (spot._businessInfo) {
           const openingHours = spot._businessInfo.opening_hours;
@@ -1122,14 +1145,14 @@
               `${API_BASE}/api/maps/business_info/${encodeURIComponent(
                 spot.place_id,
               )}`,
+              {
+                headers: defaultHeaders,
+              },
             );
           } else if (spot.name) {
             response = await fetch(`${API_BASE}/api/maps/business_info`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
+              headers: defaultHeaders,
               body: JSON.stringify({ name: spot.name }),
             });
           } else {
@@ -1858,7 +1881,7 @@
           sheet.classList.remove("expanded", "half");
           syncSheetState("sheet-collapsed");
           if (currentDayIndex !== -1) {
-              document.getElementById("editFab").style.display = "flex";
+            document.getElementById("editFab").style.display = "flex";
           }
 
           // 恢復圖示：列表 → 機器人
@@ -2848,7 +2871,6 @@
           await initMap();
           createDayButtons();
           displayAllDays();
-
         } else {
           // 沒 itinerary -> 轉 setup
           sessionStorage.setItem("currentProjectId", project.project_id);
