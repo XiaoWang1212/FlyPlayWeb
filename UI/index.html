@@ -2871,6 +2871,12 @@
           await initMap();
           createDayButtons();
           displayAllDays();
+
+          // 嘗試補全詳細行程與圖片資訊，讓 openProject 也能顯示照片
+          const detailedData = await generateDetailedItinerary();
+          if (detailedData) {
+            await enrichWithPictureInfo(detailedData);
+          }
         } else {
           // 沒 itinerary -> 轉 setup
           sessionStorage.setItem("currentProjectId", project.project_id);
