@@ -1132,7 +1132,7 @@
         .location-block:hover {
             background-color: #f0f0f0; 
         }
-
+ 
         /* --- 新行程建立彈窗 --- */
         .new-trip-modal {
             position: fixed;

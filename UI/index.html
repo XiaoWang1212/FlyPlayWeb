@@ -118,7 +118,9 @@
         <div class="new-trip-modal-title">建立新行程</div>
 
         <!-- 行程標題 -->
-        <label class="new-trip-modal-label" for="newTripTitleInput">行程標題</label>
+        <label class="new-trip-modal-label" for="newTripTitleInput"
+          >行程標題</label
+        >
         <input
           id="newTripTitleInput"
           class="new-trip-modal-input"
@@ -130,7 +132,9 @@
         />
 
         <!-- 開始日期 -->
-        <label class="new-trip-modal-label" for="newTripStartDateInput">開始日期</label>
+        <label class="new-trip-modal-label" for="newTripStartDateInput"
+          >開始日期</label
+        >
         <input
           id="newTripStartDateInput"
           class="new-trip-modal-input new-trip-modal-date"
@@ -140,7 +144,11 @@
 
         <!-- 取消 / 建立 -->
         <div class="new-trip-modal-actions">
-          <button type="button" class="new-trip-modal-button secondary" onclick="closeNewTripModal()">
+          <button
+            type="button"
+            class="new-trip-modal-button secondary"
+            onclick="closeNewTripModal()"
+          >
             取消
           </button>
           <button type="submit" class="new-trip-modal-button primary">
@@ -389,6 +397,10 @@
           currentInfoWindow.close();
           currentInfoWindow = null;
         }
+      }
+
+      function closeCurrentPopup() {
+        clearCurrentPopup();
       }
 
       function closeCustomMapPopup() {
@@ -1085,7 +1097,10 @@
           } else if (spot.name) {
             response = await fetch(`${API_BASE}/api/maps/business_info`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
               body: JSON.stringify({ name: spot.name }),
             });
           } else {
