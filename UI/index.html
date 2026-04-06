@@ -244,6 +244,8 @@
         allBtn.style.color = "#FFFFFF";
         allBtn.style.borderColor = allColor;
 
+        document.getElementById("editFab").style.display = "none";
+
         allBtn.onclick = () => switchDay(-1, allBtn);
         buttonContainer.appendChild(allBtn);
         // -------------------------
@@ -711,6 +713,15 @@
         }
 
         currentDayIndex = dayIndex;
+
+        const editFabBtn = document.getElementById("editFab");
+        if (dayIndex === -1) {
+            editFabBtn.style.display = "none"; // 「全部」時隱藏
+        } else {
+            if (!isChatMode) {
+                editFabBtn.style.display = "flex"; // 「單天」且「不在聊天室」時才顯示
+            }
+        }
 
         // 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式）
         const allBtns = document.querySelectorAll("#dayButtonContainer button");
@@ -1740,7 +1751,9 @@
           timelineView.classList.add("active");
           sheet.classList.remove("expanded", "half");
           syncSheetState("sheet-collapsed");
-          document.getElementById("editFab").style.display = "flex";
+          if (currentDayIndex !== -1) {
+              document.getElementById("editFab").style.display = "flex";
+          }
 
           // 恢復圖示：列表 → 機器人
           robotFabIcon.classList.remove("fa-list-ul");
