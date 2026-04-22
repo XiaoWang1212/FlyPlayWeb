@@ -1,3 +1,5 @@
+import math
+
 from services.googlemap_service import GoogleMapService
 
 
@@ -9,6 +11,30 @@ class DataFixService:
     
     def __init__(self):
         self.google_map_service = GoogleMapService()
+
+    @staticmethod
+    def _calculate_distance_km(origin, target):
+        """使用 Haversine 公式計算兩點距離（公里）。"""
+        lat1 = origin.get('latitude')
+        lon1 = origin.get('longitude')
+        lat2 = target.get('latitude')
+        lon2 = target.get('longitude')
+
+        if None in (lat1, lon1, lat2, lon2):
+            return None
+
+        earth_radius_km = 6371
+        d_lat = math.radians(lat2 - lat1)
+        d_lon = math.radians(lon2 - lon1)
+
+        a = (
+            math.sin(d_lat / 2) ** 2
+            + math.cos(math.radians(lat1))
+            * math.cos(math.radians(lat2))
+            * math.sin(d_lon / 2) ** 2
+        )
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return earth_radius_km * c
     
     def enrich_data_with_location(self, data):
         output_data = []
@@ -71,6 +97,11 @@ class DataFixService:
                 if nearby_result.get('success') and nearby_result.get('places'):
                     place = nearby_result['places'][0]
                     location = place.get('location', {})
+
+                    distance_km = self._calculate_distance_km(center_location, location)
+                    if distance_km is not None and distance_km > 50:
+                        print(f"跳過 {location_name}，距離中心點 {distance_km:.2f} 公里，超過 50 公里")
+                        continue
 
                     day_result["locations"].append({
                         "location_name": location_name,
