@@ -64,6 +64,50 @@ class GeminiService:
             "total_tokens": getattr(usage_metadata, "total_token_count", None),
         }
 
+    def _time_slots_for_count(self, count):
+        """依每日行程數量生成固定時間"""
+        presets = {
+            1: ["09:00"],
+            2: ["09:00", "14:00"],
+            3: ["09:00", "12:00", "15:00"],
+            4: ["09:00", "12:00", "15:00", "18:00"],
+            5: ["08:00", "11:00", "14:00", "17:00", "20:00"],
+        }
+        if count in presets:
+            return presets[count]
+
+        base_hour = 8
+        return [f"{(base_hour + i * 2):02d}:00" for i in range(count)]
+
+    def _attach_generated_times(self, parsed_json):
+        """為行程補上 time 欄位，並以目前 location 順序為準。"""
+        if not isinstance(parsed_json, dict):
+            return parsed_json
+
+        days = None
+        if isinstance(parsed_json.get("days"), list):
+            days = parsed_json.get("days")
+        elif isinstance(parsed_json.get("data"), list):
+            days = parsed_json.get("data")
+
+        if not isinstance(days, list):
+            return parsed_json
+
+        for day in days:
+            if not isinstance(day, dict):
+                continue
+
+            locations = day.get("location")
+            if not isinstance(locations, list):
+                continue
+
+            slots = self._time_slots_for_count(len(locations))
+            for idx, loc in enumerate(locations):
+                if isinstance(loc, dict):
+                    loc["time"] = slots[idx] if idx < len(slots) else slots[-1]
+
+        return parsed_json
+
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
         try:
@@ -159,7 +203,6 @@ class GeminiService:
                         "weekday": "星期幾 (例如：星期一)", 
                         "location": [
                             {{
-                                "time": "09:00",
                                 "location_name": "地點名稱",
                             }}
                         ]
@@ -170,6 +213,7 @@ class GeminiService:
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
             一天最多三個景點就好。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+            time 欄位由系統補上，請不要輸出 time。
 
             """
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
@@ -218,6 +262,7 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
+            parsed_json = self._attach_generated_times(parsed_json)
 
             return {
                 "success": True,
@@ -262,6 +307,10 @@ class GeminiService:
                         existing_itinerary.get("data"), list
                     ):
                         raw_days = existing_itinerary.get("data", [])
+                    elif isinstance(existing_itinerary, dict) and isinstance(
+                        existing_itinerary.get("days"), list
+                    ):
+                        raw_days = existing_itinerary.get("days", [])
                     elif isinstance(existing_itinerary, list):
                         raw_days = existing_itinerary
 
@@ -287,13 +336,14 @@ class GeminiService:
                         except Exception:
                             day_no_int = idx + 1
 
-                        locations = (
-                            day_item.get("locations", [])
-                            if isinstance(day_item, dict)
-                            else []
-                        )
+                        locations = []
+                        if isinstance(day_item, dict):
+                            if isinstance(day_item.get("locations"), list):
+                                locations = day_item.get("locations", [])
+                            elif isinstance(day_item.get("location"), list):
+                                locations = day_item.get("location", [])
                         normalized_locations = []
-                        for loc_idx, loc in enumerate(locations):
+                        for loc in locations:
                             loc_name = (
                                 loc.get("location_name")
                                 if isinstance(loc, dict)
@@ -301,10 +351,8 @@ class GeminiService:
                             )
                             if not loc_name:
                                 continue
-                            hour = 9 + (loc_idx * 3)
                             normalized_locations.append(
                                 {
-                                    "time": f"{hour:02d}:00",
                                     "place_name": loc_name,
                                     "description": "",
                                     "type": "景點",
@@ -348,7 +396,6 @@ class GeminiService:
                         "weekday": "星期幾 (例如：星期一)", 
                         "location": [
                             {{
-                                "time": "09:00",
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",
@@ -376,6 +423,7 @@ class GeminiService:
             8. 確保修改後的行程符合用戶預算和興趣。
             9. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
             10. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
+            11. time 欄位由系統補上，請不要輸出 time。
             """
 
             response = self.model.generate_content(
@@ -384,6 +432,7 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
+            parsed_json = self._attach_generated_times(parsed_json)
             print(parsed_json)
             return {
                 "success": True,
