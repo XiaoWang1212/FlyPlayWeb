@@ -409,19 +409,19 @@ async function openProject(project) {
 			);
 		}
 
-    // 強制重新載入資料庫資料
+		// 強制重新載入資料庫資料
 		await loadCoordinatesFirst();
 		await initMap();
 		createDayButtons();
 		displayAllDays();
 
-    // 嘗試補全詳細行程與圖片資訊，讓 openProject 也能顯示照片
+		// 嘗試補全詳細行程與圖片資訊，讓 openProject 也能顯示照片
 		const detailedData = await generateDetailedItinerary();
 		if (detailedData) {
 			await enrichWithPictureInfo(detailedData);
 		}
 	} else {
-    // 沒 itinerary -> 轉 setup
+		// 沒 itinerary -> 轉 setup
 		sessionStorage.setItem("currentProjectId", project.project_id);
 		sessionStorage.setItem("currentProjectTitle", project.title);
 		sessionStorage.setItem("navigationType", "forward");
