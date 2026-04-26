@@ -1,1284 +1,1470 @@
 :root {
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-            --header-height: 50px;
-            --sidebar-width: 320px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        a { text-decoration: none; color: inherit; }
-
-        html {
-            background-color: #f0f0f0;
-            overflow: hidden;
-            height: 100%;
-            position: fixed;
-            width: 100%;
-        }
-
-        body {
-            background-color: #f0f0f0;
-            height: 100vh;
-            height: 100dvh; /* 動態視窗高度，鍵盤彈出時不會改變 */
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-            overscroll-behavior-y: none;
-            -webkit-user-select: none;
-            user-select: none;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            left: 0;
-        }
-
-        /* Header */
-        header {
-            background-color: #0f1a3a;
-            color: white;
-            height: calc(var(--header-height) + var(--safe-top));
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: var(--safe-top) 15px 0 15px;
-            z-index: 2000;
-            position: sticky;
-            top: 0;
-            flex-shrink: 0;
-            width: 100%;
-        }
-
-        .header-title { font-size: 18px; font-weight: 500; }
-        
-        .menu-btn, .action-btn { 
-            cursor: pointer; 
-            font-size: 20px; 
-            padding: 10px; 
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-        }
-        .menu-btn:active, .action-btn:active { opacity: 0.6; transform: scale(0.96); }
-
-        /* Sidebar */
-        .sidebar-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 2001;
-            opacity: 0; visibility: hidden; transition: 0.3s;
-        }
-        .sidebar-overlay.active { opacity: 1; visibility: visible; }
-
-        .sidebar {
-            position: fixed; top: 0; left: 0;
-            width: 60%; max-width: var(--sidebar-width); height: 100%;
-            background: white; z-index: 2002;
-            transform: translateX(-100%); transition: transform 0.3s ease-in-out;
-            display: flex; flex-direction: column;
-            padding-top: var(--safe-top);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-        .sidebar.active { transform: translateX(0); }
-
-        .sidebar-header { 
-            padding: 20px; 
-            display: flex; justify-content: flex-end; align-items: center; 
-        }
-        
-        .sidebar-content { flex: 1; overflow-y: auto; padding: 0 20px; }
-        
-        .new-trip-btn { 
-            display: flex; align-items: center; margin-bottom: 20px; cursor: pointer; 
-            color: #333; 
-        }
-        .new-trip-btn i { margin-right: 10px; }
-        
-        .sidebar-divider { border: 0; border-top: 1px solid #eee; margin-bottom: 15px; }
-        
-        .trip-item { 
-            display: flex; justify-content: flex-start; align-items: center; 
-            padding: 15px 0; cursor: pointer; 
-        }
-        .trip-info { display: flex; align-items: center; flex: 1; }
-        .trip-text { display: flex; flex-direction: column; margin-left: 10px; }
-        .trip-text h4 { font-size: 16px; margin-bottom: 4px; font-weight: normal; }
-        .trip-text span { font-size: 12px; color: #888; }
-        
-        .bookmark-icon { padding: 5px; color: #333; transition: transform 0.2s; }
-        .bookmark-icon:active { transform: scale(1.2); }
-
-        /* Map */
-        .map-container {
-            flex: 1; position: relative; width: 100%;
-            background-color: #e5e3df;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/OpenStreetMap_Logo_2011.svg/1024px-OpenStreetMap_Logo_2011.svg.png');
-            background-size: cover; background-position: center;
-            overflow: hidden;
-            z-index: 0;
-
-            /* --- FAB (懸浮按鈕群組) --- */
-            .fab-group {
-                position: absolute; 
-                right: 15px; 
-                bottom: 220px; /* default closed */
-                display: flex; 
-                flex-direction: column;
-                gap: 10px;
-                transition: bottom 0.3s ease-in-out, transform 0.3s ease-in-out;
-                z-index: 1500; 
-
-                /* FAB 裡面的個別按鈕 */
-                .fab {
-                    width: 45px; 
-                    height: 45px; 
-                    background: white; 
-                    border-radius: 50%;
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
-                    font-size: 20px; 
-                    color: #333; 
-                    cursor: pointer;
-                }
-
-                &.horizontal {
-                    flex-direction: row;
-                }
-
-                &.vertical {
-                    flex-direction: column;
-
-                }
-            }
-
-            /* 用一組 class 統一管理 */
-            .sheet-expanded .bottom-sheet {
-                height: 75%;
-            }
-            .sheet-half .bottom-sheet {
-                height: 50%;
-            }
-            .sheet-collapsed .bottom-sheet {
-                height: 200px;
-            }
-
-            .sheet-expanded .fab-group {
-                bottom: calc(75% + 20px);
-            }
-            .sheet-half .fab-group {
-                bottom: calc(50% + 20px);
-            }
-            .sheet-collapsed .fab-group {
-                bottom: 220px;
-            }
-
-            /* --- Bottom Sheet (底部面板) --- */
-            .bottom-sheet {
-                position: absolute; 
-                bottom: 0; 
-                left: 0; 
-                width: 100%;
-                background: white;
-                border-top-left-radius: 20px; 
-                border-top-right-radius: 20px;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-                transition: height 0.3s ease-in-out;
-                height: 200px;
-                display: flex; 
-                flex-direction: column;
-                z-index: 500;
-            }
-
-            .bottom-sheet.expanded, .map-container.sheet-expanded .bottom-sheet {
-                height: 75%;
-            }
-            .bottom-sheet.half, .map-container.sheet-half .bottom-sheet {
-                height: 50%;
-            }
-            .map-container.sheet-collapsed .bottom-sheet {
-                height: 200px;
-            }
-
-            .sheet-handle-bar { 
-                width: 100%; 
-                padding: 15px 0 5px 0; 
-                display: flex; 
-                justify-content: center; 
-                cursor: pointer; 
-                touch-action: none; 
-            }
-
-            .sheet-handle { 
-                width: 40px; 
-                height: 5px; 
-                background: #ddd; 
-                border-radius: 5px; 
-            }
-
-            .sheet-content {
-                flex: 1; 
-                overflow-y: hidden; 
-                padding: 0;
-                position: relative;
-            }
-        }
-
-        .map-container .fab-group {
-            position: absolute;
-            right: 15px;
-            bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: bottom 0.3s ease-in-out, transform 0.3s ease-in-out;
-            z-index: 1500;
-        }
-
-        .map-container .fab-group .fab {
-            width: 45px;
-            height: 45px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            font-size: 20px;
-            color: #333;
-            cursor: pointer;
-        }
-
-        .map-container.sheet-expanded .fab-group {
-            bottom: calc(75% + 18px);
-            flex-direction: row;
-        }
-
-        .map-container.sheet-half .fab-group {
-            bottom: calc(50% + 18px);
-            flex-direction: column;
-        }
-
-        .map-container.sheet-collapsed .fab-group {
-            bottom: 220px; /* 收起時上移，避免太貼底 */
-            flex-direction: column;
-        }
-
-        .map-pin { position: absolute; color: #ff4d4f; font-size: 30px; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .pin-1 { top: 40%; left: 30%; }
-        .pin-2 { top: 50%; left: 60%; }
-
-        /* 視圖切換 */
-        .view-section {
-            display: none;
-            width: 100%;
-            height: 100%;
-            flex-direction: column;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 10px 20px;
-            padding-bottom: calc(20px + var(--safe-bottom)); 
-        }
-        .view-section.active {
-            display: flex;
-        }
-
-        /* 聊天室樣式 */
-        #chatView {
-            padding: 0;
-            background: #f9f9f9;
-        }
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            padding-bottom: calc(80px + var(--safe-bottom)); /* 增加底部空間 */
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .chat-msg {
-            max-width: 80%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            font-size: 15px;
-            line-height: 1.4;
-        }
-        .chat-msg.bot {
-            background: white;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .chat-msg.user {
-            background: #333;
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        
-        .chat-input-bar {
-            position: fixed; /* 改為 fixed，讓它固定在視窗底部 */
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 10px 15px;
-            background: white;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-            padding-bottom: calc(10px + var(--safe-bottom));
-            z-index: 600; /* 確保在 bottom-sheet 之上 */
-        }
-        .chat-input-field {
-            flex: 1;
-            background: #f0f0f0;
-            border: none;
-            border-radius: 20px;
-            padding: 0 15px;
-            height: 40px;
-            font-size: 15px;
-            outline: none;
-        }
-        .chat-send-btn {
-            width: 40px;
-            height: 40px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .typing {
-            display: flex;
-            gap: 4px;
-            padding: 12px 15px;
-            background: white;
-            border-radius: 15px;
-            border-bottom-left-radius: 4px;
-            align-self: flex-start;
-        }
-        .dot {
-            width: 6px;
-            height: 6px;
-            background: #aaa;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite;
-        }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-
-        /* Timeline UI (完全保持原樣) */
-        .timeline-item { 
-            display: flex; 
-            flex-direction: column; /* 改為垂直排列 */
-            margin-bottom: 20px; 
-            position: relative; 
-            transition: 
-            background 0.2s; 
-            background: #fff;
-            border-radius: 8px;
-        }
-        
-        .timeline-left { display: flex; flex-direction: column; align-items: center; margin-right: 15px; width: 60px; }
-        .location-img { width: 60px; height: 60px; background-color: #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; pointer-events: none; }
-        /* .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; } */
-        .timeline-transit { display: flex; align-items: center; justify-content: center; margin: 10px 0; color: #999; font-size: 12px; }
-        .timeline-transit i { margin-right: 5px; }
-        .timeline-right { flex: 1; padding-top: 5px; }
-        .timeline-title { 
-            font-weight: bold; 
-            font-size: 16px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start;
-        }
-        .timeline-desc { font-size: 12px; color: #999; margin-top: 5px; line-height: 1.4; }
-        .time-badge { 
-            font-size: 12px; 
-            background: #f0f0f0; 
-            padding: 2px 6px; 
-            border-radius: 10px; 
-            color: #666; 
-            font-weight: normal; 
-
-            align-self: flex-start; /* 讓它靠上方對齊，不要跟著標題拉伸高度 */
-            flex-shrink: 0;         /* 防止左邊標題太長時，把時間標籤擠到變形 */
-            white-space: nowrap;    /* 確保時間文字永遠保持同一行 */
-            margin-left: 10px;      /* 確保跟左邊文字保持一點安全距離 */
-            margin-top: 2px;
-        }
-        .day-header { font-size: 14px; font-weight: bold; margin: 15px 0; color: #333; position: sticky; top: 0; background: white; z-index: 10; padding: 5px 0; }
-
-        /* 獨立出來的交通區塊 */
-        .transit-block {
-            display: flex;
-            align-items: stretch;
-            min-height: 45px;
-        }
-
-        .transit-line {
-            width: 60px; /* 和圖片一樣寬，用來對齊 */
-            margin-right: 15px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .transit-line::after {
-            content: "";
-            width: 2px;
-            border-left: 2px dotted #ccc;
-            margin-top: 5px;
-            margin-bottom: 5px;
-        }
-
-        .transit-data {
-            flex: 1;
-            font-size: 13px;
-            color: #888;
-            display: flex;
-            align-items: center;
-        }
-
-        .sortable-ghost { opacity: 0.4; background: #f0f0f0; }
-        .sortable-drag { opacity: 1; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .sortable-chosen {
-            background-color: #e0e0e0 !important;
-            transform: scale(1.02);
-        }
-
-        /* 編輯模式 */
-       /* 編輯模式時，右側留白給垃圾桶 */
-        .view-section.editing .timeline-right {
-            padding-right: 45px; 
-        }
-
-        /* 調整垃圾桶位置 */
-        .delete-btn {
-            display: none;
-            position: absolute; 
-            right: 10px; /* 從 -10px 改為 10px 往內移 */
-            top: 15px;   /* 稍微往下移，對齊時間 */
-            background: #ff4d4f; 
-            color: white;
-            width: 25px; 
-            height: 25px; 
-            border-radius: 50%;
-            text-align: center; 
-            line-height: 25px;
-            cursor: pointer; 
-            font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
-            z-index: 10;
-        }
-        .add-item-btn {
-            display: none;
-            width: 100%; padding: 12px; margin-top: 10px;
-            background-color: #f0f0f0; color: #333;
-            border: 2px dashed #ccc; border-radius: 10px;
-            text-align: center; cursor: pointer; font-weight: bold;
-        }
-        .view-section.editing .delete-btn { display: block; animation: fadeIn 0.3s; }
-        .view-section.editing .add-item-btn { display: block; animation: fadeIn 0.3s; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* --- 日期選擇按鈕容器 --- */
-        #dayButtonContainer {
-            display: flex;
-            gap: 10px;
-            padding: 10px 20px 15px 20px;
-            min-height: 60px;
-
-            justify-content: flex-start;
-            flex-wrap: nowrap;
-            overflow-x: auto; 
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch; 
-            scrollbar-width: none;
-
-            background: white;
-            position: sticky;
-            top: -10px;
-            z-index: 10;
-            margin-top: -10px;  
-            margin-left: -20px;  
-            margin-right: -20px;
-            box-sizing: border-box; 
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        #dayButtonContainer::-webkit-scrollbar {
-            display: none;
-        }
-
-        #dayButtonContainer button {
-            padding: 1px 18px;
-            border: 2px solid #999;
-            background: white;
-            color: #333;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        #dayButtonContainer button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        #dayButtonContainer button:active {
-            transform: translateY(0);
-            opacity: 0.8;
-        }
-
-        /* 被選中的按鈕樣式 - 針對不同天數的顏色 */
-        #dayButtonContainer button:nth-child(1).active {
-            background: #2962FF;
-            color: white;
-            border-color: #2962FF;
-        }
-
-        #dayButtonContainer button:nth-child(2).active {
-            background: #34A853;
-            color: white;
-            border-color: #34A853;
-        }
-
-        #dayButtonContainer button:nth-child(3).active {
-            background: #EA4335;
-            color: white;
-            border-color: #EA4335;
-        }
-
-        #dayButtonContainer button:nth-child(4).active {
-            background: #FBBC04;
-            color: white;
-            border-color: #FBBC04;
-        }
-
-        #dayButtonContainer button:nth-child(5).active {
-            background: #9C27B0;
-            color: white;
-            border-color: #9C27B0;
-        }
-
-        /* 日期標題樣式 */
-        [data-day-title] {
-            padding: 15px;
-            background-color: #0f1a3a;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            margin-left: -20px;
-            margin-right: -20px;
-            padding-left: 20px;
-            padding-right: 20px;
-        }
-
-        [data-day-title]:first-of-type {
-            margin-top: 0;
-        }
-
-        /* 活動費用樣式 */
-        .activity-cost {
-          font-size: 12px;
-          color: #666;
-          margin-top: 5px;
-        }
-
-        /* --- 自定義地圖標記樣式 (水滴型) --- */
-        .custom-marker {
-            width: 28px;
-            height: 28px;
-            border: 2px solid white;
-            
-            /* 關鍵 1：設定右上、右下、左上為圓角，左下角為 0 (尖端) */
-            border-radius: 50% 50% 50% 0; 
-            
-            /* 關鍵 2：將左下角的尖端旋轉 45 度，讓它朝向正下方 */
-            transform: rotate(-45deg); 
-            
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            
-            /* 配合旋轉角度調整陰影 (-x, +y)，讓陰影維持在圖釘正下方 */
-            box-shadow: -2px 2px 6px rgba(0,0,0,0.4); 
-        }
-
-        /* 將水滴內的文字反向旋轉轉正 */
-        .custom-marker span {
-            transform: rotate(45deg); /* 反向旋轉 45 度把文字轉正 */
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            line-height: 1;
-            
-            /* 讓文字在圓圈內絕對置中 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* 視覺微調：因為水滴下方多了一塊尖端，稍微把文字往左上提一點點會在視覺上更置中 */
-            margin-top: 1px;
-            margin-left: -1px;
-        }
-
-        .drag-confirm-btn {
-            display: none; /* 預設隱藏 */
-            position: fixed;
-            bottom: calc(30px + var(--safe-bottom));
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2962FF;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 30px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            z-index: 2000;
-            cursor: pointer;
-        }
-        .drag-confirm-btn.show {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: popUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-        }
-        @keyframes popUp {
-            from { opacity: 0; transform: translate(-50%, 20px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
-        }
-        /* --- 地圖彈出視窗 (InfoWindow) 客製化 UI 完美復刻版 --- */
-        .custom-info-window {
-            display: flex;
-            gap: 12px;
-            width: 260px; 
-            padding: 4px 0 0 0; 
-            font-family: inherit;
-        }
-
-        .info-img-wrapper {
-            width: 60px;
-            flex-shrink: 0;
-        }
-        .info-img {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            background-color: #ddd; 
-            display: block;
-        }
-
-        .info-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            justify-content: flex-start;
-        }
-
-        .info-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start; 
-            gap: 8px;
-            margin-bottom: 4px; 
-        }
-        .info-title {
-            font-size: 15px;
-            font-weight: bold;
-            color: #000; 
-            line-height: 1.2;
-            margin: 0;
-        }
-        .info-time {
-            font-size: 11px;
-            background: #f0f0f0;
-            padding: 2px 8px;
-            border-radius: 12px;
-            color: #666;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .info-desc {
-            font-size: 12px;
-            color: #999; 
-            margin-bottom: 6px;
-            line-height: 1.4;
-            display: -webkit-box;
-            /* -webkit-line-clamp: 2; */ 
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .info-address {
-            font-size: 12px;
-            color: #999; /* 地址文字淺灰 */
-            display: flex;
-            align-items: center; 
-            gap: 6px;
-            line-height: 1.2;
-            white-space: nowrap; 
-            overflow: hidden;
-            text-overflow: ellipsis; 
-        }
-        .info-address i {
-            font-size: 12px;
-            color: #999; 
-        }
-
-        .info-meta-item {
-            font-size: 12px;
-            color: #999 !important; /* 底部時間/地址文字淺灰 */
-        }
-
-        .info-cost {
-            font-size: 12px;
-            color: #999 !important; /* 預算文字淺灰 */
-        }
-
-        /* --- 1. 自定義地圖彈出框容器 (扁長、無留白、小關閉按鈕) --- */
-        .custom-map-popup {
-        position: absolute;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        transform: translate(-50%, -100%); /* 置中在點上方 */
-        z-index: 1000;
-        width: 420px; /* 加長寬度 */
-        max-height: 85px; /* 減少高度 */
-        display: none; /* 預設隱藏 */
-        overflow: hidden; /* 確保內容不溢出 */
-        border: 1px solid #ddd;
-        
-        /* 🔺 為內容留白，這裡的 padding 很關鍵，用戶要求扁，所以 padding-top 設得很小 */
-        padding: 0 0 0 0; 
-        }
-
-        /* 狀態：顯示時 */
-        .custom-map-popup.show {
-        display: block;
-        animation: popupIn 0.3s ease;
-        }
-
-        /* --- 2. 卡片內容排版 (幾乎保持原樣，與行程表卡片一致) --- */
-        .popup-card-content {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        /* 移除上方留白的最關鍵 CSS：調整彈出框內部的 padding/margin */
-        .popup-card-content .info-content {
-            justify-content: flex-start; /* 確保內容靠上 */
-        }
-
-        .popup-card-content .info-header {
-            margin-bottom: 2px; /* 減小原本 margin-bottom: 6px */
-        }
-
-        .popup-card-content .info-desc {
-            margin-bottom: 4px; /* 減小原本 margin-bottom: 8px */
-        }
-
-        /* ❌ 3. 用戶要求自定義關閉按鈕樣式：右上角、小一點 */
-        .popup-close-btn {
-        position: absolute;
-        top: 5px; /* 靠上 */
-        right: 5px; /* 靠右 */
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 14px; /* ✨ 用戶要求變小 */
-        color: #777;
-        padding: 0;
-        line-height: 1;
-        z-index: 10;
-        }
-        .popup-close-btn:hover {
-        color: #333;
-        }
-
-        /* 🔺 4. 自定義小尾巴 (三角形) */
-        .popup-tip {
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 10px solid transparent;
-        border-right: 10px solid transparent;
-        border-top: 10px solid white;
-        }
-
-        @keyframes popupIn {
-        from { opacity: 0; transform: translate(-50%, -90%) scale(0.9); }
-        to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-        }
-
-        .spot-search-overlay {
-            position: fixed;
-            inset: 0;
-            background: transparent;
-            display: none;
-            align-items: flex-start;
-            justify-content: center;
-            z-index: 1900;
-            padding: calc(var(--header-height) + var(--safe-top) + 10px) 12px 12px;
-            pointer-events: none;
-        }
-
-        .spot-search-overlay.active {
-            display: flex;
-        }
-
-        .spot-search-panel {
-            width: 100%;
-            max-width: 760px;
-            max-height: min(72vh, 560px);
-            background: transparent;
-            border-radius: 16px;
-            display: flex;
-            flex-direction: column;
-            overflow: visible;
-            pointer-events: auto;
-        }
-
-        .spot-search-close {
-            border: none;
-            background: #fff;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            color: #666;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-            flex-shrink: 0;
-        }
-
-        .spot-search-close:active {
-            transform: scale(0.97);
-        }
-
-        .spot-search-input-row {
-            display: flex;
-            gap: 6px;
-            padding: 2px;
-            flex-shrink: 0;
-        }
-
-        .spot-search-input {
-            flex: 1;
-            height: 40px;
-            border: none;
-            border-radius: 999px;
-            padding: 0 16px;
-            font-size: 15px;
-            outline: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-        }
-
-        .spot-search-input:focus {
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .spot-search-results {
-            overflow-y: auto;
-            padding: 0;
-            margin-top: 6px;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-            min-height: 0;
-            max-height: min(52vh, 440px);
-        }
-
-        .spot-search-message {
-            padding: 16px;
-            font-size: 14px;
-            color: #5f6368;
-            text-align: center;
-        }
-
-        .spot-search-item {
-            width: 100%;
-            border: none;
-            border-bottom: 1px solid #f4f4f4;
-            background: #fff;
-            text-align: left;
-            padding: 12px 16px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .spot-search-item:last-child {
-            border-bottom: none;
-        }
-
-        .spot-search-item.active {
-            background: #f6f8ff;
-        }
-
-        .spot-search-item-main {
-            font-size: 15px;
-            font-weight: 600;
-            color: #222;
-            margin-bottom: 4px;
-        }
-
-        .spot-search-item-body {
-            min-width: 0;
-            flex: 1;
-        }
-
-        .spot-search-item-thumb {
-            width: 52px;
-            height: 52px;
-            border-radius: 10px;
-            background: #f1f1f1;
-            color: #9a9a9a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-
-        .spot-search-item-thumb.has-photo {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-
-        .spot-search-item-sub {
-            font-size: 13px;
-            color: #666;
-            line-height: 1.4;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .spot-search-item-tag {
-            margin-top: 6px;
-            display: inline-block;
-            font-size: 12px;
-            color: #555;
-            background: #f2f2f2;
-            border-radius: 999px;
-            padding: 2px 8px;
-        }
-
-        /* --- 地圖資訊卡片樣式 (InfoWindow) --- */
-        .spot-map-info-wrapper {
-            max-width: 320px;
-            padding: 2px 2px 0;
-        }
-
-        .spot-map-card {
-            font-family: inherit;
-            color: #1f2937;
-        }
-
-        .spot-map-card-head {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .spot-map-card-thumb {
-            width: 64px;
-            height: 64px;
-            border-radius: 10px;
-            background: #eef1f5;
-            color: #9aa0a6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        .spot-map-card-thumb.has-photo {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-
-        .spot-map-card-main {
-            min-width: 0;
-            flex: 1;
-        }
-
-        .spot-map-card-title-row {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .spot-map-card-title {
-            font-size: 16px;
-            font-weight: 700;
-            line-height: 1.25;
-            margin-bottom: 4px;
-            color: #0f172a;
-            min-width: 0;
-        }
-
-        .spot-map-close-btn {
-            border: none;
-            background: transparent;
-            color: #6b7280;
-            font-size: 12px;
-            line-height: 1;
-            cursor: pointer;
-            padding: 2px 0 0;
-            flex-shrink: 0;
-        }
-
-        .spot-map-close-btn:hover {
-            color: #111827;
-        }
-
-        .spot-map-card-address {
-            font-size: 12px;
-            line-height: 1.4;
-            color: #5f6368;
-        }
-
-        .spot-map-card-metrics {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 6px;
-            margin-bottom: 10px;
-        }
-
-        .spot-map-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            width: fit-content;
-            max-width: 100%;
-            font-size: 12px;
-            line-height: 1.3;
-            color: #334155;
-            background: #f5f7fb;
-            border-radius: 999px;
-            padding: 6px 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .spot-map-chip i {
-            color: #0f1a3a;
-            font-size: 11px;
-        }
-
-        .spot-map-add-btn {
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            background: #0f1a3a;
-            color: #fff;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 10px 12px;
-            cursor: pointer;
-            box-shadow: 0 6px 12px rgba(15, 26, 58, 0.25);
-            transition: transform 0.18s ease, opacity 0.18s ease;
-        }
-
-        .spot-map-add-btn:active {
-            transform: translateY(1px) scale(0.99);
-        }
-
-        /* 隱藏 Google InfoWindow 預設右上角關閉按鈕，改用卡片內同列 x */
-        .gm-style .gm-ui-hover-effect {
-            display: none !important;
-        }
-
-        .location-block {
-            display: flex;
-            padding-top: 10px;
-            border-radius: 8px;
-        }
-
-        /* 🖱️ 滑鼠移上去時 (Hover) 變淺灰色 */
-        .location-block:hover {
-            background-color: #f0f0f0; 
-        }
- 
-        /* --- 新行程建立彈窗 --- */
-        .new-trip-modal {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2100;
-            padding: 20px;
-        }
-
-        .new-trip-modal.active {
-            display: flex;
-        }
-
-        .new-trip-modal-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(6, 10, 24, 0.55);
-            backdrop-filter: blur(6px);
-        }
-
-        .new-trip-modal-panel {
-            position: relative;
-            width: 100%;
-            max-width: 420px;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 22px;
-            padding: 22px 18px 18px;
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
-            z-index: 1;
-        }
-
-        .new-trip-modal-close {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            width: 34px;
-            height: 34px;
-            border: none;
-            border-radius: 50%;
-            background: #f2f4f8;
-            color: #556;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .new-trip-modal-title {
-            font-size: 22px;
-            font-weight: 700;
-            color: #0f1a3a;
-            margin-bottom: 8px;
-            padding-right: 44px;
-        }
-
-        .new-trip-modal-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 8px;
-        }
-
-        .new-trip-modal-input {
-            width: 100%;
-            height: 48px;
-            border: 1px solid #d7dce3;
-            border-radius: 14px;
-            padding: 0 14px;
-            font-size: 16px;
-            color: #111827;
-            background: #fff;
-            outline: none;
-            margin-bottom: 16px;
-        }
-
-        .new-trip-modal-input:focus {
-            border-color: #0f1a3a;
-        }
-
-        .new-trip-modal-date {
-            appearance: none;
-            -webkit-appearance: none;
-        }
-
-        .new-trip-modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 6px;
-        }
-
-        .new-trip-modal-button {
-            flex: 1;
-            height: 46px;
-            border: none;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .new-trip-modal-button.secondary {
-            background: #eef1f5;
-            color: #334155;
-        }
-
-        .new-trip-modal-button.primary {
-            background: #0f1a3a;
-            color: #fff;
-            box-shadow: 0 8px 16px rgba(15, 26, 58, 0.22);
-        }
-
-        .new-trip-modal-button:active,
-        .new-trip-modal-close:active {
-            transform: scale(0.98);
-        }
-
-        @media (max-width: 480px) {
-            .new-trip-modal {
-                padding: 14px;
-            }
-
-            .new-trip-modal-panel {
-                max-width: 100%;
-                border-radius: 22px;
-                padding: 20px 16px 16px;
-            }
-
-            .new-trip-modal-title {
-                font-size: 20px;
-            }
-
-            .new-trip-modal-input {
-                height: 50px;
-            }
-        }
+	--safe-top: env(safe-area-inset-top);
+	--safe-bottom: env(safe-area-inset-bottom);
+	--header-height: 50px;
+	--sidebar-width: 320px;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+		sans-serif;
+	-webkit-tap-highlight-color: transparent;
+}
+
+a {
+	text-decoration: none;
+	color: inherit;
+}
+
+html {
+	background-color: #f0f0f0;
+	overflow: hidden;
+	height: 100%;
+	position: fixed;
+	width: 100%;
+}
+
+body {
+	background-color: #f0f0f0;
+	height: 100vh;
+	height: 100dvh; /* 動態視窗高度，鍵盤彈出時不會改變 */
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	overscroll-behavior-y: none;
+	-webkit-user-select: none;
+	user-select: none;
+	position: fixed;
+	width: 100%;
+	top: 0;
+	left: 0;
+}
+
+/* Header */
+header {
+	background-color: #0f1a3a;
+	color: white;
+	height: calc(var(--header-height) + var(--safe-top));
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--safe-top) 15px 0 15px;
+	z-index: 2000;
+	position: sticky;
+	top: 0;
+	flex-shrink: 0;
+	width: 100%;
+}
+
+.header-title {
+	font-size: 18px;
+	font-weight: 500;
+}
+
+.menu-btn,
+.action-btn {
+	cursor: pointer;
+	font-size: 20px;
+	padding: 10px;
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+}
+.menu-btn:active,
+.action-btn:active {
+	opacity: 0.6;
+	transform: scale(0.96);
+}
+
+/* Sidebar */
+.sidebar-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 2001;
+	opacity: 0;
+	visibility: hidden;
+	transition: 0.3s;
+}
+.sidebar-overlay.active {
+	opacity: 1;
+	visibility: visible;
+}
+
+.sidebar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 60%;
+	max-width: var(--sidebar-width);
+	height: 100%;
+	background: white;
+	z-index: 2002;
+	transform: translateX(-100%);
+	transition: transform 0.3s ease-in-out;
+	display: flex;
+	flex-direction: column;
+	padding-top: var(--safe-top);
+	box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+.sidebar.active {
+	transform: translateX(0);
+}
+
+.sidebar-header {
+	padding: 20px;
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+.sidebar-content {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0 20px;
+}
+
+.new-trip-btn {
+	display: flex;
+	align-items: center;
+	margin-bottom: 20px;
+	cursor: pointer;
+	color: #333;
+}
+.new-trip-btn i {
+	margin-right: 10px;
+}
+
+.sidebar-divider {
+	border: 0;
+	border-top: 1px solid #eee;
+	margin-bottom: 15px;
+}
+
+.trip-item {
+	display: flex;
+	justify-content: flex-start;
+	align-items: center;
+	padding: 15px 0;
+	cursor: pointer;
+}
+.trip-info {
+	display: flex;
+	align-items: center;
+	flex: 1;
+}
+.trip-text {
+	display: flex;
+	flex-direction: column;
+	margin-left: 10px;
+}
+.trip-text h4 {
+	font-size: 16px;
+	margin-bottom: 4px;
+	font-weight: normal;
+}
+.trip-text span {
+	font-size: 12px;
+	color: #888;
+}
+
+.bookmark-icon {
+	padding: 5px;
+	color: #333;
+	transition: transform 0.2s;
+}
+.bookmark-icon:active {
+	transform: scale(1.2);
+}
+
+/* Map */
+.map-container {
+	flex: 1;
+	position: relative;
+	width: 100%;
+	background-color: #e5e3df;
+	background-image: url("https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/OpenStreetMap_Logo_2011.svg/1024px-OpenStreetMap_Logo_2011.svg.png");
+	background-size: cover;
+	background-position: center;
+	overflow: hidden;
+	z-index: 0;
+
+	/* --- FAB (懸浮按鈕群組) --- */
+	.fab-group {
+		position: absolute;
+		right: 15px;
+		bottom: 220px; /* default closed */
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		transition:
+			bottom 0.3s ease-in-out,
+			transform 0.3s ease-in-out;
+		z-index: 1500;
+
+		/* FAB 裡面的個別按鈕 */
+		.fab {
+			width: 45px;
+			height: 45px;
+			background: white;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+			font-size: 20px;
+			color: #333;
+			cursor: pointer;
+		}
+
+		&.horizontal {
+			flex-direction: row;
+		}
+
+		&.vertical {
+			flex-direction: column;
+		}
+	}
+
+	/* 用一組 class 統一管理 */
+	.sheet-expanded .bottom-sheet {
+		height: 75%;
+	}
+	.sheet-half .bottom-sheet {
+		height: 50%;
+	}
+	.sheet-collapsed .bottom-sheet {
+		height: 200px;
+	}
+
+	.sheet-expanded .fab-group {
+		bottom: calc(75% + 20px);
+	}
+	.sheet-half .fab-group {
+		bottom: calc(50% + 20px);
+	}
+	.sheet-collapsed .fab-group {
+		bottom: 220px;
+	}
+
+	/* --- Bottom Sheet (底部面板) --- */
+	.bottom-sheet {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		background: white;
+		border-top-left-radius: 20px;
+		border-top-right-radius: 20px;
+		box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+		transition: height 0.3s ease-in-out;
+		height: 200px;
+		display: flex;
+		flex-direction: column;
+		z-index: 500;
+	}
+
+	.bottom-sheet.expanded,
+	.map-container.sheet-expanded .bottom-sheet {
+		height: 75%;
+	}
+	.bottom-sheet.half,
+	.map-container.sheet-half .bottom-sheet {
+		height: 50%;
+	}
+	.map-container.sheet-collapsed .bottom-sheet {
+		height: 200px;
+	}
+
+	.sheet-handle-bar {
+		width: 100%;
+		padding: 15px 0 5px 0;
+		display: flex;
+		justify-content: center;
+		cursor: pointer;
+		touch-action: none;
+	}
+
+	.sheet-handle {
+		width: 40px;
+		height: 5px;
+		background: #ddd;
+		border-radius: 5px;
+	}
+
+	.sheet-content {
+		flex: 1;
+		overflow-y: hidden;
+		padding: 0;
+		position: relative;
+	}
+}
+
+.map-container .fab-group {
+	position: absolute;
+	right: 15px;
+	bottom: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	transition:
+		bottom 0.3s ease-in-out,
+		transform 0.3s ease-in-out;
+	z-index: 1500;
+}
+
+.map-container .fab-group .fab {
+	width: 45px;
+	height: 45px;
+	background: white;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	font-size: 20px;
+	color: #333;
+	cursor: pointer;
+}
+
+.map-container.sheet-expanded .fab-group {
+	bottom: calc(75% + 18px);
+	flex-direction: row;
+}
+
+.map-container.sheet-half .fab-group {
+	bottom: calc(50% + 18px);
+	flex-direction: column;
+}
+
+.map-container.sheet-collapsed .fab-group {
+	bottom: 220px; /* 收起時上移，避免太貼底 */
+	flex-direction: column;
+}
+
+.map-pin {
+	position: absolute;
+	color: #ff4d4f;
+	font-size: 30px;
+	text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+.pin-1 {
+	top: 40%;
+	left: 30%;
+}
+.pin-2 {
+	top: 50%;
+	left: 60%;
+}
+
+/* 視圖切換 */
+.view-section {
+	display: none;
+	width: 100%;
+	height: 100%;
+	flex-direction: column;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding: 10px 20px;
+	padding-bottom: calc(20px + var(--safe-bottom));
+}
+.view-section.active {
+	display: flex;
+}
+
+/* 聊天室樣式 */
+#chatView {
+	padding: 0;
+	background: #f9f9f9;
+}
+.chat-messages {
+	flex: 1;
+	padding: 20px;
+	padding-bottom: calc(80px + var(--safe-bottom)); /* 增加底部空間 */
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+.chat-msg {
+	max-width: 80%;
+	padding: 10px 15px;
+	border-radius: 15px;
+	font-size: 15px;
+	line-height: 1.4;
+}
+.chat-msg.bot {
+	background: white;
+	align-self: flex-start;
+	border-bottom-left-radius: 4px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.chat-msg.user {
+	background: #333;
+	color: white;
+	align-self: flex-end;
+	border-bottom-right-radius: 4px;
+}
+
+.chat-input-bar {
+	position: fixed; /* 改為 fixed，讓它固定在視窗底部 */
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	padding: 10px 15px;
+	background: white;
+	border-top: 1px solid #eee;
+	display: flex;
+	gap: 10px;
+	padding-bottom: calc(10px + var(--safe-bottom));
+	z-index: 600; /* 確保在 bottom-sheet 之上 */
+}
+.chat-input-field {
+	flex: 1;
+	background: #f0f0f0;
+	border: none;
+	border-radius: 20px;
+	padding: 0 15px;
+	height: 40px;
+	font-size: 15px;
+	outline: none;
+}
+.chat-send-btn {
+	width: 40px;
+	height: 40px;
+	background: #333;
+	color: white;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.typing {
+	display: flex;
+	gap: 4px;
+	padding: 12px 15px;
+	background: white;
+	border-radius: 15px;
+	border-bottom-left-radius: 4px;
+	align-self: flex-start;
+}
+.dot {
+	width: 6px;
+	height: 6px;
+	background: #aaa;
+	border-radius: 50%;
+	animation: bounce 1.4s infinite;
+}
+.dot:nth-child(2) {
+	animation-delay: 0.2s;
+}
+.dot:nth-child(3) {
+	animation-delay: 0.4s;
+}
+@keyframes bounce {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-4px);
+	}
+}
+
+/* Timeline UI (完全保持原樣) */
+.timeline-item {
+	display: flex;
+	flex-direction: column; /* 改為垂直排列 */
+	margin-bottom: 20px;
+	position: relative;
+	transition: background 0.2s;
+	background: #fff;
+	border-radius: 8px;
+}
+
+.timeline-left {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-right: 15px;
+	width: 60px;
+}
+.location-img {
+	width: 60px;
+	height: 60px;
+	background-color: #ddd;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 24px;
+	pointer-events: none;
+}
+/* .timeline-connector { flex: 1; width: 1px; border-left: 2px dotted #ccc; margin: 5px 0; min-height: 30px; } */
+.timeline-transit {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 10px 0;
+	color: #999;
+	font-size: 12px;
+}
+.timeline-transit i {
+	margin-right: 5px;
+}
+.timeline-right {
+	flex: 1;
+	padding-top: 5px;
+}
+.timeline-title {
+	font-weight: bold;
+	font-size: 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+.timeline-desc {
+	font-size: 12px;
+	color: #999;
+	margin-top: 5px;
+	line-height: 1.4;
+}
+.time-badge {
+	font-size: 12px;
+	background: #f0f0f0;
+	padding: 2px 6px;
+	border-radius: 10px;
+	color: #666;
+	font-weight: normal;
+
+	align-self: flex-start; /* 讓它靠上方對齊，不要跟著標題拉伸高度 */
+	flex-shrink: 0; /* 防止左邊標題太長時，把時間標籤擠到變形 */
+	white-space: nowrap; /* 確保時間文字永遠保持同一行 */
+	margin-left: 10px; /* 確保跟左邊文字保持一點安全距離 */
+	margin-top: 2px;
+}
+.day-header {
+	font-size: 14px;
+	font-weight: bold;
+	margin: 15px 0;
+	color: #333;
+	position: sticky;
+	top: 0;
+	background: white;
+	z-index: 10;
+	padding: 5px 0;
+}
+
+/* 獨立出來的交通區塊 */
+.transit-block {
+	display: flex;
+	align-items: stretch;
+	min-height: 45px;
+}
+
+.transit-line {
+	width: 60px; /* 和圖片一樣寬，用來對齊 */
+	margin-right: 15px;
+	display: flex;
+	justify-content: center;
+}
+
+.transit-line::after {
+	content: "";
+	width: 2px;
+	border-left: 2px dotted #ccc;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.transit-data {
+	flex: 1;
+	font-size: 13px;
+	color: #888;
+	display: flex;
+	align-items: center;
+}
+
+.sortable-ghost {
+	opacity: 0.4;
+	background: #f0f0f0;
+}
+.sortable-drag {
+	opacity: 1;
+	transform: scale(1.02);
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+.sortable-chosen {
+	background-color: #e0e0e0 !important;
+	transform: scale(1.02);
+}
+
+/* 編輯模式 */
+/* 編輯模式時，右側留白給垃圾桶 */
+.view-section.editing .timeline-right {
+	padding-right: 45px;
+}
+
+/* 調整垃圾桶位置 */
+.delete-btn {
+	display: none;
+	position: absolute;
+	right: 10px; /* 從 -10px 改為 10px 往內移 */
+	top: 15px; /* 稍微往下移，對齊時間 */
+	background: #ff4d4f;
+	color: white;
+	width: 25px;
+	height: 25px;
+	border-radius: 50%;
+	text-align: center;
+	line-height: 25px;
+	cursor: pointer;
+	font-size: 14px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	z-index: 10;
+}
+.add-item-btn {
+	display: none;
+	width: 100%;
+	padding: 12px;
+	margin-top: 10px;
+	background-color: #f0f0f0;
+	color: #333;
+	border: 2px dashed #ccc;
+	border-radius: 10px;
+	text-align: center;
+	cursor: pointer;
+	font-weight: bold;
+}
+.view-section.editing .delete-btn {
+	display: block;
+	animation: fadeIn 0.3s;
+}
+.view-section.editing .add-item-btn {
+	display: block;
+	animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* --- 日期選擇按鈕容器 --- */
+#dayButtonContainer {
+	display: flex;
+	gap: 10px;
+	padding: 10px 20px 15px 20px;
+	min-height: 60px;
+
+	justify-content: flex-start;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+
+	background: white;
+	position: sticky;
+	top: -10px;
+	z-index: 10;
+	margin-top: -10px;
+	margin-left: -20px;
+	margin-right: -20px;
+	box-sizing: border-box;
+	box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+#dayButtonContainer::-webkit-scrollbar {
+	display: none;
+}
+
+#dayButtonContainer button {
+	padding: 1px 18px;
+	border: 2px solid #999;
+	background: white;
+	color: #333;
+	border-radius: 20px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: all 0.3s ease;
+	font-weight: 500;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+#dayButtonContainer button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#dayButtonContainer button:active {
+	transform: translateY(0);
+	opacity: 0.8;
+}
+
+/* 被選中的按鈕樣式 - 針對不同天數的顏色 */
+#dayButtonContainer button:nth-child(1).active {
+	background: #2962ff;
+	color: white;
+	border-color: #2962ff;
+}
+
+#dayButtonContainer button:nth-child(2).active {
+	background: #34a853;
+	color: white;
+	border-color: #34a853;
+}
+
+#dayButtonContainer button:nth-child(3).active {
+	background: #ea4335;
+	color: white;
+	border-color: #ea4335;
+}
+
+#dayButtonContainer button:nth-child(4).active {
+	background: #fbbc04;
+	color: white;
+	border-color: #fbbc04;
+}
+
+#dayButtonContainer button:nth-child(5).active {
+	background: #9c27b0;
+	color: white;
+	border-color: #9c27b0;
+}
+
+/* 日期標題樣式 */
+[data-day-title] {
+	padding: 15px;
+	background-color: #0f1a3a;
+	color: white;
+	font-size: 16px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 10px;
+	border-radius: 5px;
+	margin-left: -20px;
+	margin-right: -20px;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+[data-day-title]:first-of-type {
+	margin-top: 0;
+}
+
+/* 活動費用樣式 */
+.activity-cost {
+	font-size: 12px;
+	color: #666;
+	margin-top: 5px;
+}
+
+/* --- 自定義地圖標記樣式 (水滴型) --- */
+.custom-marker {
+	width: 28px;
+	height: 28px;
+	border: 2px solid white;
+
+	/* 關鍵 1：設定右上、右下、左上為圓角，左下角為 0 (尖端) */
+	border-radius: 50% 50% 50% 0;
+
+	/* 關鍵 2：將左下角的尖端旋轉 45 度，讓它朝向正下方 */
+	transform: rotate(-45deg);
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+
+	/* 配合旋轉角度調整陰影 (-x, +y)，讓陰影維持在圖釘正下方 */
+	box-shadow: -2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* 將水滴內的文字反向旋轉轉正 */
+.custom-marker span {
+	transform: rotate(45deg); /* 反向旋轉 45 度把文字轉正 */
+	color: white;
+	font-weight: bold;
+	font-size: 14px;
+	line-height: 1;
+
+	/* 讓文字在圓圈內絕對置中 */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* 視覺微調：因為水滴下方多了一塊尖端，稍微把文字往左上提一點點會在視覺上更置中 */
+	margin-top: 1px;
+	margin-left: -1px;
+}
+
+.drag-confirm-btn {
+	display: none; /* 預設隱藏 */
+	position: fixed;
+	bottom: calc(30px + var(--safe-bottom));
+	left: 50%;
+	transform: translateX(-50%);
+	background: #2962ff;
+	color: white;
+	padding: 12px 25px;
+	border-radius: 30px;
+	font-weight: bold;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+	z-index: 2000;
+	cursor: pointer;
+}
+.drag-confirm-btn.show {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	animation: popUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+@keyframes popUp {
+	from {
+		opacity: 0;
+		transform: translate(-50%, 20px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+/* --- 地圖彈出視窗 (InfoWindow) 客製化 UI 完美復刻版 --- */
+.custom-info-window {
+	display: flex;
+	gap: 12px;
+	width: 260px;
+	padding: 4px 0 0 0;
+	font-family: inherit;
+}
+
+.info-img-wrapper {
+	width: 60px;
+	flex-shrink: 0;
+}
+.info-img {
+	width: 60px;
+	height: 60px;
+	border-radius: 8px;
+	object-fit: cover;
+	background-color: #ddd;
+	display: block;
+}
+
+.info-content {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	justify-content: flex-start;
+}
+
+.info-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+.info-title {
+	font-size: 15px;
+	font-weight: bold;
+	color: #000;
+	line-height: 1.2;
+	margin: 0;
+}
+.info-time {
+	font-size: 11px;
+	background: #f0f0f0;
+	padding: 2px 8px;
+	border-radius: 12px;
+	color: #666;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.info-desc {
+	font-size: 12px;
+	color: #999;
+	margin-bottom: 6px;
+	line-height: 1.4;
+	display: -webkit-box;
+	/* -webkit-line-clamp: 2; */
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.info-address {
+	font-size: 12px;
+	color: #999; /* 地址文字淺灰 */
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.info-address i {
+	font-size: 12px;
+	color: #999;
+}
+
+.info-meta-item {
+	font-size: 12px;
+	color: #999 !important; /* 底部時間/地址文字淺灰 */
+}
+
+.info-cost {
+	font-size: 12px;
+	color: #999 !important; /* 預算文字淺灰 */
+}
+
+/* --- 1. 自定義地圖彈出框容器 (扁長、無留白、小關閉按鈕) --- */
+.custom-map-popup {
+	position: absolute;
+	background: white;
+	border-radius: 12px;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+	transform: translate(-50%, -100%); /* 置中在點上方 */
+	z-index: 1000;
+	width: 420px; /* 加長寬度 */
+	max-height: 85px; /* 減少高度 */
+	display: none; /* 預設隱藏 */
+	overflow: hidden; /* 確保內容不溢出 */
+	border: 1px solid #ddd;
+
+	/* 🔺 為內容留白，這裡的 padding 很關鍵，用戶要求扁，所以 padding-top 設得很小 */
+	padding: 0 0 0 0;
+}
+
+/* 狀態：顯示時 */
+.custom-map-popup.show {
+	display: block;
+	animation: popupIn 0.3s ease;
+}
+
+/* --- 2. 卡片內容排版 (幾乎保持原樣，與行程表卡片一致) --- */
+.popup-card-content {
+	display: flex;
+	gap: 12px;
+	width: 100%;
+}
+
+/* 移除上方留白的最關鍵 CSS：調整彈出框內部的 padding/margin */
+.popup-card-content .info-content {
+	justify-content: flex-start; /* 確保內容靠上 */
+}
+
+.popup-card-content .info-header {
+	margin-bottom: 2px; /* 減小原本 margin-bottom: 6px */
+}
+
+.popup-card-content .info-desc {
+	margin-bottom: 4px; /* 減小原本 margin-bottom: 8px */
+}
+
+/* ❌ 3. 用戶要求自定義關閉按鈕樣式：右上角、小一點 */
+.popup-close-btn {
+	position: absolute;
+	top: 5px; /* 靠上 */
+	right: 5px; /* 靠右 */
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 14px; /* ✨ 用戶要求變小 */
+	color: #777;
+	padding: 0;
+	line-height: 1;
+	z-index: 10;
+}
+.popup-close-btn:hover {
+	color: #333;
+}
+
+/* 🔺 4. 自定義小尾巴 (三角形) */
+.popup-tip {
+	position: absolute;
+	bottom: -10px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 0;
+	height: 0;
+	border-left: 10px solid transparent;
+	border-right: 10px solid transparent;
+	border-top: 10px solid white;
+}
+
+@keyframes popupIn {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -90%) scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, -100%) scale(1);
+	}
+}
+
+.spot-search-overlay {
+	position: fixed;
+	inset: 0;
+	background: transparent;
+	display: none;
+	align-items: flex-start;
+	justify-content: center;
+	z-index: 1900;
+	padding: calc(var(--header-height) + var(--safe-top) + 10px) 12px 12px;
+	pointer-events: none;
+}
+
+.spot-search-overlay.active {
+	display: flex;
+}
+
+.spot-search-panel {
+	width: 100%;
+	max-width: 760px;
+	max-height: min(72vh, 560px);
+	background: transparent;
+	border-radius: 16px;
+	display: flex;
+	flex-direction: column;
+	overflow: visible;
+	pointer-events: auto;
+}
+
+.spot-search-close {
+	border: none;
+	background: #fff;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	color: #666;
+	cursor: pointer;
+	font-size: 14px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+	flex-shrink: 0;
+}
+
+.spot-search-close:active {
+	transform: scale(0.97);
+}
+
+.spot-search-input-row {
+	display: flex;
+	gap: 6px;
+	padding: 2px;
+	flex-shrink: 0;
+}
+
+.spot-search-input {
+	flex: 1;
+	height: 40px;
+	border: none;
+	border-radius: 999px;
+	padding: 0 16px;
+	font-size: 15px;
+	outline: none;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.spot-search-input:focus {
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.spot-search-results {
+	overflow-y: auto;
+	padding: 0;
+	margin-top: 6px;
+	border-radius: 12px;
+	background: #fff;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+	min-height: 0;
+	max-height: min(52vh, 440px);
+}
+
+.spot-search-message {
+	padding: 16px;
+	font-size: 14px;
+	color: #5f6368;
+	text-align: center;
+}
+
+.spot-search-item {
+	width: 100%;
+	border: none;
+	border-bottom: 1px solid #f4f4f4;
+	background: #fff;
+	text-align: left;
+	padding: 12px 16px;
+	cursor: pointer;
+	transition: background 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.spot-search-item:last-child {
+	border-bottom: none;
+}
+
+.spot-search-item.active {
+	background: #f6f8ff;
+}
+
+.spot-search-item-main {
+	font-size: 15px;
+	font-weight: 600;
+	color: #222;
+	margin-bottom: 4px;
+}
+
+.spot-search-item-body {
+	min-width: 0;
+	flex: 1;
+}
+
+.spot-search-item-thumb {
+	width: 52px;
+	height: 52px;
+	border-radius: 10px;
+	background: #f1f1f1;
+	color: #9a9a9a;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	flex-shrink: 0;
+}
+
+.spot-search-item-thumb.has-photo {
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.spot-search-item-sub {
+	font-size: 13px;
+	color: #666;
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.spot-search-item-tag {
+	margin-top: 6px;
+	display: inline-block;
+	font-size: 12px;
+	color: #555;
+	background: #f2f2f2;
+	border-radius: 999px;
+	padding: 2px 8px;
+}
+
+/* --- 地圖資訊卡片樣式 (InfoWindow) --- */
+.spot-map-info-wrapper {
+	max-width: 320px;
+	padding: 2px 2px 0;
+}
+
+.spot-map-card {
+	font-family: inherit;
+	color: #1f2937;
+}
+
+.spot-map-card-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.spot-map-card-thumb {
+	width: 64px;
+	height: 64px;
+	border-radius: 10px;
+	background: #eef1f5;
+	color: #9aa0a6;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	flex-shrink: 0;
+}
+
+.spot-map-card-thumb.has-photo {
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.spot-map-card-main {
+	min-width: 0;
+	flex: 1;
+}
+
+.spot-map-card-title-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.spot-map-card-title {
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.25;
+	margin-bottom: 4px;
+	color: #0f172a;
+	min-width: 0;
+}
+
+.spot-map-close-btn {
+	border: none;
+	background: transparent;
+	color: #6b7280;
+	font-size: 12px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 2px 0 0;
+	flex-shrink: 0;
+}
+
+.spot-map-close-btn:hover {
+	color: #111827;
+}
+
+.spot-map-card-address {
+	font-size: 12px;
+	line-height: 1.4;
+	color: #5f6368;
+}
+
+.spot-map-card-metrics {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+
+.spot-map-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	width: fit-content;
+	max-width: 100%;
+	font-size: 12px;
+	line-height: 1.3;
+	color: #334155;
+	background: #f5f7fb;
+	border-radius: 999px;
+	padding: 6px 10px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.spot-map-chip i {
+	color: #0f1a3a;
+	font-size: 11px;
+}
+
+.spot-map-add-btn {
+	width: 100%;
+	border: none;
+	border-radius: 12px;
+	background: #0f1a3a;
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	padding: 10px 12px;
+	cursor: pointer;
+	box-shadow: 0 6px 12px rgba(15, 26, 58, 0.25);
+	transition:
+		transform 0.18s ease,
+		opacity 0.18s ease;
+}
+
+.spot-map-add-btn:active {
+	transform: translateY(1px) scale(0.99);
+}
+
+/* 隱藏 Google InfoWindow 預設右上角關閉按鈕，改用卡片內同列 x */
+.gm-style .gm-ui-hover-effect {
+	display: none !important;
+}
+
+.location-block {
+	display: flex;
+	padding-top: 10px;
+	border-radius: 8px;
+}
+
+/* 🖱️ 滑鼠移上去時 (Hover) 變淺灰色 */
+.location-block:hover {
+	background-color: #f0f0f0;
+}
+
+/* --- 新行程建立彈窗 --- */
+.new-trip-modal {
+	position: fixed;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 2100;
+	padding: 20px;
+}
+
+.new-trip-modal.active {
+	display: flex;
+}
+
+.new-trip-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(6, 10, 24, 0.55);
+	backdrop-filter: blur(6px);
+}
+
+.new-trip-modal-panel {
+	position: relative;
+	width: 100%;
+	max-width: 420px;
+	background: rgba(255, 255, 255, 0.98);
+	border-radius: 22px;
+	padding: 22px 18px 18px;
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+	z-index: 1;
+}
+
+.new-trip-modal-close {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	width: 34px;
+	height: 34px;
+	border: none;
+	border-radius: 50%;
+	background: #f2f4f8;
+	color: #556;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.new-trip-modal-title {
+	font-size: 22px;
+	font-weight: 700;
+	color: #0f1a3a;
+	margin-bottom: 8px;
+	padding-right: 44px;
+}
+
+.new-trip-modal-label {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 8px;
+}
+
+.new-trip-modal-input {
+	width: 100%;
+	height: 48px;
+	border: 1px solid #d7dce3;
+	border-radius: 14px;
+	padding: 0 14px;
+	font-size: 16px;
+	color: #111827;
+	background: #fff;
+	outline: none;
+	margin-bottom: 16px;
+}
+
+.new-trip-modal-input:focus {
+	border-color: #0f1a3a;
+}
+
+.new-trip-modal-date {
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+.new-trip-modal-actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 6px;
+}
+
+.new-trip-modal-button {
+	flex: 1;
+	height: 46px;
+	border: none;
+	border-radius: 14px;
+	font-size: 15px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.new-trip-modal-button.secondary {
+	background: #eef1f5;
+	color: #334155;
+}
+
+.new-trip-modal-button.primary {
+	background: #0f1a3a;
+	color: #fff;
+	box-shadow: 0 8px 16px rgba(15, 26, 58, 0.22);
+}
+
+.new-trip-modal-button:active,
+.new-trip-modal-close:active {
+	transform: scale(0.98);
+}
+
+@media (max-width: 480px) {
+	.new-trip-modal {
+		padding: 14px;
+	}
+
+	.new-trip-modal-panel {
+		max-width: 100%;
+		border-radius: 22px;
+		padding: 20px 16px 16px;
+	}
+
+	.new-trip-modal-title {
+		font-size: 20px;
+	}
+
+	.new-trip-modal-input {
+		height: 50px;
+	}
+}
+
+#map {
+	height: 100%;
+	width: 100%;
+}
