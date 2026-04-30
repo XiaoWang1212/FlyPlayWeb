@@ -373,8 +373,14 @@
 
             infoWindow.open({ map, anchor: marker });
 
+            // 使用該天 weekday 顯示對應營業時間，避免固定顯示星期一
+            const dayWeekday =
+              dayIndex >= 0 && dayIndex < allDays.length
+                ? allDays[dayIndex]?.weekday || ""
+                : "";
+
             const { openingHoursText, priceRangeText } =
-              await getBusinessInfo(activitySpot);
+              await getBusinessInfo(activitySpot, dayWeekday);
             if (activitySpot._businessInfo) {
               activity._businessInfo = activitySpot._businessInfo;
             }
@@ -1103,13 +1109,35 @@
         clearSpotPreview();
       }
 
-      async function getBusinessInfo(spot) {
+      async function getBusinessInfo(spot, weekday = "") {
         if (!spot) {
           return {
             openingHoursText: "未提供",
             priceRangeText: "未提供",
           };
         }
+
+        // 營業時間選擇 用 weekday 比對
+        const selectOpeningHoursText = (openingHours) => {
+          if (!Array.isArray(openingHours) || !openingHours.length) {
+            return "未提供";
+          }
+
+          const weekdayText = String(weekday || "").trim();
+          if (!weekdayText) {
+            return openingHours[0];
+          }
+
+          const matchedLine = openingHours.find(
+            (line) =>
+              typeof line === "string" && line.startsWith(`${weekdayText}:`),
+          );
+          if (matchedLine) {
+            return matchedLine;
+          }
+
+          return openingHours[0];
+        };
 
         const token = localStorage.getItem("userToken");
         const defaultHeaders = token
@@ -1123,10 +1151,7 @@
         if (spot._businessInfo) {
           const openingHours = spot._businessInfo.opening_hours;
           const priceRange = spot._businessInfo.price_range;
-          const openingHoursText =
-            Array.isArray(openingHours) && openingHours.length > 0
-              ? openingHours[0]
-              : "未提供";
+          const openingHoursText = selectOpeningHoursText(openingHours);
           const priceRangeText =
             priceRange && typeof priceRange === "object"
               ? `${priceRange?.startPrice?.currencyCode || ""} ${
@@ -1176,10 +1201,7 @@
           const openingHours = spot._businessInfo.opening_hours;
           const priceRange = spot._businessInfo.price_range;
 
-          const openingHoursText =
-            Array.isArray(openingHours) && openingHours.length > 0
-              ? openingHours[0]
-              : "未提供";
+          const openingHoursText = selectOpeningHoursText(openingHours);
           const priceRangeText =
             priceRange && typeof priceRange === "object"
               ? `${priceRange?.startPrice?.currencyCode || ""} ${
@@ -2152,8 +2174,14 @@
 
         openSpotInfoOnMap(selectedSpot, "載入中...", "載入中...");
 
+        // 搜尋加入行程時，沿用目前所選天數的 weekday。
+        const selectedWeekday =
+          currentDayIndex >= 0 && currentDayIndex < allDays.length
+            ? allDays[currentDayIndex]?.weekday || ""
+            : "";
+
         const { openingHoursText, priceRangeText } =
-          await getBusinessInfo(selectedSpot);
+          await getBusinessInfo(selectedSpot, selectedWeekday);
         if (selectedSpotForAdd === selectedSpot) {
           openSpotInfoOnMap(selectedSpot, openingHoursText, priceRangeText);
         }
