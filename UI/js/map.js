@@ -44,7 +44,7 @@ async function addCustomMarkers(activities, dayIndex) {
 			}
 
 			const infoWindow = new google.maps.InfoWindow({
-				content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, "載入中...", "載入中...", { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
+				content: `<div class="custom-map-popup-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, "載入中...", "載入中...", { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
 				maxWidth: 360,
 			});
 			currentInfoWindow = infoWindow;
@@ -68,7 +68,7 @@ async function addCustomMarkers(activities, dayIndex) {
 			}
 
 			infoWindow.setContent(
-				`<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, openingHoursText, priceRangeText, { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
+				`<div class="custom-map-popup-info-wrapper">${buildSpotPreviewInfoHtml(activitySpot, openingHoursText, priceRangeText, { showAddButton: false, closeHandler: "closeCurrentPopup()" })}</div>`,
 			);
 		});
 	});
@@ -81,14 +81,9 @@ function clearCurrentPopup() {
 	}
 }
 
-// closeCurrentPopup / closeCustomMapPopup 為 clearCurrentPopup 的別名
+// closeCurrentPopup 為 clearCurrentPopup 的別名
 // — closeCurrentPopup：供 buildSpotPreviewInfoHtml 的 onclick 字串呼叫
-// — closeCustomMapPopup：供 #customMapPopup 的 onclick HTML 屬性呼叫
 function closeCurrentPopup() {
-	clearCurrentPopup();
-}
-
-function closeCustomMapPopup() {
 	clearCurrentPopup();
 }
 
@@ -100,6 +95,87 @@ function clearMapRoutes() {
 	currentMarkers = [];
 
 	clearCurrentPopup();
+}
+
+function buildSpotFromPlaceResult(place, fallbackLocation) {
+	const placeLocation = place && place.geometry ? place.geometry.location : null;
+	const location = placeLocation || fallbackLocation;
+	const lat = location && typeof location.lat === "function" ? location.lat() : location?.lat;
+	const lng = location && typeof location.lng === "function" ? location.lng() : location?.lng;
+	const hasPhoto = Array.isArray(place?.photos) && place.photos.length > 0;
+	const photoUrl = hasPhoto
+		? place.photos[0].getUrl({ maxWidth: 320, maxHeight: 320 })
+		: "";
+
+	return {
+		place_id: place?.place_id || "",
+		name: place?.name || "未命名地點",
+		address: place?.formatted_address || place?.vicinity || "無地址資訊",
+		location: {
+			lat: typeof lat === "number" ? lat : 0,
+			lng: typeof lng === "number" ? lng : 0,
+		},
+		photos: photoUrl ? [{ photo_url: photoUrl }] : [],
+		rating: place?.rating,
+		user_rating_count: place?.user_ratings_total,
+		types: place?.types || [],
+	};
+}
+
+function getPlaceDetails(placeId) {
+	if (!placeId || !map || !google?.maps?.places) return Promise.resolve(null);
+
+	return new Promise((resolve) => {
+		const service = new google.maps.places.PlacesService(map);
+		service.getDetails(
+			{
+				placeId: placeId,
+				fields: [
+					"place_id",
+					"name",
+					"formatted_address",
+					"geometry",
+					"photos",
+					"rating",
+					"user_ratings_total",
+					"types",
+				],
+			},
+			(result, status) => {
+				if (
+					status === google.maps.places.PlacesServiceStatus.OK &&
+					result
+				) {
+					resolve(result);
+					return;
+				}
+				resolve(null);
+			},
+		);
+	});
+}
+
+async function handleMapPlaceClick(event) {
+	if (!event?.placeId) return;
+
+	const place = await getPlaceDetails(event.placeId);
+	const spot = buildSpotFromPlaceResult(place || {}, event.latLng);
+
+	selectedSpotForAdd = spot;
+	openSpotInfoOnMap(spot, "載入中...", "載入中...");
+
+	const selectedWeekday =
+		currentDayIndex >= 0 && currentDayIndex < allDays.length
+			? allDays[currentDayIndex]?.weekday || ""
+			: "";
+	const { openingHoursText, priceRangeText } = await getBusinessInfo(
+		spot,
+		selectedWeekday,
+	);
+
+	if (selectedSpotForAdd === spot) {
+		openSpotInfoOnMap(spot, openingHoursText, priceRangeText);
+	}
 }
 
 // 顯示所有天的行程
@@ -332,9 +408,15 @@ async function initMap() {
 			mapId: "DEMO_MAP_ID",
 			fullscreenControl: false,
 			mapTypeControl: false,
+			clickableIcons: true, 
 		});
 
-		map.addListener("click", () => {
+		map.addListener("click", (event) => {
+			if (event && event.placeId) {
+				event.stop();
+				handleMapPlaceClick(event);
+				return;
+			}
 			if (justClickedMarker) {
 				justClickedMarker = false;
 				return;
@@ -360,7 +442,7 @@ fetch(`${API_BASE}/api/google-key`)
 	.then((res) => res.json())
 	.then((data) => {
 		const script = document.createElement("script");
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes&loading=async`;
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places&loading=async`;
 		script.async = true;
 		document.head.appendChild(script);
 	});

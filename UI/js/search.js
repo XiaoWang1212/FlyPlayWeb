@@ -46,18 +46,13 @@ function getSpotPrimaryPhotoUrl(spot) {
     : "";
 }
 
-// 清除搜尋預覽 marker。
-function clearSpotPreview() {
+// 關閉景點預覽資訊（資訊窗 + 預覽 marker），供關閉按鈕與外部呼叫。
+function closeSpotPreviewInfo() {
+  clearCurrentPopup();
   if (spotPreviewMarker) {
     spotPreviewMarker.setMap(null);
     spotPreviewMarker = null;
   }
-}
-
-// 關閉景點預覽資訊（資訊窗 + 預覽 marker）。
-function closeSpotPreviewInfo() {
-  clearCurrentPopup();
-  clearSpotPreview();
 }
 
 // ===== 商家資訊 =====
@@ -171,9 +166,9 @@ async function getBusinessInfo(spot, weekday = "") {
 }
 
 // ===== 地圖資訊卡與預覽 =====
-// 建立資訊卡縮圖區塊 HTML。
-function buildSpotMapCardThumbHtml(photoUrl) {
-  return `<div class="spot-map-card-thumb ${photoUrl ? "has-photo" : ""}" ${
+// 建立縮圖 HTML。
+function buildSpotThumbHtml(photoUrl, baseClassName) {
+  return `<div class="${baseClassName} ${photoUrl ? "has-photo" : ""}" ${
     photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
   }>
           ${photoUrl ? "" : '<i class="far fa-image"></i>'}
@@ -182,19 +177,19 @@ function buildSpotMapCardThumbHtml(photoUrl) {
 
 // 建立資訊卡標題區塊 HTML。
 function buildSpotMapCardMainHtml(name, address, closeHandler) {
-  return `<div class="spot-map-card-main">
-          <div class="spot-map-card-title-row">
-            <div class="spot-map-card-title">${name}</div>
+  return `<div class="custom-map-popup-main">
+          <div class="custom-map-popup-title-row">
+            <div class="custom-map-popup-title">${name}</div>
             <button
               type="button"
-              class="spot-map-close-btn"
+              class="custom-map-popup-card-close-btn"
               aria-label="關閉景點資訊"
               onclick="${closeHandler}"
             >
               <i class="fas fa-times"></i>
             </button>
           </div>
-          <div class="spot-map-card-address">${address}</div>
+          <div class="custom-map-popup-address">${address}</div>
         </div>`;
 }
 
@@ -204,10 +199,10 @@ function buildSpotMapCardMetricsHtml(
   openingHoursDisplay,
   priceRangeDisplay,
 ) {
-  return `<div class="spot-map-card-metrics">
-        <div class="spot-map-chip"><i class="fas fa-star"></i> 評分 ${ratingText}</div>
-        <div class="spot-map-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
-        <div class="spot-map-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
+  return `<div class="custom-map-popup-metrics">
+        <div class="custom-map-popup-chip"><i class="fas fa-star"></i> 評分 ${ratingText}</div>
+        <div class="custom-map-popup-chip"><i class="fas fa-clock"></i> ${openingHoursDisplay}</div>
+        <div class="custom-map-popup-chip"><i class="fas fa-wallet"></i> 價位：${priceRangeDisplay}</div>
       </div>`;
 }
 
@@ -215,7 +210,7 @@ function buildSpotMapCardMetricsHtml(
 function buildSpotMapCardAddButtonHtml(showAddButton) {
   if (!showAddButton) return "";
 
-  return `<button type="button" class="spot-map-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
+  return `<button type="button" class="custom-map-popup-add-btn" onclick="addSpotToItinerary(selectedSpotForAdd, event)">
         <i class="fas fa-plus"></i> 加入行程
       </button>`;
 }
@@ -251,9 +246,9 @@ function buildSpotPreviewInfoHtml(
   const priceRangeDisplay = escapeHtml(priceRangeText);
 
   return `
-    <div class="spot-map-card">
-      <div class="spot-map-card-head">
-        ${buildSpotMapCardThumbHtml(photoUrl)}
+    <div class="custom-map-popup-card">
+      <div class="custom-map-popup-head">
+        ${buildSpotThumbHtml(photoUrl, "custom-map-popup-thumb")}
         ${buildSpotMapCardMainHtml(name, address, closeHandler)}
       </div>
       ${buildSpotMapCardMetricsHtml(
@@ -277,8 +272,7 @@ function openSpotInfoOnMap(
   const location = normalizePlaceLocation(spot);
   if (!location) return;
 
-  clearSpotPreview();
-  clearCurrentPopup();
+  closeSpotPreviewInfo();
 
   // 建立目前選中景點的 marker。
   spotPreviewMarker = new google.maps.Marker({
@@ -289,7 +283,7 @@ function openSpotInfoOnMap(
   });
 
   currentInfoWindow = new google.maps.InfoWindow({
-    content: `<div class="spot-map-info-wrapper">${buildSpotPreviewInfoHtml(
+    content: `<div class="custom-map-popup-info-wrapper">${buildSpotPreviewInfoHtml(
       spot,
       openingHoursText,
       priceRangeText,
@@ -347,14 +341,6 @@ function closeSpotSearchModal() {
 
 // 渲染搜尋結果列表
 // 依目前狀態渲染清單，並標示 active 項目。
-function buildSpotSearchItemThumbHtml(photoUrl) {
-  return `<div class="spot-search-item-thumb ${photoUrl ? "has-photo" : ""}" ${
-    photoUrl ? `style="background-image:url('${photoUrl}')"` : ""
-  }>
-            ${photoUrl ? "" : '<i class="far fa-image"></i>'}
-          </div>`;
-}
-
 function buildSpotSearchItemHtml(item, index, isSelected) {
   const photoUrl = getSpotPrimaryPhotoUrl(item);
 
@@ -364,7 +350,7 @@ function buildSpotSearchItemHtml(item, index, isSelected) {
           class="spot-search-item ${isSelected ? "active" : ""}"
           onclick="selectSpotSearchResult(${index})"
         >
-          ${buildSpotSearchItemThumbHtml(photoUrl)}
+          ${buildSpotThumbHtml(photoUrl, "spot-search-item-thumb")}
           <div class="spot-search-item-body">
             <div class="spot-search-item-main">${item.name || "未命名地點"}</div>
             <div class="spot-search-item-sub">${item.address || "無地址資訊"}</div>
