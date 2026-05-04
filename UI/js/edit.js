@@ -104,6 +104,9 @@ function toggleEditMode() {
 		} else {
 			displayDay(currentDayIndex);
 		}
+
+		// 離開編輯模式時收起搜尋介面。
+		closeSpotSearchModal();
 	}
 }
 

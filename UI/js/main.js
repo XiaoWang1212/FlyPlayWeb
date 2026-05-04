@@ -71,13 +71,11 @@ mapContainer.addEventListener("click", function (e) {
 	}
 });
 
-spotSearchOverlay.addEventListener("click", function (e) {
-	if (e.target === spotSearchOverlay) {
-		closeSpotSearchModal();
-	}
-});
+// 全頁搜尋模式下，避免點地圖空白區就自動關閉搜尋面板。
 
 spotSearchInput.addEventListener("focus", function () {
+	spotSearchOverlay.classList.remove("results-collapsed");
+
 	if (
 		spotSearchState.isOpen &&
 		Array.isArray(spotSearchState.results) &&

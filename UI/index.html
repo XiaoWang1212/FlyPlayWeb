@@ -229,20 +229,22 @@
     <div class="spot-search-overlay" id="spotSearchOverlay" aria-hidden="true">
       <div class="spot-search-panel" role="dialog" aria-modal="true">
         <div class="spot-search-input-row">
-          <button
-            class="spot-search-close"
-            type="button"
-            onclick="closeSpotSearchModal()"
-            aria-label="關閉搜尋"
-          >
-            <i class="fas fa-close"></i>
-          </button>
-          <input
-            id="spotSearchInput"
-            class="spot-search-input"
-            type="text"
-            placeholder="輸入景點、地標或地址"
-          />
+          <div class="spot-search-bar" role="search">
+            <button
+              class="spot-search-close"
+              type="button"
+              onclick="closeSpotSearchModal()"
+              aria-label="返回"
+            >
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <input
+              id="spotSearchInput"
+              class="spot-search-input"
+              type="text"
+              placeholder="輸入景點、地標或地址"
+            />
+          </div>
         </div>
         <div class="spot-search-results" id="spotSearchResults"></div>
       </div>

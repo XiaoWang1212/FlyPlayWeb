@@ -18,7 +18,6 @@ async function addCustomMarkers(activities, dayIndex) {
 			photos: activity.photos || [],
 			rating: activity.rating,
 			user_rating_count: activity.user_rating_count,
-			_businessInfo: activity._businessInfo || null,
 		};
 
 		const marker = new AdvancedMarkerElement({
@@ -62,9 +61,7 @@ async function addCustomMarkers(activities, dayIndex) {
 				activitySpot,
 				dayWeekday,
 			);
-			if (activitySpot._businessInfo) {
-				activity._businessInfo = activitySpot._businessInfo;
-			}
+			// 商家資訊快取由 search.js 內的 Map 統一管理。
 
 			if (currentInfoWindow !== infoWindow) {
 				return;
