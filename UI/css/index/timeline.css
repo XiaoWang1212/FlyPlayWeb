@@ -1,0 +1,234 @@
+/* Timeline: 行程卡片、日期切換列、交通區塊與日標題樣式 */
+.timeline-item {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 20px;
+	position: relative;
+	transition: background 0.2s;
+	background: #fff;
+	border-radius: 8px;
+}
+
+.timeline-left {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-right: 15px;
+	width: 60px;
+}
+
+.location-img {
+	width: 60px;
+	height: 60px;
+	background-color: #ddd;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 24px;
+	pointer-events: none;
+}
+
+.timeline-transit {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 10px 0;
+	color: #999;
+	font-size: 12px;
+}
+
+.timeline-transit i {
+	margin-right: 5px;
+}
+
+.timeline-right {
+	flex: 1;
+	padding-top: 5px;
+}
+
+.timeline-title {
+	font-weight: bold;
+	font-size: 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+
+.timeline-desc {
+	font-size: 12px;
+	color: #999;
+	margin-top: 5px;
+	line-height: 1.4;
+}
+
+.time-badge {
+	font-size: 12px;
+	background: #f0f0f0;
+	padding: 2px 6px;
+	border-radius: 10px;
+	color: #666;
+	font-weight: normal;
+	align-self: flex-start;
+	flex-shrink: 0;
+	white-space: nowrap;
+	margin-left: 10px;
+	margin-top: 2px;
+}
+
+.day-header {
+	font-size: 14px;
+	font-weight: bold;
+	margin: 15px 0;
+	color: #333;
+	position: sticky;
+	top: 0;
+	background: white;
+	z-index: 10;
+	padding: 5px 0;
+}
+
+.transit-block {
+	display: flex;
+	align-items: stretch;
+	min-height: 45px;
+}
+
+.transit-line {
+	width: 60px;
+	margin-right: 15px;
+	display: flex;
+	justify-content: center;
+}
+
+.transit-line::after {
+	content: "";
+	width: 2px;
+	border-left: 2px dotted #ccc;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.transit-data {
+	flex: 1;
+	font-size: 13px;
+	color: #888;
+	display: flex;
+	align-items: center;
+}
+
+#dayButtonContainer {
+	display: flex;
+	gap: 10px;
+	padding: 10px 20px 15px 20px;
+	min-height: 60px;
+	justify-content: flex-start;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	background: white;
+	position: sticky;
+	top: -10px;
+	z-index: 10;
+	margin-top: -10px;
+	margin-left: -20px;
+	margin-right: -20px;
+	box-sizing: border-box;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+#dayButtonContainer::-webkit-scrollbar {
+	display: none;
+}
+
+#dayButtonContainer button {
+	padding: 1px 18px;
+	border: 2px solid #999;
+	background: white;
+	color: #333;
+	border-radius: 20px;
+	cursor: pointer;
+	font-size: 14px;
+	transition: all 0.3s ease;
+	font-weight: 500;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+#dayButtonContainer button:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#dayButtonContainer button:active {
+	transform: translateY(0);
+	opacity: 0.8;
+}
+
+#dayButtonContainer button:nth-child(1).active {
+	background: #2962ff;
+	color: white;
+	border-color: #2962ff;
+}
+
+#dayButtonContainer button:nth-child(2).active {
+	background: #34a853;
+	color: white;
+	border-color: #34a853;
+}
+
+#dayButtonContainer button:nth-child(3).active {
+	background: #ea4335;
+	color: white;
+	border-color: #ea4335;
+}
+
+#dayButtonContainer button:nth-child(4).active {
+	background: #fbbc04;
+	color: white;
+	border-color: #fbbc04;
+}
+
+#dayButtonContainer button:nth-child(5).active {
+	background: #9c27b0;
+	color: white;
+	border-color: #9c27b0;
+}
+
+[data-day-title] {
+	padding: 15px;
+	background-color: #0f1a3a;
+	color: white;
+	font-size: 16px;
+	font-weight: bold;
+	margin-top: 20px;
+	margin-bottom: 10px;
+	border-radius: 5px;
+	margin-left: -20px;
+	margin-right: -20px;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+[data-day-title]:first-of-type {
+	margin-top: 0;
+}
+
+.activity-cost {
+	font-size: 12px;
+	color: #666;
+	margin-top: 5px;
+}
+
+.location-block {
+	display: flex;
+	padding-top: 10px;
+	border-radius: 8px;
+}
+
+.location-block:hover {
+	background-color: #f0f0f0;
+}

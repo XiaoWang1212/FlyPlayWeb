@@ -1,0 +1,107 @@
+/* Edit: 拖曳排序狀態、編輯模式按鈕、刪除與確認互動樣式 */
+.sortable-ghost {
+	opacity: 0.4;
+	background: #f0f0f0;
+}
+
+.sortable-drag {
+	opacity: 1;
+	transform: scale(1.02);
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.sortable-chosen {
+	background-color: #e0e0e0 !important;
+	transform: scale(1.02);
+}
+
+.view-section.editing .timeline-right {
+	padding-right: 45px;
+}
+
+.delete-btn {
+	display: none;
+	position: absolute;
+	right: 10px;
+	top: 15px;
+	background: #ff4d4f;
+	color: white;
+	width: 25px;
+	height: 25px;
+	border-radius: 50%;
+	text-align: center;
+	line-height: 25px;
+	cursor: pointer;
+	font-size: 14px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	z-index: 10;
+}
+
+.add-item-btn {
+	display: none;
+	width: 100%;
+	padding: 12px;
+	margin-top: 10px;
+	background-color: #f0f0f0;
+	color: #333;
+	border: 2px dashed #ccc;
+	border-radius: 10px;
+	text-align: center;
+	cursor: pointer;
+	font-weight: bold;
+}
+
+.view-section.editing .delete-btn {
+	display: block;
+	animation: fadeIn 0.3s;
+}
+
+.view-section.editing .add-item-btn {
+	display: block;
+	animation: fadeIn 0.3s;
+}
+
+.drag-confirm-btn {
+	display: none;
+	position: fixed;
+	bottom: calc(30px + var(--safe-bottom));
+	left: 50%;
+	transform: translateX(-50%);
+	background: #2962ff;
+	color: white;
+	padding: 12px 25px;
+	border-radius: 30px;
+	font-weight: bold;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+	z-index: 2000;
+	cursor: pointer;
+}
+
+.drag-confirm-btn.show {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	animation: popUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes popUp {
+	from {
+		opacity: 0;
+		transform: translate(-50%, 20px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
