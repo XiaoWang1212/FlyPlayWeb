@@ -168,8 +168,10 @@ class GeminiService:
 
             }}
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
-            一天最多三個景點就好。
+            一天最多四個景點就好。
+            景點請勿重複。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+            景點禁止出現大阪的新世界。
 
             """
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
@@ -243,7 +245,7 @@ class GeminiService:
         """生成完整詳細行程 (包含description、type、cost等詳細信息)
 
         參數：
-            existing_itinerary: 可選的現有行程 JSON 數據。如果提供，AI 會根據其進行修改優化。
+            existing_itinerary: 可選的現有行程 JSON 數據。
         """
         try:
             interests_str = ", ".join(interests) if interests else "通用興趣"
@@ -329,7 +331,7 @@ class GeminiService:
                 ensure_ascii=False,
                 indent=2,
             )
-            prompt = f"""請根據以下現有行程進行修改和優化。
+            prompt = f"""請根據以下現有行程進行補充相關資訊，請勿更改任何行程內容。
             原始行程：
             {existing_itinerary_str}
 
@@ -367,15 +369,12 @@ class GeminiService:
             - 單一價格：幣別 + 空白 + 千分位數字 (例：JPY 3,000)
             - 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值 (例：JPY 1,000 - 2,500)
             - 免費活動：免費
-            - 住宿可加單位：JPY 12,000 / 晚
             - 不確定的估算：約 JPY 2,000
             - 禁止輸出沒有幣別或沒有千分位的格式。
-            5. 一天最多安排 3-5 個活動（包含住宿）。
-            6. 每天應包含至少一個住宿選項（type 為住宿）。
-            7. 只回傳純 JSON，不要包含任何 markdown 標記。
-            8. 確保修改後的行程符合用戶預算和興趣。
-            9. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
-            10. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
+            5. 只回傳純 JSON，不要包含任何 markdown 標記。
+            6. 確保修改後的行程符合用戶預算和興趣。
+            7. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
+            8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
             """
 
             response = self.model.generate_content(
