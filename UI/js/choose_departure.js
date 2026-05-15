@@ -5,7 +5,7 @@
 
 // 只有前面幾個機場會顯示 其他的不顯示但是搜尋的時候找得到
 const departures = [
-  { city: "成田國際機場", code: "NRT", subtitle: "千葉/東京", display: true, image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop" },
+  { city: "成田國際機場", code: "NRT", subtitle: "千葉/東京", display: true },
   { city: "羽田國際機場", code: "HND", subtitle: "東京", display: true },
   { city: "關西國際機場", code: "KIX", subtitle: "大阪", display: true },
   { city: "中部國際機場", code: "NGO", subtitle: "名古屋", display: true },
