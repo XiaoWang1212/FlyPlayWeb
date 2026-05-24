@@ -319,6 +319,8 @@
             border-radius: 15px;
             font-size: 15px;
             line-height: 1.4;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
         .chat-msg.bot {
             background: white;

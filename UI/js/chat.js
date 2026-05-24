@@ -1,23 +1,41 @@
 // ===== 聊天功能 =====
 
 // 逐字顯示訊息（打字機效果）
-function typeMessage(text, type, speed = 30) {
+async function typeMessage(text, type, speed = 45) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);
 
-	let index = 0;
-	const interval = setInterval(() => {
-		if (index < text.length) {
-			div.textContent += text[index];
-			index++;
-			scrollToBottom();
-		} else {
-			clearInterval(interval);
-		}
-	}, speed);
+	if (!text) {
+		scrollToBottom();
+		return div;
+	}
+
+	const chunkSize = Math.max(1, Math.ceil(text.length / 400));
+	for (let index = 0; index < text.length; index += chunkSize) {
+		div.textContent = text.slice(0, index + chunkSize);
+		scrollToBottom();
+		await new Promise((resolve) => setTimeout(resolve, speed));
+	}
 
 	return div;
+}
+
+async function showPendingChatOutput() {
+	const pendingChatOutput = localStorage.getItem("pendingChatOutput");
+	if (!pendingChatOutput) return false;
+
+	localStorage.removeItem("pendingChatOutput");
+
+	if (!isChatMode) {
+		toggleChatMode();
+	} else {
+		openSheet();
+		syncSheetState("sheet-expanded");
+	}
+
+	await typeMessage(pendingChatOutput, "bot", 35);
+	return true;
 }
 
 // 切換聊天模式
@@ -92,3 +110,7 @@ function scrollToBottom() {
 	const container = document.getElementById("chatMessages");
 	container.scrollTop = container.scrollHeight;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+	void showPendingChatOutput();
+});

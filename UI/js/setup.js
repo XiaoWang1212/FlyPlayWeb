@@ -807,9 +807,14 @@ async function submitAIRecommendation() {
       throw new Error(result.message || "AI 生成錯誤");
 
     localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
+    localStorage.setItem(
+      "pendingChatOutput",
+      result.data?.raw_output ||
+        JSON.stringify(result.data?.parsed ?? result.data, null, 2),
+    );
 
     console.log("✓ 準備跳轉至 index.html");
-    // 行程建立成功後自動導向首頁
+    // 行程建立成功後回到首頁，由原本的聊天室底部面板顯示
     window.location.href = "index.html";
   } catch (err) {
     console.error("itinerary 生成失敗:", err);

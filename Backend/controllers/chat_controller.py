@@ -10,12 +10,12 @@ class ChatController:
     def __init__(self):
         self.chat_service = GeminiService()
     
-    # def handle_chat_message(self, message, conversation_history):
-    #     """處理用戶聊天消息"""
-    #     try:
-    #         return self.chat_service.chat_with_ai(message, conversation_history)
-    #     except Exception as e:
-    #         return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
+    def handle_chat_message(self, message, conversation_history):
+        """處理用戶聊天消息"""
+        try:
+            return self.chat_service.chat_with_ai(message, conversation_history)
+        except Exception as e:
+            return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
     
     def handle_travel_recommendation(self, location, days, transportation, preferences):
         """處理旅遊推薦請求"""

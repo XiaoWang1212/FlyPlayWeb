@@ -13,27 +13,27 @@ def unified_response(code, message, data=None):
         "data": data
     }), 200
 
-# @chat_bp.route('/message', methods=['POST'])
-# def send_message():
-#     try:
-#         data = request.get_json()
-#         if not data:
-#             return unified_response(400, '請求體不能為空')
+@chat_bp.route('/message', methods=['POST'])
+def send_message():
+    try:
+        data = request.get_json()
+        if not data:
+            return unified_response(400, '請求體不能為空')
         
-#         message = data.get('message') or data.get('text')
-#         conversation_history = data.get('conversationHistory', [])
+        message = data.get('message') or data.get('text')
+        conversation_history = data.get('conversationHistory', [])
         
-#         if not message:
-#             return unified_response(400, '必須提供 message 參數')
+        if not message:
+            return unified_response(400, '必須提供 message 參數')
         
-#         result = chat_controller.handle_chat_message(message, conversation_history)
+        result = chat_controller.handle_chat_message(message, conversation_history)
         
-#         if result['success']:
-#             return unified_response(200, '成功', result['data'])
-#         else:
-#             return unified_response(500, result['error'])
-#     except Exception as e:
-#         return unified_response(500, f'服務器錯誤: {str(e)}')
+        if result['success']:
+            return unified_response(200, '成功', result['data'])
+        else:
+            return unified_response(500, result['error'])
+    except Exception as e:
+        return unified_response(500, f'服務器錯誤: {str(e)}')
 
 @chat_bp.route('/recommendation', methods=['POST'])
 @login_required
