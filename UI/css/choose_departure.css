@@ -104,40 +104,6 @@ h1 {
     border-color: var(--text-main); 
 }
 
-/* 地區分類標籤 */
-.region-tabs {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    flex-shrink: 0;
-}
-
-.tab-btn {
-    padding: 8px 16px;
-    background-color: #fff; 
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    color: #666;
-    font-size: 14px;
-    white-space: nowrap;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-    transition: transform 0.15s ease;
-}
-
-.tab-btn:active {
-    transform: scale(0.95);
-    opacity: 0.7;
-}
-
-.tab-btn.active {
-    background-color: #333;
-    color: #fff;
-    border-color: #333;
-}
 
 /* 城市列表 */
 .departure-list {
@@ -147,6 +113,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+    padding: 2px;
     align-content: start;
     margin-bottom: 15px;
     position: relative;
@@ -212,6 +179,7 @@ h1 {
     z-index: 1;
 }
 
+.departure-item.has-image .airport-code,
 .departure-item.has-image .city-name,
 .departure-item.has-image .country-name {
     position: relative;
@@ -223,7 +191,7 @@ h1 {
 /* 選中狀態 */
 .departure-item.selected {
     border-color: var(--color-secondary);
-    border-width: 2px;
+    box-shadow: 0 0 0 1px var(--color-secondary);
 }
 
 .departure-item.selected .city-name {
@@ -235,6 +203,13 @@ h1 {
     color: #333;
     margin-bottom: 4px;
     font-weight: 500;
+}
+
+.departure-item .airport-code {
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
 }
 
 .departure-item .country-name {
@@ -273,58 +248,3 @@ h1 {
     color: #999;
 }
 
-/* 已選擇區域 */
-.selected-area {
-    background-color: #fff; 
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 15px;
-    flex-shrink: 0;
-}
-
-.selected-label {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 8px;
-}
-
-.selected-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.selected-tag {
-    background-color: #f0f0f0; 
-    color: #333;
-    padding: 6px 10px;
-    border-radius: 16px;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.selected-tag .remove-btn {
-    background: none;
-    border: none;
-    color: #666;
-    padding: 0;
-    font-size: 16px;
-    line-height: 1;
-    transition: color 0.2s ease, transform 0.1s ease;
-}
-
-.selected-tag .remove-btn:active {
-    transform: scale(0.9);
-    color: #333;
-}
-
-.no-selection {
-    color: #999;
-    font-size: 13px;
-}

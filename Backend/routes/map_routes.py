@@ -188,4 +188,4 @@ def get_route_details():
         else:
             return jsonify(result), 400
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500  
+        return jsonify({'success': False, 'error': str(e)}), 500
