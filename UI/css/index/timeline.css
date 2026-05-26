@@ -199,7 +199,10 @@
 }
 
 [data-day-title] {
-	padding: 15px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px 20px;
 	background-color: #0f1a3a;
 	color: white;
 	font-size: 16px;
@@ -209,8 +212,22 @@
 	border-radius: 5px;
 	margin-left: -20px;
 	margin-right: -20px;
-	padding-left: 20px;
-	padding-right: 20px;
+	position: sticky;
+	top: 50px;
+	z-index: 11;
+}
+
+.edit-btn-group {
+	display: flex;
+	gap: 8px;
+}
+
+.edit-text-btn {
+	font-size: 14px;
+	font-weight: bold;
+	cursor: pointer;
+	color: white;
+	user-select: none;
 }
 
 [data-day-title]:first-of-type {

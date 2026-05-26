@@ -61,6 +61,26 @@
 	animation: fadeIn 0.3s;
 }
 
+#timelineView.editing > .add-item-btn {
+	display: none;
+}
+
+.drag-handle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	align-self: center;
+	color: #bbb;
+	font-size: 18px;
+	padding: 0 4px 0 8px;
+	cursor: grab;
+	flex-shrink: 0;
+}
+
+.view-section.editing .drag-handle {
+	display: flex;
+}
+
 .drag-confirm-btn {
 	display: none;
 	position: fixed;

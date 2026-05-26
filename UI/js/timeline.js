@@ -18,8 +18,6 @@ function createDayButtons() {
 	allBtn.style.color = "#FFFFFF";
 	allBtn.style.borderColor = allColor;
 
-	document.getElementById("editFab").style.display = "none";
-
 	allBtn.onclick = () => switchDay(-1, allBtn);
 	buttonContainer.appendChild(allBtn);
 	// -------------------------
@@ -27,6 +25,7 @@ function createDayButtons() {
 		const btn = document.createElement("button");
 		btn.textContent = `第 ${day.day} 天`;
 		btn.setAttribute("data-day-index", index);
+		btn.style.borderColor = getColorByDay(index);
 		btn.onclick = () => switchDay(index, btn);
 		buttonContainer.appendChild(btn);
 	});
@@ -41,18 +40,29 @@ function createDayButtons() {
 function loadSingleDayTimeline(day, dayIndex) {
 	const timelineList = document.getElementById("timelineList");
 
-	// 移除舊的日期標題和活動
+	// 移除舊的日期標題、活動與新增按鈕
 	const oldDayTitles = timelineList.querySelectorAll("[data-day-title]");
 	const oldItems = timelineList.querySelectorAll(".timeline-item");
+	const oldAddBtns = timelineList.querySelectorAll(".add-item-btn");
 
 	oldDayTitles.forEach((el) => el.remove());
 	oldItems.forEach((el) => el.remove());
+	oldAddBtns.forEach((el) => el.remove());
 
 	// 添加該天的日期標題
 	const dayTitle = document.createElement("div");
 	dayTitle.setAttribute("data-day-title", "true");
-	dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
+	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode()">${isEditMode ? '取消' : '編輯'}</span></span>`;
 	timelineList.appendChild(dayTitle);
+
+	// 編輯模式下在活動上方插入新增按鈕
+	if (isEditMode) {
+		const addBtn = document.createElement("div");
+		addBtn.className = "add-item-btn";
+		addBtn.innerHTML = '<i class="fas fa-plus"></i> 新增行程';
+		addBtn.onclick = addItem;
+		timelineList.appendChild(addBtn);
+	}
 
 	// 添加該天的所有活動
 	day.activities.forEach((activity, actIndex) => {
@@ -79,6 +89,7 @@ function loadSingleDayTimeline(day, dayIndex) {
           <div class="timeline-desc">${activity.description}</div>
           ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
         </div>
+        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
       </div>
 
       ${
@@ -106,12 +117,14 @@ function loadSingleDayTimeline(day, dayIndex) {
 function loadAllTimelineActivities() {
 	const timelineList = document.getElementById("timelineList");
 
-	// 移除舊的日期標題和活動
+	// 移除舊的日期標題、活動與新增按鈕
 	const oldDayTitles = timelineList.querySelectorAll("[data-day-title]");
 	const oldItems = timelineList.querySelectorAll(".timeline-item");
+	const oldAddBtns = timelineList.querySelectorAll(".add-item-btn");
 
 	oldDayTitles.forEach((el) => el.remove());
 	oldItems.forEach((el) => el.remove());
+	oldAddBtns.forEach((el) => el.remove());
 
 	allDays.forEach((day, dayIndex) => {
 		const dayTitle = document.createElement("div");
@@ -145,6 +158,7 @@ function loadAllTimelineActivities() {
           <div class="timeline-desc">${activity.description}</div>
           ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
         </div>
+        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
       </div>
 
       ${
@@ -181,22 +195,19 @@ function switchDay(dayIndex, clickedBtn) {
 
 	currentDayIndex = dayIndex;
 
-	const editFabBtn = document.getElementById("editFab");
-	if (dayIndex === -1) {
-		editFabBtn.style.display = "none"; // 「全部」時隱藏
-	} else {
-		if (!isChatMode) {
-			editFabBtn.style.display = "flex"; // 「單天」且「不在聊天室」時才顯示
-		}
-	}
 
 	// 1. 獲取所有按鈕，並把所有按鈕的顏色清空（恢復成未選中的預設樣式
 	const allBtns = document.querySelectorAll("#dayButtonContainer button");
 	allBtns.forEach((btn) => {
 		btn.classList.remove("active");
-		btn.style.backgroundColor = ""; // 清除背景色
-		btn.style.color = ""; // 清除文字顏色
-		btn.style.borderColor = ""; // 清除邊框顏色
+		btn.style.backgroundColor = "";
+		const idx = btn.getAttribute("data-day-index");
+		if (idx !== null) {
+			btn.style.borderColor = getColorByDay(Number(idx));
+		} else {
+			btn.style.borderColor = "";
+		}
+		btn.style.color = "";
 	});
 
   // 2. 設定當前被點擊按鈕的專屬顏色
@@ -208,6 +219,17 @@ function switchDay(dayIndex, clickedBtn) {
 
   // 3. 判斷要顯示單天還是全部
 	if (dayIndex === -1) {
+		if (isEditMode) {
+			if (isDragChanged) {
+				timelineList.innerHTML = originalTimelineHTML;
+				isDragChanged = false;
+			}
+			editedDays = null;
+			isEditMode = false;
+			timelineView.classList.remove("editing");
+			sortable.option("disabled", true);
+			document.getElementById("dragConfirmBtn").classList.remove("show");
+		}
 		displayAllDays();
 	} else {
 		displayDay(dayIndex);

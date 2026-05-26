@@ -80,8 +80,20 @@ function toggleEditMode() {
 		isEditMode = true;
 
 		timelineView.classList.add("editing");
-		editFab.classList.remove("fa-pen");
-		editFab.classList.add("fa-times");
+		const editBtnGroup = document.querySelector("[data-day-title] .edit-btn-group");
+		if (editBtnGroup) {
+			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">完成</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode()">取消</span>';
+		}
+		const addBtn = document.createElement("div");
+		addBtn.className = "add-item-btn";
+		addBtn.innerHTML = '<i class="fas fa-plus"></i> 新增行程';
+		addBtn.onclick = addItem;
+		const firstItem = timelineList.querySelector(".timeline-item");
+		if (firstItem) {
+			timelineList.insertBefore(addBtn, firstItem);
+		} else {
+			timelineList.appendChild(addBtn);
+		}
 		openSheet();
 		sortable.option("disabled", false);
 		document.getElementById("dragConfirmBtn").classList.remove("show");
@@ -94,8 +106,8 @@ function toggleEditMode() {
 
 		isEditMode = false;
 		timelineView.classList.remove("editing");
-		editFab.classList.remove("fa-times");
-		editFab.classList.add("fa-pen");
+		const editLabel = document.getElementById("editTextLabel");
+		if (editLabel) editLabel.textContent = "編輯";
 		sortable.option("disabled", true);
 		document.getElementById("dragConfirmBtn").classList.remove("show");
 
@@ -157,8 +169,8 @@ function confirmDrag() {
 
 	isEditMode = false;
 	timelineView.classList.remove("editing");
-	editFab.classList.remove("fa-times");
-	editFab.classList.add("fa-pen");
+	const confirmEditLabel = document.getElementById("editTextLabel");
+	if (confirmEditLabel) confirmEditLabel.textContent = "編輯";
 
 	if (currentDayIndex === -1) {
 		displayAllDays();

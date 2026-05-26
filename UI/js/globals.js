@@ -17,6 +17,9 @@ let avgLng = 139.6503;
 let currentRenderers = [];
 let currentMarkers = [];
 
+// 每次 clearMapRoutes 時遞增，讓舊的 DirectionsService callback 自行失效
+let mapRouteSession = 0;
+
 // 目前開啟的資訊視窗
 let currentInfoWindow = null;
 

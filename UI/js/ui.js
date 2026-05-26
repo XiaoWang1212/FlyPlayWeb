@@ -83,7 +83,95 @@ async function downloadPDF() {
   `;
 	document.body.appendChild(loadingOverlay);
 
+	// === Phase 1：逐天切換地圖並截圖 ===
+	const savedDayIndex = currentDayIndex;
+
+	// 關閉底部面板，讓地圖完整顯示
+	closeSheet();
+
+	const captureMsg = document.createElement("div");
+	captureMsg.style.cssText = "position:fixed;bottom:24px;right:24px;background:rgba(0,0,0,0.72);color:#fff;padding:10px 18px;border-radius:8px;z-index:100000;font-size:14px;font-family:sans-serif;";
+	document.body.appendChild(captureMsg);
+
+	const mapImages = [];
+	const mapEl = document.getElementById("map");
+	for (let i = 0; i < allDays.length; i++) {
+		captureMsg.textContent = `擷取地圖中 (${i + 1} / ${allDays.length})…`;
+		displayDay(i);
+
+		// 先等 DirectionsService 回應並把路線畫上地圖（異步，需要固定等待）
+		await new Promise((resolve) => setTimeout(resolve, 2500));
+
+		// 路線畫好後，再用 fitBounds 確保所有景點都在鏡頭內
+		const validLocs = (allDays[i].activities || []).filter(
+			(a) => a.location && typeof a.location.lat === "number" && typeof a.location.lng === "number" &&
+				!(a.location.lat === 0 && a.location.lng === 0)
+		);
+		if (validLocs.length > 0 && window.google?.maps) {
+			const bounds = new google.maps.LatLngBounds();
+			validLocs.forEach((a) => bounds.extend({ lat: a.location.lat, lng: a.location.lng }));
+			map.fitBounds(bounds, 80);
+			// 等 fitBounds 動畫結束，再縮小 1 級確保所有景點有餘白
+			await new Promise((resolve) => {
+				const timer = setTimeout(resolve, 1500);
+				google.maps.event.addListenerOnce(map, "idle", () => {
+					clearTimeout(timer);
+					map.setZoom(map.getZoom() - 1);
+					setTimeout(resolve, 500);
+				});
+			});
+		}
+
+		try {
+			const canvas = await html2canvas(mapEl, {
+				useCORS: true,
+				scale: 1.5,
+				logging: false,
+				allowTaint: false,
+			});
+			// 裁成正方形（取短邊，從中央裁切）
+			const side = Math.min(canvas.width, canvas.height);
+			const squareCanvas = document.createElement("canvas");
+			squareCanvas.width = side;
+			squareCanvas.height = side;
+			squareCanvas.getContext("2d").drawImage(
+				canvas,
+				(canvas.width - side) / 2, (canvas.height - side) / 2,
+				side, side,
+				0, 0, side, side
+			);
+			mapImages.push(squareCanvas.toDataURL("image/jpeg", 0.88));
+		} catch (e) {
+			console.warn("地圖截圖失敗 day", i, e);
+			mapImages.push(null);
+		}
+	}
+
+	document.body.removeChild(captureMsg);
+
+	// 還原原本的檢視狀態
+	if (savedDayIndex === -1) {
+		const allBtn = document.querySelector("#dayButtonContainer button:not([data-day-index])");
+		if (allBtn) switchDay(-1, allBtn); else displayAllDays();
+	} else {
+		const dayBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${savedDayIndex}"]`);
+		if (dayBtn) switchDay(savedDayIndex, dayBtn); else displayDay(savedDayIndex);
+	}
+
 	await new Promise((resolve) => setTimeout(resolve, 100));
+
+	// 從 selectedDestinations 組出行程名稱
+	const selectedDests = JSON.parse(localStorage.getItem("selectedDestinations") || "[]");
+	let tripTitle;
+	if (selectedDests.length > 0) {
+		const countries = [...new Set(selectedDests.map((d) => d.country))];
+		const cities = selectedDests.map((d) => d.city).join("");
+		tripTitle = countries.length === 1
+			? `${countries[0]}${cities}之旅`
+			: `${cities}之旅`;
+	} else {
+		tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
+	}
 
 	const sidebarColors = [
 		"#507A8A",
@@ -91,6 +179,8 @@ async function downloadPDF() {
 		"#B85438",
 		"#A47E4A",
 		"#513653",
+		"#6C6F70",
+		"#FE7A7B",
 	];
 
 	let htmlContent = `
@@ -128,13 +218,14 @@ async function downloadPDF() {
       </style>
 
       <div class="pdf-cover">
-        <p style="margin-bottom: 10px;">JAPAN TRAVEL ITINERARY</p>
-        <h1>日本九州之旅</h1>
+        <p style="margin-bottom: 10px;">TRAVEL ITINERARY</p>
+        <h1>${tripTitle}</h1>
         <p>${allDays.length} 天深度遊</p>
       </div>
   `;
 
-	allDays.forEach((day, dayIndex) => {
+	for (let dayIndex = 0; dayIndex < allDays.length; dayIndex++) {
+		const day = allDays[dayIndex];
 		const bgColor = sidebarColors[dayIndex % sidebarColors.length];
 		const topPlaces =
 			day.activities && day.activities.length > 0
@@ -172,6 +263,12 @@ async function downloadPDF() {
 			});
 		}
 
+		const mapImg = mapImages[dayIndex]
+			? `<div style="margin-top:60px;display:flex;justify-content:center;">
+               <img src="${mapImages[dayIndex]}" style="width:420px;height:420px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
+             </div>`
+			: "";
+
 		htmlContent += `
       <div class="pdf-day-page">
         <div class="pdf-sidebar" style="background-color: ${bgColor};">
@@ -182,10 +279,11 @@ async function downloadPDF() {
         <div class="pdf-content">
           <div class="pdf-day-title">${topPlaces}</div>
           ${activitiesHtml}
+          ${mapImg}
         </div>
       </div>
     `;
-	});
+	}
 
 	htmlContent += `</div>`;
 
@@ -194,7 +292,7 @@ async function downloadPDF() {
 
 	const opt = {
 		margin: 0,
-		filename: "飛遊_精美行程表.pdf",
+		filename: `飛遊_${tripTitle}.pdf`,
 		image: { type: "jpeg", quality: 0.98 },
 		html2canvas: {
 			scale: 2,
@@ -346,10 +444,67 @@ function renderProjects(projects) {
     <h4>${project.title || "未命名行程"}</h4>
     <span>${(project.created_at || "").split("T")[0] || ""}</span>
   </div>
+</div>
+<button class="trip-more-btn" aria-label="更多選項"><i class="fas fa-ellipsis-v"></i></button>
+<div class="trip-dropdown">
+  <div class="trip-dropdown-item download-pdf-item"><i class="fas fa-download"></i> 下載PDF</div>
+  <div class="trip-dropdown-item danger delete-item"><i class="fas fa-trash"></i> 刪除</div>
 </div>`;
+
+		const moreBtn = item.querySelector(".trip-more-btn");
+		const dropdown = item.querySelector(".trip-dropdown");
+
+		moreBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const wasOpen = dropdown.classList.contains("open");
+			document.querySelectorAll(".trip-dropdown.open").forEach((d) => d.classList.remove("open"));
+			if (!wasOpen) {
+				const rect = moreBtn.getBoundingClientRect();
+				dropdown.style.top = rect.top + "px";
+				dropdown.style.left = (rect.right + 4) + "px";
+				dropdown.classList.add("open");
+			}
+		});
+
+		item.querySelector(".download-pdf-item").addEventListener("click", async (e) => {
+			e.stopPropagation();
+			dropdown.classList.remove("open");
+			toggleSidebar();
+			await openProject(project);
+			downloadPDF();
+		});
+
+		item.querySelector(".delete-item").addEventListener("click", async (e) => {
+			e.stopPropagation();
+			dropdown.classList.remove("open");
+			if (!confirm(`確定要刪除「${project.title || "未命名行程"}」嗎？`)) return;
+			await deleteProject(project.project_id);
+		});
+
 		item.addEventListener("click", () => openProject(project));
 		list.appendChild(item);
 	});
+}
+
+async function deleteProject(projectId) {
+	try {
+		const res = await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+		});
+		const body = await res.json().catch(() => ({}));
+		if (res.ok) {
+			await loadProjects();
+		} else {
+			alert("刪除失敗，請稍後再試");
+		}
+	} catch (err) {
+		console.error(err);
+		alert("刪除失敗，請檢查網路");
+	}
 }
 
 async function loadProjects() {
@@ -396,6 +551,15 @@ async function openProject(project) {
 	console.log("openProject", res.status, body);
 
 	if (res.ok && body.code === 200 && body.data && body.data.length > 0) {
+		// 更新當前專案標題，並還原此專案的目的地資料（供 downloadPDF 使用）
+		sessionStorage.setItem("currentProjectTitle", project.title || "");
+		const projectDests = localStorage.getItem(`projectDestinations_${project.project_id}`);
+		if (projectDests) {
+			localStorage.setItem("selectedDestinations", projectDests);
+		} else {
+			localStorage.removeItem("selectedDestinations");
+		}
+
 		// 保存目前選中的 itinerary，供後續 /data/latlng 與 /api/itinerary/detail 使用
 		const latestItinerary = body.data[0];
 		if (latestItinerary?.itinerary_id) {
