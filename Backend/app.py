@@ -211,11 +211,11 @@ def create_app():
                         travel_service.update_itinerary_ai_data(
                             int(itinerary_id),
                             detailed_itinerary=result["data"],
-                            data_latlng=(
-                                existing_itinerary
-                                if existing_itinerary is not None
-                                else None
-                            ),
+                            # data_latlng=(
+                            #     existing_itinerary
+                            #     if existing_itinerary is not None
+                            #     else None
+                            # ),
                         )
                     except Exception as save_err:
                         print(f"儲存 detailed_itinerary 失敗: {save_err}")
