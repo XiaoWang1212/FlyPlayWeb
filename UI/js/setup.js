@@ -788,6 +788,11 @@ async function submitAIRecommendation() {
 
   console.log(payload);
 
+  if (!navigator.onLine) {
+    alert("目前沒有網路連線，請確認網路後再試");
+    return;
+  }
+
   setGeneratingState(true);
   try {
     const res = await fetch(`${API_BASE}/api/travel/itinerary`, {
