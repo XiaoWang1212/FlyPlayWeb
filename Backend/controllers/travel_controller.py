@@ -118,6 +118,9 @@ class TravelController:
         )
         return res
 
+    def format_itinerary_for_display(self, raw_output=None, parsed=None):
+        return self.gemini_service.format_itinerary_for_display(raw_output, parsed)
+
     def delete_project(self, project_id):
         data = self.travel_service.delete_project(project_id)
         if not data:

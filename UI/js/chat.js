@@ -1,5 +1,7 @@
 // ===== 聊天功能 =====
 
+let conversationHistory = [];
+
 // 逐字顯示訊息（打字機效果）
 async function typeMessage(text, type, speed = 45) {
 	const div = document.createElement("div");
@@ -35,6 +37,10 @@ async function showPendingChatOutput() {
 	}
 
 	await typeMessage(pendingChatOutput, "bot", 35);
+	conversationHistory.push({
+		role: "assistant",
+		content: pendingChatOutput,
+	});
 	return true;
 }
 
@@ -68,7 +74,7 @@ function toggleChatMode() {
 }
 
 // 發送訊息
-function sendMessage() {
+async function sendMessage() {
 	const input = document.getElementById("chatInput");
 	const text = input.value.trim();
 	if (!text) return;
@@ -85,17 +91,40 @@ function sendMessage() {
 		);
 	scrollToBottom();
 
-	setTimeout(() => {
-		document.getElementById(loadingId).remove();
+	try {
+		const resp = await fetch(API_BASE + "/api/chat/message", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ message: text, conversationHistory }),
+		});
 
-		setTimeout(() => {
-			appendMsg("測試訊息", "bot");
+		const result = await resp.json();
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+
+		if (result && (result.code === 200 || result.success === true)) {
+			const data = result.data || result;
+			const aiText =
+				(data && (data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
+				"（無回覆）";
+			appendMsg(aiText, "bot");
+			if (Array.isArray(data.history) && data.history.length > 0) {
+				conversationHistory = data.history;
+			} else {
+				conversationHistory.push({ role: "assistant", content: aiText });
+			}
 			sheet.classList.remove("expanded");
 			sheet.classList.add("half");
 			fabGroup.classList.remove("horizontal");
 			fabGroup.classList.add("half-mode");
-		}, 1000);
-	}, 1500);
+		} else {
+			appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
+		}
+	} catch (err) {
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+		appendMsg("網路錯誤，請稍後再試", "bot");
+	}
 }
 
 function appendMsg(text, type) {
@@ -112,5 +141,15 @@ function scrollToBottom() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	const chatInput = document.getElementById("chatInput");
+	if (chatInput) {
+		chatInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				void sendMessage();
+			}
+		});
+	}
+
 	void showPendingChatOutput();
 });

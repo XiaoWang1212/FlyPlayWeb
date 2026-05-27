@@ -1,4 +1,5 @@
 import json
+import re
 import google.generativeai as genai
 from config import Config
 from datetime import datetime
@@ -11,7 +12,14 @@ with open("test.json", "r", encoding="utf-8") as f:
 class GeminiService:
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self.system_prompt = (
+            "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
+            "所有回覆請使用繁體中文純文字，不要輸出 Markdown、不要使用 **、#、-、編號清單或 code block。"
+        )
+        self.model = genai.GenerativeModel(
+            "gemini-2.5-flash",
+            system_instruction=self.system_prompt,
+        )
 
         # 配置生成參數
         self.generation_config = {
@@ -64,6 +72,58 @@ class GeminiService:
             "total_tokens": getattr(usage_metadata, "total_token_count", None),
         }
 
+    def _strip_markdown_text(self, text):
+        """把常見 Markdown 標記移除，保留可直接閱讀的純文字。"""
+        plain_lines = []
+        for raw_line in str(text or "").splitlines():
+            line = raw_line.rstrip()
+            if not line.strip():
+                plain_lines.append("")
+                continue
+
+            line = re.sub(r"^\s{0,3}#{1,6}\s*", "", line)
+            line = re.sub(r"^\s*[-*+]\s+", "", line)
+            line = re.sub(r"^\s*\d+[.)]\s+", "", line)
+            line = line.replace("**", "").replace("__", "").replace("`", "")
+            plain_lines.append(line)
+
+        normalized = []
+        previous_blank = False
+        for line in plain_lines:
+            is_blank = not line.strip()
+            if is_blank and previous_blank:
+                continue
+            normalized.append(line)
+            previous_blank = is_blank
+
+        return "\n".join(normalized).strip()
+
+    def _build_gemini_history(self, conversation_history):
+        """將前端的對話歷史轉成 Gemini chat history 格式。"""
+        gemini_history = []
+
+        for msg in conversation_history or []:
+            if not isinstance(msg, dict):
+                continue
+
+            role = str(msg.get("role", "")).lower()
+            content = msg.get("content") or msg.get("text") or ""
+            content = str(content).strip()
+
+            if not content:
+                continue
+
+            if role in {"assistant", "bot", "model"}:
+                gemini_role = "model"
+            elif role == "user":
+                gemini_role = "user"
+            else:
+                continue
+
+            gemini_history.append({"role": gemini_role, "parts": [content]})
+
+        return gemini_history
+
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
         try:
@@ -99,34 +159,67 @@ class GeminiService:
         except Exception as e:
             return {"success": False, "error": f"行程生成失敗: {str(e)}"}
 
-    def chat_with_ai(self, message, conversation_history=[]):
+    def format_itinerary_for_display(self, raw_output=None, parsed=None):
+        """把 AI 行程 JSON 轉成適合直接顯示給使用者的可讀文字。"""
+        try:
+            source_data = parsed
+
+            if isinstance(source_data, str):
+                try:
+                    source_data = json.loads(source_data)
+                except Exception:
+                    source_data = None
+
+            if not source_data and raw_output:
+                try:
+                    source_data = json.loads(raw_output)
+                except Exception:
+                    source_data = raw_output
+
+            if isinstance(source_data, (dict, list)):
+                itinerary_text = json.dumps(source_data, ensure_ascii=False, indent=2)
+            else:
+                itinerary_text = str(source_data or raw_output or "")
+
+            prompt = f"""請把以下旅遊行程內容整理成使用者容易閱讀的繁體中文摘要。
+                        不要輸出 JSON，不要輸出 Markdown，不要輸出 code block，不要使用 #、*、-、數字編號或表格。
+                        請直接輸出純文字，使用自然段落和清楚的標籤呈現，例如「行程總覽」、「第 1 天」、「住宿建議」、「用餐建議」。
+                        如果內容有日期、景點、交通、住宿、餐飲，請保留並整理順序。
+
+                        行程內容：
+                        {itinerary_text}
+                        """
+
+            response = self.model.generate_content(
+                prompt, generation_config=self.generation_config
+            )
+            readable_text = self._strip_markdown_text(response.text)
+
+            return {
+                "success": True,
+                "data": {
+                    "response": readable_text,
+                },
+            }
+        except Exception as e:
+            return {"success": False, "error": f"行程文字整理失敗: {str(e)}"}
+
+    def chat_with_ai(self, message, conversation_history=None):
         """與 AI 進行對話"""
         try:
-            # 轉換為 Gemini 格式
-            chat = self.model.start_chat(history=[])
+            chat_history = self._build_gemini_history(conversation_history)
+            chat = self.model.start_chat(history=chat_history)
 
-            # 添加系统提示
-            system_prompt = "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
-
-            # 構建完整訊息
-            full_message = f"{system_prompt}\n\n用户消息: {message}"
-
-            if conversation_history:
-                # 重建對話歷史
-                for msg in conversation_history:
-                    if msg['role'] == 'user':
-                        chat.send_message(msg['content'])
-
-            response = chat.send_message(full_message)
-            ai_content = response.text
+            response = chat.send_message(str(message).strip())
+            ai_content = self._strip_markdown_text(response.text)
 
             return {
                 'success': True,
                 'data': {
                     'response': ai_content,
-                    'history': conversation_history + [
+                    'history': (conversation_history or []) + [
                         {"role": "user", "content": message},
-                        {"role": "assistant", "content": ai_content}
+                        {"role": "assistant", "content": ai_content},
                     ]
                 }
             }
@@ -170,8 +263,12 @@ class GeminiService:
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
             一天最多四個景點就好。
             景點請勿重複。
+            每一天的 location 裡面至少要有一個 type 為「美食」的項目。
+            如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
             景點禁止出現大阪的新世界。
+            請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
+            如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
 
             """
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
@@ -375,6 +472,8 @@ class GeminiService:
             6. 確保修改後的行程符合用戶預算和興趣。
             7. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
             8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
+            9. 不要推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類地點；若原始內容包含這類地點，請替換成相鄰且更適合旅遊的景點。
+            10. 每一天的 location 裡面至少要有一個 type 為「美食」的項目；如果原始行程沒有美食，請補上一個合適的餐廳或在地美食。
             """
 
             response = self.model.generate_content(

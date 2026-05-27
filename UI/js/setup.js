@@ -16,6 +16,90 @@ let scrollEndTimeout;
 
 const API_BASE = "http://127.0.0.1:5001";
 
+function formatItineraryFallbackText(rawOutput, parsedOutput) {
+  const itinerary = parsedOutput?.parsed || parsedOutput;
+  const days = Array.isArray(itinerary?.days)
+    ? itinerary.days
+    : Array.isArray(itinerary)
+      ? itinerary
+      : [];
+
+  if (days.length > 0) {
+    const lines = ["行程摘要"];
+
+    days.forEach((day) => {
+      const dayTitle = [
+        day?.day ? `第 ${day.day} 天` : "",
+        day?.weekday ? `(${day.weekday})` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      if (dayTitle) {
+        lines.push("");
+        lines.push(dayTitle);
+      }
+
+      const items = day?.location || day?.activities || [];
+      if (Array.isArray(items)) {
+        items.forEach((item) => {
+          const name = item?.place_name || item?.location_name || item?.name || "";
+          const time = item?.time ? `${item.time}` : "";
+          const description = item?.description ? `｜${item.description}` : "";
+          const type = item?.type ? `｜${item.type}` : "";
+          const cost = item?.cost ? `｜費用 ${item.cost}` : "";
+          const line = [time, name].filter(Boolean).join(" ") + description + type + cost;
+          if (line.trim()) {
+            lines.push(line.trim());
+          }
+        });
+      }
+    });
+
+    return lines.join("\n").trim();
+  }
+
+  const fallbackText = String(rawOutput || "").trim();
+  if (!fallbackText) return "行程摘要暫時無法顯示";
+
+  return fallbackText
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+[.)]\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
+async function buildReadableItinerary(token, rawOutput, parsedOutput) {
+  try {
+    const res = await fetch(`${API_BASE}/api/travel/itinerary/summary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        raw_output: rawOutput,
+        parsed: parsedOutput,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const result = await res.json();
+    if (result.code !== 200) {
+      throw new Error(result.message || "行程摘要生成失敗");
+    }
+
+    return formatItineraryFallbackText(result.data?.response, null);
+  } catch (error) {
+    console.warn("行程摘要生成失敗，改用原始內容：", error);
+    return formatItineraryFallbackText(rawOutput, parsedOutput);
+  }
+}
+
 // 跳轉頁面
 function goToDestinationPage() {
   const basePath = window.location.href.substring(
@@ -788,6 +872,11 @@ async function submitAIRecommendation() {
 
   console.log(payload);
 
+  if (!navigator.onLine) {
+    alert("目前沒有網路連線，請確認網路後再試");
+    return;
+  }
+
   setGeneratingState(true);
   try {
     const res = await fetch(`${API_BASE}/api/travel/itinerary`, {
@@ -807,11 +896,14 @@ async function submitAIRecommendation() {
       throw new Error(result.message || "AI 生成錯誤");
 
     localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
-    localStorage.setItem(
-      "pendingChatOutput",
-      result.data?.raw_output ||
-        JSON.stringify(result.data?.parsed ?? result.data, null, 2),
+
+    const readableItinerary = await buildReadableItinerary(
+      token,
+      result.data?.raw_output,
+      result.data?.parsed,
     );
+
+    localStorage.setItem("pendingChatOutput", readableItinerary);
 
     console.log("✓ 準備跳轉至 index.html");
     // 行程建立成功後回到首頁，由原本的聊天室底部面板顯示

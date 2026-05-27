@@ -110,6 +110,23 @@ def generate_itinerary():
     return unified_response(200, "行程生成成功", result["data"])
 
 
+@travel_bp.route("/itinerary/summary", methods=["POST"])
+@login_required
+def summarize_itinerary():
+    payload = request.get_json(force=True, silent=True)
+    if not payload:
+        return unified_response(400, "請求體需為 JSON")
+
+    result = travel_ctrl.format_itinerary_for_display(
+        raw_output=payload.get("raw_output"),
+        parsed=payload.get("parsed"),
+    )
+    if not result["success"]:
+        return unified_response(500, result.get("error"))
+
+    return unified_response(200, "行程摘要生成成功", result["data"])
+
+
 @travel_bp.route("/itinerary/<int:itinerary_id>", methods=["GET"])
 @login_required
 def get_itinerary(itinerary_id):

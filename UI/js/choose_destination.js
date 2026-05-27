@@ -8,23 +8,54 @@
 /**
  * 目的地資料陣列
  */
-// TODO: 改圖片
 const destinations = [
-    // 日本地區（先亂放圖片）
-    { city: "東京", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop" },
-    { city: "大阪", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1589452271712-64b8a66c7b71?w=400&h=300&fit=crop" },
-    { city: "京都", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=300&fit=crop" },
-    { city: "北海道", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1605099846030-8f67a715a33f?w=400&h=300&fit=crop" },
-    { city: "沖繩", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1544991875-5dc1b05f607d?w=400&h=300&fit=crop" },
-    { city: "福岡", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1578469550956-0e16b69c6a3d?w=400&h=300&fit=crop" },
-    { city: "名古屋", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1584592740039-6f6c049a5b3f?w=400&h=300&fit=crop" },
-    { city: "札幌", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1576675466550-2389afd2b2c4?w=400&h=300&fit=crop" },
-    { city: "橫濱", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1566398618126-16c0fd32e4eb?w=400&h=300&fit=crop" },
-    { city: "神戶", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1624353187199-33b00f9bcdc4?w=400&h=300&fit=crop" },
-    { city: "奈良", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1590559899731-a382839e5549?w=400&h=300&fit=crop" },
-    { city: "箱根", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1578300164804-6746f6ead5c5?w=400&h=300&fit=crop" },
-    { city: "熊本", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop" },
-    { city: "仙台", country: "日本", region: "japan", image: "https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400&h=300&fit=crop" },
+    { city: "東京", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1606044466411-207a9a49711f?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "大阪", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1680061337399-a175cebe51b1?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "京都", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1598157016767-34bd1c718528?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "北海道", region: "hokkaido", label: "北海道", image: "https://images.unsplash.com/photo-1545105511-839f4a45a030?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "沖繩", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1612476919598-a233d3692cc6?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "福岡", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1573045736319-913a18c8ee27?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "奈良", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1693380767492-00fb0bcc4ce6?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "神奈川", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1587474064565-922e1178ec8f?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "千葉", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1652963212851-bfc736ce2ff3?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "廣島", region: "chugoku", label: "中國", image: "https://images.unsplash.com/photo-1504109586057-7a2ae83d1338?q=80&w=3133&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "長崎", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1624517608619-6403e09ba80a?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "石川", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1778225453431-d918eb1e964a?q=80&w=2338&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "山梨", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1635215278333-639a0576fe3d?q=80&w=1973&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "兵庫", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1573416033034-e42e14b545d2?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "愛知", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1661054782263-a9cc56a4e565?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "熊本", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1705695464723-56195396666b?q=80&w=2890&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "岐阜", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1617284349156-26a70e5cece0?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "長野", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1705573383653-b574d7100a56?q=80&w=2342&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "大分", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1624517607060-b0bfafdb19a9?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "三重", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1609333728948-8faa8fffdca1?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "靜岡", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1578271887552-5ac3a72752bc?q=80&w=2338&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "宮城", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1774946480290-f9a968b62692?q=80&w=2338&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "埼玉", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1659190570975-d8af5b024917?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "栃木", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1614651857407-9b22acceb43a?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "岡山", region: "chugoku", label: "中國", image: "https://images.unsplash.com/photo-1562887059-f11cd4f5e989?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "香川", region: "shikoku", label: "四國", image: "https://images.unsplash.com/photo-1696329706614-2ac0f0076986?q=80&w=2338&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "鹿兒島", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1704686508379-8ee92cad45f6?q=80&w=2324&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "滋賀", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1592024343449-9476e446f038?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "新潟", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1694116865986-32660110ee0d?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "愛媛", region: "shikoku", label: "四國", image: "https://images.unsplash.com/photo-1754685725795-77b5305e74bd?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "和歌山", region: "kinki", label: "近畿", image: "https://images.unsplash.com/photo-1614913501059-9fb836fe1769?q=80&w=2342&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "群馬", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1764057145939-0d197221c00e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "富山", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1758540531176-be45aad3ab0e?q=80&w=3088&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "山口", region: "chugoku", label: "中國", image: "https://images.unsplash.com/photo-1609474294819-b18d936efbfa?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "宮崎", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1650861063389-8197786fb2df?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "青森", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1602159649231-08f18550512d?q=80&w=3131&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "福井", region: "chubu", label: "中部", image: "https://images.unsplash.com/photo-1627099177620-7755ca6705b8?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "佐賀", region: "kyushu", label: "九州", image: "https://images.unsplash.com/photo-1513863640767-1605e79998a1?q=80&w=2338&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "岩手", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1628927072757-f425cad8dace?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "秋田", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1707090061775-5217dcaad6f0?q=80&w=2336&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "山形", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1670736990625-ac75a09397cd?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "鳥取", region: "chugoku", label: "中國", image: "https://images.unsplash.com/photo-1693188074158-00e5edb3d0ac?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "茨城", region: "kanto", label: "關東", image: "https://images.unsplash.com/photo-1682394578396-f911e730d913?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "島根", region: "chugoku", label: "中國", image: "https://images.unsplash.com/photo-1765692102119-06822b6b8235?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "高知", region: "shikoku", label: "四國", image: "https://images.unsplash.com/photo-1712829313451-b54bd4ed6b1a?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "福島", region: "tohoku", label: "東北", image: "https://images.unsplash.com/photo-1628926867153-b6bad577f000?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+    { city: "德島", region: "shikoku", label: "四國", image: "https://images.unsplash.com/photo-1776101419357-4a21565eb14d?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
 ];
 
 // ==================== 全域變數 ====================
@@ -90,7 +121,7 @@ function renderDestinations() {
         item.setAttribute("data-region", dest.region);
         item.setAttribute(
             "data-search",
-            `${dest.city}${dest.country}`.toLowerCase()
+            `${dest.city}${dest.label}`.toLowerCase()
         );
 
         // 如果有圖片，設定背景圖
@@ -102,7 +133,7 @@ function renderDestinations() {
         // 檢查此目的地是否已被選中
         const isSelected = selectedDestinations.some(
             (selected) =>
-                selected.city === dest.city && selected.country === dest.country
+                selected.city === dest.city && selected.region === dest.region
         );
         // 如果已選中，加上 selected 樣式
         if (isSelected) {
@@ -112,7 +143,7 @@ function renderDestinations() {
         // 設定項目的 HTML 內容
         item.innerHTML = `
             <div class="city-name">${dest.city}</div>
-            <div class="country-name">${dest.country}</div>
+            <div class="country-name">${dest.label}</div>
         `;
 
         // 綁定點擊事件
@@ -137,7 +168,7 @@ function toggleDestination(dest, itemElement) {
     // 在已選擇陣列中尋找此目的地
     const index = selectedDestinations.findIndex(
         (selected) =>
-            selected.city === dest.city && selected.country === dest.country
+            selected.city === dest.city && selected.region === dest.region
     );
 
     if (index > -1) {
@@ -160,10 +191,10 @@ function toggleDestination(dest, itemElement) {
  * @param {string} city - 城市名稱
  * @param {string} country - 國家名稱
  */
-function removeDestination(city, country) {
+function removeDestination(city, region) {
     // 在已選擇陣列中尋找此目的地
     const index = selectedDestinations.findIndex(
-        (selected) => selected.city === city && selected.country === country
+        (selected) => selected.city === city && selected.region === region
     );
 
     if (index > -1) {
@@ -173,9 +204,8 @@ function removeDestination(city, country) {
         // 更新對應的 UI 項目，移除 selected 樣式
         const items = document.querySelectorAll(".destination-item");
         items.forEach((item) => {
-            const itemCity = item.querySelector(".city-name").textContent;
-            const itemCountry = item.querySelector(".country-name").textContent;
-            if (itemCity === city && itemCountry === country) {
+            if (item.getAttribute("data-region") === region &&
+                item.querySelector(".city-name").textContent === city) {
                 item.classList.remove("selected");
             }
         });
@@ -220,7 +250,7 @@ function updateConfirmButton() {
                 const tag = document.createElement("span");
                 tag.className = "selected-tag";
                 // 顯示城市名稱和移除按鈕
-                tag.innerHTML = `${dest.city} <button class="remove-btn" onclick="removeDestination('${dest.city}', '${dest.country}')">×</button>`;
+                tag.innerHTML = `${dest.city} <button class="remove-btn" onclick="removeDestination('${dest.city}', '${dest.region}')">×</button>`;
                 selectedList.appendChild(tag);
             });
         } else {
@@ -270,13 +300,9 @@ function filterRegion(region) {
         btn.classList.remove("active");
     });
 
-    // 找到對應的按鈕並設為 active
+    // 找到對應的按鈕並設為 active（用 data-region 屬性比對）
     document.querySelectorAll(".tab-btn").forEach((btn) => {
-        // 根據按鈕文字判斷是否為目標按鈕
-        if (
-            (region === "all" && btn.textContent === "全部") ||
-            (region === "japan" && btn.textContent === "日本")
-        ) {
+        if (btn.getAttribute("data-region") === region) {
             btn.classList.add("active");
         }
     });
