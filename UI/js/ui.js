@@ -187,7 +187,7 @@ async function downloadPDF() {
     <div style="background-color: #FAF8F5; width: 800px; font-family: 'Noto Serif TC', serif; color: #333;">
       <style>
         .pdf-cover {
-          width: 800px; height: 1130px;
+          width: 800px; height: 1131px;
           background-color: #2D2722;
           background-image: linear-gradient(135deg, #1A1513, #2D2722);
           color: #FFFFFF;
@@ -197,24 +197,24 @@ async function downloadPDF() {
         .pdf-cover p { font-size: 18px; color: #D4C9A8; letter-spacing: 2px; }
 
         .pdf-day-page {
-          display: flex; width: 800px; min-height: 1120px;
+          display: flex; width: 800px; min-height: 1131px;
           background-color: #FAF8F5;
         }
 
-        .pdf-sidebar { width: 140px; padding-top: 60px; text-align: center; color: #FFFFFF; flex-shrink: 0; }
+        .pdf-sidebar { width: 140px; min-height: 1131px; padding-top: 60px; text-align: center; color: #FFFFFF; flex-shrink: 0; }
         .pdf-sidebar .day-label { font-size: 14px; letter-spacing: 2px; opacity: 0.8; }
         .pdf-sidebar .day-num { font-size: 64px; font-weight: 700; line-height: 1; margin: 10px 0; }
         .pdf-sidebar .day-date { font-size: 14px; opacity: 0.8; }
-        .pdf-content { flex-grow: 1; padding: 60px 50px; }
-        .pdf-day-title { font-size: 24px; font-weight: 700; border-bottom: 1px solid #E0D8C8; padding-bottom: 20px; margin-bottom: 40px; }
-        .pdf-item { display: flex; margin-bottom: 30px; }
-        .pdf-item-time { width: 70px; font-size: 16px; color: #888; font-style: italic; flex-shrink: 0; }
+        .pdf-content { flex-grow: 1; padding: 45px 40px; }
+        .pdf-day-title { font-size: 22px; font-weight: 700; border-bottom: 1px solid #E0D8C8; padding-bottom: 16px; margin-bottom: 18px; }
+        .pdf-item { display: flex; margin-bottom: 16px; }
+        .pdf-item-time { width: 60px; font-size: 14px; color: #888; font-style: italic; flex-shrink: 0; }
         .pdf-item-detail { flex-grow: 1; }
-        .pdf-item-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .pdf-item-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
         .pdf-item-tag { font-size: 10px; background-color: #EAE3D1; color: #665A48; padding: 2px 8px; border-radius: 4px; }
-        .pdf-item-desc { font-size: 15px; color: #666; line-height: 1.6; }
-        .pdf-transit { margin: 15px 0 15px 70px; padding-left: 20px; border-left: 1px dashed #CCC; font-size: 14px; color: #A09481; }
-        .pdf-transit-badge { background-color: #F4EFEB; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+        .pdf-item-desc { font-size: 13px; color: #666; line-height: 1.5; }
+        .pdf-transit { margin: 8px 0 8px 60px; padding-left: 16px; border-left: 1px dashed #CCC; font-size: 12px; color: #A09481; }
+        .pdf-transit-badge { background-color: #F4EFEB; padding: 3px 10px; border-radius: 20px; display: inline-block; }
       </style>
 
       <div class="pdf-cover">
@@ -264,8 +264,8 @@ async function downloadPDF() {
 		}
 
 		const mapImg = mapImages[dayIndex]
-			? `<div style="margin-top:60px;display:flex;justify-content:center;">
-               <img src="${mapImages[dayIndex]}" style="width:420px;height:420px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
+			? `<div style="margin-top:25px;display:flex;justify-content:center;">
+               <img src="${mapImages[dayIndex]}" style="width:360px;height:360px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
              </div>`
 			: "";
 
@@ -302,7 +302,7 @@ async function downloadPDF() {
 			windowWidth: 800,
 		},
 		jsPDF: { unit: "px", format: [800, 1131], orientation: "portrait" },
-		pagebreak: { mode: "css", before: ".pdf-day-page" },
+		pagebreak: { mode: [] },
 	};
 
 	try {

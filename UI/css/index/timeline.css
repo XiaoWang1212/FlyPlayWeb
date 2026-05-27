@@ -50,7 +50,7 @@
 
 .timeline-title {
 	font-weight: bold;
-	font-size: 16px;
+	font-size: 14px;
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
@@ -92,7 +92,7 @@
 .transit-block {
 	display: flex;
 	align-items: stretch;
-	min-height: 45px;
+	min-height: 40px;
 }
 
 .transit-line {
@@ -100,6 +100,7 @@
 	margin-right: 15px;
 	display: flex;
 	justify-content: center;
+	flex-shrink: 0;
 }
 
 .transit-line::after {
@@ -110,13 +111,159 @@
 	margin-bottom: 5px;
 }
 
-.transit-data {
+.transit-info-row {
 	flex: 1;
-	font-size: 13px;
-	color: #888;
 	display: flex;
 	align-items: center;
+	gap: 6px;
+	min-width: 0;
 }
+
+.transit-summary {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	cursor: pointer;
+	padding: 4px 0;
+	min-width: 0;
+}
+
+.transit-mode-icon {
+	font-size: 13px;
+	color: #666;
+	flex-shrink: 0;
+}
+
+.transit-text {
+	font-size: 13px;
+	color: #555;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.transit-chevron {
+	font-size: 9px;
+	color: #aaa;
+	flex-shrink: 0;
+}
+
+.transit-route-link {
+	color: #1a73e8;
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+	flex-shrink: 0;
+	padding: 4px 0;
+}
+
+/* 交通方式選擇 Modal */
+.transit-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	z-index: 6000;
+	display: flex;
+	align-items: flex-end;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s;
+}
+
+.transit-overlay.show {
+	opacity: 1;
+	pointer-events: all;
+}
+
+.transit-modal {
+	background: #fff;
+	border-radius: 16px 16px 0 0;
+	width: 100%;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	transform: translateY(100%);
+	transition: transform 0.28s ease;
+}
+
+.transit-overlay.show .transit-modal {
+	transform: translateY(0);
+}
+
+.transit-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid #eee;
+}
+
+.transit-modal-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: #111;
+}
+
+.transit-modal-close {
+	background: none;
+	border: none;
+	font-size: 16px;
+	color: #666;
+	cursor: pointer;
+	padding: 4px;
+	line-height: 1;
+}
+
+.transit-mode-item {
+	display: flex;
+	align-items: center;
+	padding: 14px 20px;
+	gap: 14px;
+	cursor: pointer;
+	border: 1.5px solid transparent;
+	border-radius: 8px;
+	margin: 4px 12px;
+}
+
+.transit-mode-item.selected {
+	border-color: #1a73e8;
+	background: #f0f6ff;
+}
+
+.transit-mode-item.disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.tmode-icon {
+	width: 28px;
+	text-align: center;
+	font-size: 17px;
+	color: #444;
+	flex-shrink: 0;
+}
+
+.tmode-label {
+	flex: 1;
+	font-size: 15px;
+	color: #222;
+}
+
+.tmode-info {
+	text-align: right;
+	font-size: 13px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+}
+
+.tdur { font-weight: 500; color: #222; }
+.tdist { color: #888; }
+.tno-route { color: #aaa; font-size: 12px; }
+.tdetail-link { color: #1a73e8; font-size: 12px; text-decoration: none; }
+
 
 #dayButtonContainer {
 	display: flex;

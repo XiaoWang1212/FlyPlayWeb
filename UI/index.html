@@ -240,6 +240,38 @@
       </div>
     </div>
 
+    <!-- 交通方式選擇器 -->
+    <div class="transit-overlay" id="transitOverlay" onclick="closeTransitModal()">
+      <div class="transit-modal" onclick="event.stopPropagation()">
+        <div class="transit-modal-header">
+          <span class="transit-modal-title">選取交通方式</span>
+          <button class="transit-modal-close" onclick="closeTransitModal()">✕</button>
+        </div>
+
+        <div class="transit-mode-item" id="tm_DRIVING" onclick="selectTransitMode('DRIVING')">
+          <div class="tmode-icon"><i class="fas fa-car"></i></div>
+          <div class="tmode-label">駕車</div>
+          <div class="tmode-info" id="tmi_DRIVING"></div>
+        </div>
+        <div class="transit-mode-item" id="tm_TRANSIT" onclick="selectTransitMode('TRANSIT')">
+          <div class="tmode-icon"><i class="fas fa-train"></i></div>
+          <div class="tmode-label">搭乘大眾運輸</div>
+          <div class="tmode-info" id="tmi_TRANSIT"></div>
+        </div>
+        <div class="transit-mode-item" id="tm_WALKING" onclick="selectTransitMode('WALKING')">
+          <div class="tmode-icon"><i class="fas fa-walking"></i></div>
+          <div class="tmode-label">步行</div>
+          <div class="tmode-info" id="tmi_WALKING"></div>
+        </div>
+        <div class="transit-mode-item" id="tm_STRAIGHT" onclick="selectTransitMode('STRAIGHT')">
+          <div class="tmode-icon"><i class="fas fa-ruler"></i></div>
+          <div class="tmode-label">直線距離</div>
+          <div class="tmode-info" id="tmi_STRAIGHT"></div>
+        </div>
+
+      </div>
+    </div>
+
     <div id="pdf-export-container"></div>
     <!-- <script src="js/original.js"></script> -->
     <script src="js/globals.js"></script>
@@ -251,6 +283,7 @@
     <script src="js/search.js"></script>
     <script src="js/edit.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/transit.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
 

@@ -67,15 +67,24 @@ function loadSingleDayTimeline(day, dayIndex) {
 	// 添加該天的所有活動
 	day.activities.forEach((activity, actIndex) => {
 		const isLast = actIndex === day.activities.length - 1;
+		const nextActivity = isLast ? null : day.activities[actIndex + 1];
 		const photoUrl =
 			activity.photos && activity.photos[0]
 				? activity.photos[0].photo_url
 				: "";
 
+		const oLat = activity.location?.lat ?? '';
+		const oLng = activity.location?.lng ?? '';
+		const dLat = nextActivity?.location?.lat ?? '';
+		const dLng = nextActivity?.location?.lng ?? '';
+		const oName = (activity.place_name || '').replace(/"/g, '&quot;');
+		const dName = (nextActivity?.place_name || '').replace(/"/g, '&quot;');
+
 		const newItemHTML = `
       <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
 
       <div class="location-block" onclick="focusMarker('${activity.activityId || activity.place_name || String(actIndex)}')">
+        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
         <div class="timeline-left">
           <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
             <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
@@ -83,25 +92,31 @@ function loadSingleDayTimeline(day, dayIndex) {
         </div>
         <div class="timeline-right">
           <div class="timeline-title">
-            ${actIndex + 1}. ${activity.place_name}
+            <span class="place-name">${actIndex + 1}. ${activity.place_name}</span>
             <span class="time-badge">${activity.time}</span>
           </div>
           <div class="timeline-desc">${activity.description}</div>
           ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
         </div>
-        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
       </div>
 
-      ${
-			!isLast
-				? `
-      <div class="transit-block">
+      ${!isLast ? `
+      <div class="transit-block"
+           data-origin-lat="${oLat}" data-origin-lng="${oLng}"
+           data-dest-lat="${dLat}" data-dest-lng="${dLng}"
+           data-origin-name="${oName}" data-dest-name="${dName}">
         <div class="transit-line"></div>
-        <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+        <div class="transit-info-row">
+          <div class="transit-summary" onclick="openTransitModal(this.closest('.transit-block'))">
+            <i class="fas fa-walking transit-mode-icon"></i>
+            <span class="transit-text">計算中…</span>
+            <i class="fas fa-chevron-down transit-chevron"></i>
+          </div>
+          <a class="transit-route-link" href="javascript:void(0)"
+             onclick="openGoogleMapsRoute(event, this.closest('.transit-block'))">路線</a>
+        </div>
       </div>
-      `
-				: '<div style="height: 15px;"></div>'
-		}
+      ` : '<div style="height: 15px;"></div>'}
     `;
 
 		const div = document.createElement("div");
@@ -111,6 +126,7 @@ function loadSingleDayTimeline(day, dayIndex) {
 		div.innerHTML = newItemHTML;
 		timelineList.appendChild(div);
 	});
+	setTimeout(() => initTransitBlocks(), 300);
 }
 
 // 載入所有活動的時間線
@@ -136,15 +152,24 @@ function loadAllTimelineActivities() {
 
 		day.activities.forEach((activity, actIndex) => {
 			const isLast = actIndex === day.activities.length - 1;
+			const nextActivity = isLast ? null : day.activities[actIndex + 1];
 			const photoUrl =
 				activity.photos && activity.photos[0]
 					? activity.photos[0].photo_url
 					: "";
 
+			const oLat = activity.location?.lat ?? '';
+			const oLng = activity.location?.lng ?? '';
+			const dLat = nextActivity?.location?.lat ?? '';
+			const dLng = nextActivity?.location?.lng ?? '';
+			const oName = (activity.place_name || '').replace(/"/g, '&quot;');
+			const dName = (nextActivity?.place_name || '').replace(/"/g, '&quot;');
+
 			const newItemHTML = `
       <div class="delete-btn" onclick="deleteItem(this)"><i class="fas fa-trash"></i></div>
 
       <div class="location-block" onclick="focusMarker('${activity.activityId || activity.place_name || String(actIndex)}')">
+        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
         <div class="timeline-left">
           <div class="location-img" ${photoUrl ? `style="background-image: url('${photoUrl}'); background-size: cover; background-position: center;"` : ""}>
             <i class="far fa-image" ${photoUrl ? 'style="display: none;"' : ""}></i>
@@ -152,25 +177,31 @@ function loadAllTimelineActivities() {
         </div>
         <div class="timeline-right">
           <div class="timeline-title">
-            ${actIndex + 1}. ${activity.place_name}
+            <span class="place-name">${actIndex + 1}. ${activity.place_name}</span>
             <span class="time-badge">${activity.time}</span>
           </div>
           <div class="timeline-desc">${activity.description}</div>
           ${activity.cost ? `<div class="activity-cost">💰 ${activity.cost}</div>` : ""}
         </div>
-        <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
       </div>
 
-      ${
-			!isLast
-				? `
-      <div class="transit-block">
+      ${!isLast ? `
+      <div class="transit-block"
+           data-origin-lat="${oLat}" data-origin-lng="${oLng}"
+           data-dest-lat="${dLat}" data-dest-lng="${dLng}"
+           data-origin-name="${oName}" data-dest-name="${dName}">
         <div class="transit-line"></div>
-        <div class="transit-data"><i class="fas fa-bus"></i> 預估交通時間...</div>
+        <div class="transit-info-row">
+          <div class="transit-summary" onclick="openTransitModal(this.closest('.transit-block'))">
+            <i class="fas fa-walking transit-mode-icon"></i>
+            <span class="transit-text">計算中…</span>
+            <i class="fas fa-chevron-down transit-chevron"></i>
+          </div>
+          <a class="transit-route-link" href="javascript:void(0)"
+             onclick="openGoogleMapsRoute(event, this.closest('.transit-block'))">路線</a>
+        </div>
       </div>
-      `
-				: '<div style="height: 15px;"></div>'
-		}
+      ` : '<div style="height: 15px;"></div>'}
     `;
 
 			const div = document.createElement("div");
@@ -181,6 +212,7 @@ function loadAllTimelineActivities() {
 			timelineList.appendChild(div);
 		});
 	});
+	setTimeout(() => initTransitBlocks(), 300);
 }
 
 // 切換日期
