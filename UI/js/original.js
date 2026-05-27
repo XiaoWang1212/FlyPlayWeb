@@ -2248,6 +2248,8 @@ async function downloadPDF() {
 		"#B85438",
 		"#A47E4A",
 		"#513653",
+		"#6C6F70",
+		"#FE7A7B",
 	];
 
 	// 1. 建立純 HTML 字串
