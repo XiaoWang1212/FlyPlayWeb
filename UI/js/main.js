@@ -9,7 +9,7 @@ const mapContainer = document.getElementById("mapContainer");
 const dragHandle = document.getElementById("dragHandle");
 const timelineView = document.getElementById("timelineView");
 const chatView = document.getElementById("chatView");
-const editFab = document.getElementById("editFab").querySelector("i");
+const editFab = null;
 const robotFabIcon = document.getElementById("robotFab").querySelector("i");
 
 // --- 搜尋相關 DOM 參考 ---
@@ -132,5 +132,18 @@ window.onload = async function () {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+	syncSheetState("sheet-collapsed");
 	loadProjects();
+
+	// 機器人每 6 秒揮一次手
+	setInterval(() => {
+		const fab = document.getElementById("robotFab");
+		if (!fab) return;
+		fab.classList.add("robot-wave");
+		fab.addEventListener("animationend", () => fab.classList.remove("robot-wave"), { once: true });
+	}, 6000);
+});
+
+document.addEventListener("click", () => {
+	document.querySelectorAll(".trip-dropdown.open").forEach((d) => d.classList.remove("open"));
 });

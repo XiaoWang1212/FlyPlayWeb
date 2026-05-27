@@ -29,7 +29,6 @@ function toggleChatMode() {
 		chatView.classList.add("active");
 		openSheet();
 		syncSheetState("sheet-expanded");
-		document.getElementById("editFab").style.display = "none";
 
 		robotFabIcon.classList.remove("fa-robot");
 		robotFabIcon.classList.add("fa-list-ul");
@@ -40,9 +39,6 @@ function toggleChatMode() {
 		timelineView.classList.add("active");
 		sheet.classList.remove("expanded", "half");
 		syncSheetState("sheet-collapsed");
-		if (currentDayIndex !== -1) {
-			document.getElementById("editFab").style.display = "flex";
-		}
 
 		robotFabIcon.classList.remove("fa-list-ul");
 		robotFabIcon.classList.add("fa-robot");

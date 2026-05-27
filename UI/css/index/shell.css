@@ -113,6 +113,60 @@ header {
 	cursor: pointer;
 }
 
+.trip-more-btn {
+	background: none;
+	border: none;
+	padding: 6px 8px;
+	cursor: pointer;
+	color: #aaa;
+	font-size: 14px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	transition: background 0.2s, color 0.2s;
+}
+
+.trip-more-btn:hover {
+	background: #f0f0f0;
+	color: #333;
+}
+
+.trip-dropdown {
+	display: none;
+	position: fixed;
+	background: #fff;
+	border-radius: 9px;
+	box-shadow: 0 3px 14px rgba(0, 0, 0, 0.13);
+	min-width: 110px;
+	z-index: 9999;
+	overflow: hidden;
+}
+
+.trip-dropdown.open {
+	display: block;
+}
+
+.trip-dropdown-item {
+	padding: 9px 13px;
+	cursor: pointer;
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	transition: background 0.15s;
+}
+
+.trip-dropdown-item:hover {
+	background: #f5f5f5;
+}
+
+.trip-dropdown-item.danger {
+	color: #ff4d4f;
+}
+
+.trip-dropdown-item.danger:hover {
+	background: #fff1f0;
+}
+
 .trip-info {
 	display: flex;
 	align-items: center;
@@ -236,6 +290,53 @@ header {
 	font-size: 20px;
 	color: #333;
 	cursor: pointer;
+}
+
+/* ===== 機器人 FAB 動畫 ===== */
+#robotFab {
+	position: relative;
+	animation: robot-float 2.6s ease-in-out infinite;
+}
+
+/* 脈衝光環 */
+#robotFab::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	border: 2px solid rgba(80, 80, 80, 0.28);
+	animation: robot-pulse 3.5s ease-out 2s infinite;
+	pointer-events: none;
+}
+
+#robotFab:hover {
+	animation: none;
+	transform: scale(1.13);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+
+#robotFab.robot-wave {
+	animation: robot-wave 0.72s ease-in-out forwards;
+}
+
+@keyframes robot-float {
+	0%, 100% { transform: translateY(0); }
+	50%       { transform: translateY(-6px); }
+}
+
+@keyframes robot-wave {
+	0%   { transform: translateY(-3px) rotate(0deg); }
+	18%  { transform: translateY(-3px) rotate(-16deg); }
+	38%  { transform: translateY(-3px) rotate(16deg); }
+	56%  { transform: translateY(-3px) rotate(-10deg); }
+	74%  { transform: translateY(-3px) rotate(10deg); }
+	100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes robot-pulse {
+	0%   { transform: scale(1);   opacity: 0.55; }
+	65%  { transform: scale(1.7); opacity: 0; }
+	100% { transform: scale(1.7); opacity: 0; }
 }
 
 .map-container.sheet-expanded .fab-group {

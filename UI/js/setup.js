@@ -737,6 +737,11 @@ function buildItineraryPayload() {
 
   const projectId = Number(sessionStorage.getItem("currentProjectId") || 0);
 
+  // 將目的地資料綁定到此專案，供之後開啟時還原
+  if (projectId && destinations.length > 0) {
+    localStorage.setItem(`projectDestinations_${projectId}`, JSON.stringify(destinations));
+  }
+
   const departure_airport =
     tripSetup.departure || tripSetup.departureLabel || "未填";
   const companion =
