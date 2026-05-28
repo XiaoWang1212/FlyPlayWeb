@@ -12,7 +12,8 @@ function getColorByDay(dayIndex) {
     "#EA4335",
     "#FBBC04",
     "#9C27B0",
-    "#FFC0CB",
+    "#6C6F70",
+    "#FF6666",
   ];
   return colors[dayIndex % colors.length];
 }

@@ -88,6 +88,7 @@ function closeCurrentPopup() {
 }
 
 function clearMapRoutes() {
+	mapRouteSession++; // 讓所有進行中的 DirectionsService callback 自行失效
 	currentRenderers.forEach((renderer) => renderer.setMap(null));
 	currentRenderers = [];
 
@@ -231,6 +232,7 @@ function displayAllDays() {
 		}));
 		map.panTo({ lat: avgLat - 0.07, lng: avgLng });
 		map.setZoom(11.5);
+		const sessionAtDispatch = mapRouteSession;
 		directionsService.route(
 			{
 				origin: origin,
@@ -240,6 +242,7 @@ function displayAllDays() {
 				travelMode: google.maps.TravelMode.WALKING,
 			},
 			(result, status) => {
+				if (sessionAtDispatch !== mapRouteSession) return; // 已被新的 displayDay/clearMapRoutes 取消
 				if (status === "OK") {
 					directionsRenderer.setDirections(result);
 					addCustomMarkers(routeActivities, dayIndex);
@@ -309,6 +312,7 @@ function displayDay(dayIndex) {
 		stopover: true,
 	}));
 
+	const sessionAtDispatch = mapRouteSession;
 	directionsService.route(
 		{
 			origin: origin,
@@ -318,6 +322,7 @@ function displayDay(dayIndex) {
 			travelMode: google.maps.TravelMode.WALKING,
 		},
 		(result, status) => {
+			if (sessionAtDispatch !== mapRouteSession) return; // 已被新的 displayDay/clearMapRoutes 取消
 			if (status === "OK") {
 				directionsRenderer.setDirections(result);
 				addCustomMarkers(routeActivities, dayIndex);

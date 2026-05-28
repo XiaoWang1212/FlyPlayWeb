@@ -114,9 +114,9 @@ class TravelService:
             set_items.append("detailed_itinerary=%s")
             values.append(json.dumps(detailed_itinerary))
 
-        if data_latlng is not None:
-            set_items.append("data_latlng=%s")
-            values.append(json.dumps(data_latlng))
+        # if data_latlng is not None:
+        #     set_items.append("data_latlng=%s")
+        #     values.append(json.dumps(data_latlng))
 
         if not set_items:
             return None

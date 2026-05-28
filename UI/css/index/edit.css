@@ -19,6 +19,49 @@
 	padding-right: 45px;
 }
 
+.view-section.editing .timeline-left {
+	width: 45px;
+	margin-right: 8px;
+}
+
+.view-section.editing .location-img {
+	width: 45px;
+	height: 45px;
+	font-size: 18px;
+}
+
+.view-section.editing .place-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.view-section.editing .timeline-title {
+	font-size: 13px;
+}
+
+.view-section.editing .timeline-desc {
+	font-size: 10px;
+}
+
+.view-section.editing .time-badge {
+	font-size: 10px;
+	padding: 1px 5px;
+}
+
+.view-section.editing .activity-cost {
+	font-size: 10px;
+}
+
+.view-section.editing .delete-btn {
+	width: 23px;
+	height: 23px;
+	font-size: 12px;
+	line-height: 23px;
+}
+
 .delete-btn {
 	display: none;
 	position: absolute;
@@ -59,6 +102,26 @@
 .view-section.editing .add-item-btn {
 	display: block;
 	animation: fadeIn 0.3s;
+}
+
+#timelineView.editing > .add-item-btn {
+	display: none;
+}
+
+.drag-handle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	align-self: center;
+	color: #bbb;
+	font-size: 18px;
+	padding: 0 8px 0 4px;
+	cursor: grab;
+	flex-shrink: 0;
+}
+
+.view-section.editing .drag-handle {
+	display: flex;
 }
 
 .drag-confirm-btn {
