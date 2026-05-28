@@ -22,11 +22,20 @@ def send_message():
         
         message = data.get('message') or data.get('text')
         conversation_history = data.get('conversationHistory', [])
+        trip_context = data.get('tripContext', {})
+        current_itinerary = data.get('currentItinerary', [])
+        current_day_index = data.get('currentDayIndex', -1)
         
         if not message:
             return unified_response(400, '必須提供 message 參數')
         
-        result = chat_controller.handle_chat_message(message, conversation_history)
+        result = chat_controller.handle_chat_message(
+            message,
+            conversation_history,
+            trip_context,
+            current_itinerary,
+            current_day_index,
+        )
         
         if result['success']:
             return unified_response(200, '成功', result['data'])

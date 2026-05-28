@@ -49,7 +49,14 @@ class ChatController:
 
         return any(keyword in text for keyword in travel_keywords)
     
-    def handle_chat_message(self, message, conversation_history):
+    def handle_chat_message(
+        self,
+        message,
+        conversation_history,
+        trip_context=None,
+        current_itinerary=None,
+        current_day_index=-1,
+    ):
         """處理用戶聊天消息"""
         try:
             if not self._is_travel_related(message):
@@ -64,7 +71,13 @@ class ChatController:
                     },
                 }
 
-            return self.chat_service.chat_with_ai(message, conversation_history)
+            return self.chat_service.chat_with_ai(
+                message,
+                conversation_history,
+                trip_context,
+                current_itinerary,
+                current_day_index,
+            )
         except Exception as e:
             return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
     

@@ -2,6 +2,125 @@
 
 let conversationHistory = [];
 
+function getChatCurrentItinerary() {
+	if (Array.isArray(allDays) && allDays.length > 0) {
+		return allDays;
+	}
+
+	const detailedRaw = localStorage.getItem("detailed_itinerary");
+	if (detailedRaw) {
+		try {
+			const detailed = JSON.parse(detailedRaw);
+			const days = detailed?.parsed?.days || detailed?.days;
+			if (Array.isArray(days) && days.length > 0) {
+				return days.map((day) => ({
+					day: day.day,
+					weekday: day.weekday,
+					activities: day.location || day.activities || [],
+				}));
+			}
+		} catch (_) {}
+	}
+
+	return [];
+}
+
+function serializeChatItinerary(days) {
+	return {
+		data: (days || []).map((day) => ({
+			day: day.day,
+			weekday: day.weekday || `第${day.day}天`,
+			locations: (day.activities || []).map((activity) => ({
+				location_name:
+					activity.place_name || activity.location_name || activity.name || "",
+				place_id: activity.place_id || "",
+				location: activity.location || null,
+				time: activity.time || "",
+			})),
+		})),
+	};
+}
+
+function persistChatItinerary(days) {
+	if (!Array.isArray(days) || days.length === 0) return;
+
+	localStorage.setItem("data_latlng", JSON.stringify(serializeChatItinerary(days)));
+
+	const detailedRaw = localStorage.getItem("detailed_itinerary");
+	if (detailedRaw) {
+		try {
+			const detailed = JSON.parse(detailedRaw);
+			if (detailed?.parsed && Array.isArray(detailed.parsed.days)) {
+				detailed.parsed.days = days;
+			} else if (Array.isArray(detailed?.days)) {
+				detailed.days = days;
+			} else {
+				detailed.days = days;
+			}
+			localStorage.setItem("detailed_itinerary", JSON.stringify(detailed));
+		} catch (_) {}
+	}
+
+	const generatedRaw = localStorage.getItem("generatedItinerary");
+	if (generatedRaw) {
+		try {
+			const generated = JSON.parse(generatedRaw);
+			if (generated?.parsed && Array.isArray(generated.parsed.days)) {
+				generated.parsed.days = days;
+			}
+			localStorage.setItem("generatedItinerary", JSON.stringify(generated));
+		} catch (_) {}
+	}
+}
+
+function applyChatItineraryUpdate(parsed) {
+	const targetDay = Number(parsed?.target_day || parsed?.day || 0);
+	const updatedDay = parsed?.updated_day || parsed?.day_data || parsed?.updatedDay;
+	if (!targetDay || !updatedDay) return false;
+
+	const nextDays = JSON.parse(JSON.stringify(getChatCurrentItinerary()));
+	if (!Array.isArray(nextDays) || nextDays.length === 0) return false;
+
+	const targetIndex = nextDays.findIndex(
+		(day, index) => Number(day?.day) === targetDay || index === targetDay - 1,
+	);
+	if (targetIndex === -1) return false;
+
+	const previousDay = nextDays[targetIndex] || {};
+	const previousActivities = Array.isArray(previousDay.activities)
+		? previousDay.activities
+		: [];
+	const nextActivities = Array.isArray(updatedDay.activities)
+		? updatedDay.activities.map((activity, index) => ({
+			...previousActivities[index],
+			...activity,
+			location: activity.location || previousActivities[index]?.location || null,
+		}))
+		: previousActivities;
+
+	nextDays[targetIndex] = {
+		...previousDay,
+		...updatedDay,
+		day: Number(updatedDay.day || targetDay),
+		weekday: updatedDay.weekday || previousDay.weekday,
+		activities: nextActivities,
+	};
+
+	allDays = nextDays;
+	persistChatItinerary(nextDays);
+
+	if (typeof createDayButtons === "function") {
+		createDayButtons();
+	}
+	if (currentDayIndex === -1) {
+		if (typeof displayAllDays === "function") displayAllDays();
+	} else if (typeof displayDay === "function") {
+		displayDay(currentDayIndex);
+	}
+
+	return true;
+}
+
 // 逐字顯示訊息（打字機效果）
 async function typeMessage(text, type, speed = 45) {
 	const div = document.createElement("div");
@@ -75,6 +194,28 @@ async function sendMessage() {
 	const text = input.value.trim();
 	if (!text) return;
 
+	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
+	const selectedDestinations = JSON.parse(
+		localStorage.getItem("selectedDestinations") || "[]",
+	);
+	const tripContext = {
+		days: tripSetup.daysValue || tripSetup.daysLabel || "",
+		destination: selectedDestinations
+			.map((dest) => dest.city || dest.name || dest.label)
+			.filter(Boolean)
+			.join("、"),
+		departure: tripSetup.departureLabel || tripSetup.departure || "",
+		companion: tripSetup.companionLabel || tripSetup.companion || "",
+		budget: tripSetup.budgetLabel || tripSetup.budget || "",
+		travelType:
+			(tripSetup.travelTypeLabels || []).join("、") ||
+			tripSetup.travelTypeLabel ||
+			tripSetup.travelType ||
+			"",
+		startDate: tripSetup.startDate || "",
+	};
+	const currentItinerary = getChatCurrentItinerary();
+
 	appendMsg(text, "user");
 	input.value = "";
 
@@ -91,7 +232,13 @@ async function sendMessage() {
 		const resp = await fetch(API_BASE + "/api/chat/message", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ message: text, conversationHistory }),
+			body: JSON.stringify({
+				message: text,
+				conversationHistory,
+				tripContext,
+				currentItinerary,
+				currentDayIndex,
+			}),
 		});
 
 		const result = await resp.json();
@@ -101,9 +248,15 @@ async function sendMessage() {
 		if (result && (result.code === 200 || result.success === true)) {
 			const data = result.data || result;
 			const aiText =
-				(data && (data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
+				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
 				"（無回覆）";
 			appendMsg(aiText, "bot");
+			if (data && data.parsed && data.parsed.action === "update_day") {
+				const updated = applyChatItineraryUpdate(data.parsed);
+				if (!updated) {
+					appendMsg("系統已回傳修改結果，但無法套用到目前行程。", "bot");
+				}
+			}
 			if (Array.isArray(data.history) && data.history.length > 0) {
 				conversationHistory = data.history;
 			} else {

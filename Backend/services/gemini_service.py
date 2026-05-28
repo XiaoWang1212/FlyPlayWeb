@@ -13,7 +13,8 @@ class GeminiService:
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
         self.system_prompt = (
-            "你是一個旅遊規劃 AI，請主動詢問使用者旅伴類型、目的地、天數等資訊來優化行程。"
+            "你是一個旅遊規劃 AI。若系統已提供旅遊上下文，請直接使用，不要重複詢問已知的目的地、天數、出發地、旅伴或預算。"
+            "只有在資訊缺失且確實影響回答時，才補充詢問。"
             "所有回覆請使用繁體中文純文字，不要輸出 Markdown、不要使用 **、#、-、編號清單或 code block。"
         )
         self.model = genai.GenerativeModel(
@@ -124,6 +125,93 @@ class GeminiService:
 
         return gemini_history
 
+    def _build_trip_context_text(self, trip_context):
+        """把前端傳來的旅遊設定整理成可讀上下文。"""
+        if not isinstance(trip_context, dict):
+            return ""
+
+        destination = trip_context.get("destination") or trip_context.get("destinations")
+        if isinstance(destination, list):
+            destination = "、".join(
+                str(item.get("city") or item.get("name") or item.get("label") or "")
+                for item in destination
+                if isinstance(item, dict)
+            )
+
+        days = trip_context.get("days")
+        if isinstance(days, str) and days and not days.isdigit():
+            days_text = days
+        elif days:
+            days_text = f"{days}天"
+        else:
+            days_text = ""
+
+        context_lines = []
+        if destination:
+            context_lines.append(f"目的地：{destination}")
+        if days_text:
+            context_lines.append(f"天數：{days_text}")
+        if trip_context.get("departure"):
+            context_lines.append(f"出發地：{trip_context.get('departure')}")
+        if trip_context.get("companion"):
+            context_lines.append(f"旅伴類型：{trip_context.get('companion')}")
+        if trip_context.get("budget"):
+            context_lines.append(f"預算：{trip_context.get('budget')}")
+        if trip_context.get("travelType"):
+            context_lines.append(f"旅遊偏好：{trip_context.get('travelType')}")
+        if trip_context.get("startDate"):
+            context_lines.append(f"出發日期：{trip_context.get('startDate')}")
+
+        if not context_lines:
+            return ""
+
+        return "\n".join(context_lines)
+
+    def _is_itinerary_edit_request(self, message):
+        text = str(message or "").strip()
+        if not text:
+            return False
+
+        edit_keywords = ["修改", "更改", "調整", "改成", "替換", "刪除", "新增", "第", "天"]
+        if not any(keyword in text for keyword in edit_keywords):
+            return False
+
+        return bool(re.search(r"第\s*[0-9一二三四五六七八九十百]+\s*天", text)) or any(
+            keyword in text for keyword in ["修改", "更改", "調整", "改成", "替換"]
+        )
+
+    def _build_itinerary_context_text(self, current_itinerary, current_day_index=-1):
+        if not isinstance(current_itinerary, list) or not current_itinerary:
+            return ""
+
+        lines = []
+        for index, day in enumerate(current_itinerary):
+            if not isinstance(day, dict):
+                continue
+
+            day_no = day.get("day") or index + 1
+            weekday = day.get("weekday") or ""
+            activities = day.get("activities") or day.get("location") or []
+            if not isinstance(activities, list):
+                activities = []
+
+            summary_items = []
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                time = activity.get("time") or ""
+                name = activity.get("place_name") or activity.get("location_name") or activity.get("name") or ""
+                if name:
+                    summary_items.append(f"{time} {name}".strip())
+
+            current_marker = " (目前所在天)" if current_day_index == index else ""
+            lines.append(
+                f"第{day_no}天{f' {weekday}' if weekday else ''}{current_marker}: "
+                + "；".join(summary_items)
+            )
+
+        return "\n".join(lines)
+
     def get_travel_recommendation(self, location, days, transportation, preferences):
         """基於參數生成旅遊推薦 (簡要版)"""
         try:
@@ -204,19 +292,73 @@ class GeminiService:
         except Exception as e:
             return {"success": False, "error": f"行程文字整理失敗: {str(e)}"}
 
-    def chat_with_ai(self, message, conversation_history=None):
+    def chat_with_ai(
+        self,
+        message,
+        conversation_history=None,
+        trip_context=None,
+        current_itinerary=None,
+        current_day_index=-1,
+    ):
         """與 AI 進行對話"""
         try:
             chat_history = self._build_gemini_history(conversation_history)
             chat = self.model.start_chat(history=chat_history)
 
-            response = chat.send_message(str(message).strip())
+            trip_context_text = self._build_trip_context_text(trip_context)
+            itinerary_context_text = self._build_itinerary_context_text(
+                current_itinerary, current_day_index
+            )
+            final_message = str(message).strip()
+            if self._is_itinerary_edit_request(final_message) and itinerary_context_text:
+                final_message = (
+                    "你是一個旅遊行程編輯器。使用者要透過聊天修改某一天的行程。\n"
+                    "請只修改使用者指定的那一天，不要改其他天。\n"
+                    "若使用者沒有明說天數，請根據上下文推斷；若無法判斷，請回傳 need_clarification。\n"
+                    "請只回傳純 JSON，不要輸出 Markdown。\n\n"
+                    "現有旅遊上下文：\n"
+                    f"{trip_context_text or '無'}\n\n"
+                    "現有行程：\n"
+                    f"{itinerary_context_text}\n\n"
+                    "使用者修改需求：\n"
+                    f"{final_message}\n\n"
+                    "請輸出以下 JSON 形式：\n"
+                    "{\n"
+                    '  "action": "update_day",\n'
+                    '  "target_day": 2,\n'
+                    '  "summary": "已將第 2 天下午改為...",\n'
+                    '  "updated_day": {\n'
+                    '    "day": 2,\n'
+                    '    "weekday": "星期五",\n'
+                    '    "activities": [\n'
+                    '      {"time": "09:00", "place_name": "...", "description": "...", "type": "景點", "cost": "免費", "location": null}\n'
+                    "    ]\n"
+                    "  }\n"
+                    "}\n"
+                    "如果無法完成修改，請回傳 {\"action\": \"need_clarification\", \"question\": \"...\"}。"
+                )
+            elif trip_context_text:
+                final_message = (
+                    "已知旅遊資訊：\n"
+                    f"{trip_context_text}\n\n"
+                    f"使用者問題：{final_message}\n\n"
+                    "請直接根據已知資訊回答，不要再次詢問已知的天數或目的地。"
+                )
+
+            response = chat.send_message(final_message)
             ai_content = self._strip_markdown_text(response.text)
+            parsed_payload = None
+            if self._is_itinerary_edit_request(message):
+                try:
+                    _, _, parsed_payload = self._parse_response_json(response)
+                except Exception:
+                    parsed_payload = None
 
             return {
                 'success': True,
                 'data': {
                     'response': ai_content,
+                    'parsed': parsed_payload,
                     'history': (conversation_history or []) + [
                         {"role": "user", "content": message},
                         {"role": "assistant", "content": ai_content},
@@ -269,6 +411,7 @@ class GeminiService:
             景點禁止出現大阪的新世界。
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
+            檢查每日景點的距離不要超過120公里。
 
             """
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
