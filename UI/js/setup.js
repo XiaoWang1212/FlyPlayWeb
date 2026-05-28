@@ -10,6 +10,8 @@
  * travelType: "relax",     // 旅遊偏好
  * destinations: [{...}]    // 從目的地頁面傳過來的陣列
  * }
+ *
+ * 飛機動畫的說明寫在 SubmitAIRecommendation 上方註解。
  */
 
 let scrollEndTimeout;
@@ -774,6 +776,15 @@ function buildItineraryPayload() {
   };
 }
 
+/**
+ * 送出 AI 行程生成請求。
+ *
+ * 飛機動畫用 await 的時間當「生成中」指示：
+ *   開始：startPlaneAnim()   飛機無限 loop，AI 跑多久就飛多久
+ *   成功：flyToIndex()       爬升離場 + 自動導向 index.html 接俯衝
+ *   失敗：stopPlaneAnim()    飛機緩降回起點
+ *
+ */
 async function submitAIRecommendation() {
   const btn = getGenerateBtn();
   if (btn?.disabled) return;
@@ -799,6 +810,7 @@ async function submitAIRecommendation() {
   }
 
   setGeneratingState(true);
+  startPlaneAnim();
   try {
     const res = await fetch(`${API_BASE}/api/travel/itinerary`, {
       method: "POST",
@@ -819,10 +831,10 @@ async function submitAIRecommendation() {
     localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
 
     console.log("✓ 準備跳轉至 index.html");
-    // 行程建立成功後自動導向首頁
-    window.location.href = "index.html";
+    flyToIndex();
   } catch (err) {
     console.error("itinerary 生成失敗:", err);
+    stopPlaneAnim();
     alert("AI 行程生成失敗，請稍後再試");
   } finally {
     setGeneratingState(false);

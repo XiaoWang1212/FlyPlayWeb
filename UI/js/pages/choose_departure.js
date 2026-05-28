@@ -1,4 +1,5 @@
 /**
+ * 目前沒有接到這一個檔案，是接到資料夾外面的。
  * choose_departure.js - 出發地選擇頁面
  * 單選出發地，存到 tripSetup（localStorage）
  */

@@ -7,6 +7,13 @@
         <link rel="stylesheet" href="css/setup.css" />
     </head>
     <body>
+        <!-- 飛機 overlay 由 js/flight-animation.js 動態注入 -->
+        <!-- 臨時測試按鈕（之後要刪掉） -->
+        <button id="test-anim-btn"
+                onclick="testPlaneAnim()"
+                style="position:fixed;top:16px;right:16px;z-index:999;background:rgba(255,233,102,0.85);color:#333;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:pointer;">
+          ✈
+        </button>
         <div class="container">
             <button class="back-btn" onclick="goBackWithTransition()">
                 <img src="assets/icons/back-arrow.svg" alt="返回">
@@ -22,7 +29,7 @@
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group layer-above">
                 <label>目的地</label>
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDestinationPage()">
@@ -49,7 +56,7 @@
             </div>
 
             <!-- 旅伴選擇器（卡片式 + icon） -->
-            <div class="form-group card-picker-group" id="companion-picker-group">
+            <div class="form-group card-picker-group layer-above" id="companion-picker-group">
                 <div class="picker-header" onclick="toggleCompanionPicker()">
                     <label>旅伴</label>
                     <div class="picker-display">
@@ -81,7 +88,7 @@
             </div>
 
             <!-- 預算選擇器（新增） -->
-            <div class="form-group card-picker-group" id="budget-picker-group">
+            <div class="form-group card-picker-group layer-above" id="budget-picker-group">
                 <div class="picker-header" onclick="toggleBudgetPicker()">
                     <label>預算</label>
                     <div class="picker-display">
@@ -112,7 +119,9 @@
             <!-- 提示缺少欄位 -->
             <div id="missing-field-hint" class="missing-field-hint"></div>
 
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
             <script src="js/page_transition.js"></script>
+            <script src="js/flight-animation.js"></script>
             <script src="js/setup.js"></script>
         </body>
     </html>

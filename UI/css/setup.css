@@ -508,6 +508,13 @@ textarea {
   pointer-events: auto;
 }
 
+/* 讓特定選擇器卡片浮在飛機圖層上方，製造穿插感 */
+/* plane SVG 是 z-index:5，這些卡片設為 10 → 飛機從其下方穿過 */
+.layer-above {
+  position: relative;
+  z-index: 10;
+}
+
 /* ==================== 缺少必填欄位提醒 ==================== */
 .missing-field-hint {
   position: fixed;

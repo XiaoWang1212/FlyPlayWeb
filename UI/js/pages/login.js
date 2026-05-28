@@ -1,3 +1,4 @@
+// 目前沒有接到這一個檔案，是接到資料夾外面的。
 const API_URL = "http://localhost:5001/api/auth/login"; // 如有反向代理請調整
 const loginForm = document.getElementById("loginForm");
 const emailInput = document.getElementById("email");
