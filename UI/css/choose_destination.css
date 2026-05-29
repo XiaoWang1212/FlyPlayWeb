@@ -141,7 +141,7 @@ h1 {
 /* 城市列表 */
 .destination-list {
     flex: 1;
-    overflow-y: scroll;  
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
