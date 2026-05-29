@@ -110,6 +110,22 @@ const departures = [
 
 const STORAGE_KEY_TRIP_SETUP = "tripSetup";
 
+const departureToRegionMap = {
+  "千葉/東京": ["kanto"],
+  東京: ["kanto"],
+  大阪: ["kinki"],
+  名古屋: ["chubu"],
+  九州: ["kyushu"],
+  北海道: ["hokkaido"],
+  沖繩: ["okinawa"],
+  "大阪/伊丹": ["kinki"],
+  東北: ["tohoku"],
+  "關東/中部": ["kanto", "chubu"],
+  "中國/四國": ["chugoku", "shikoku"],
+  "九州/離島": ["kyushu"],
+
+};
+
 function loadTripSetup() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_TRIP_SETUP);
@@ -221,13 +237,33 @@ function confirmSelection() {
     return;
   }
 
+  const selectedDep = departures.find(
+    (dep) => dep.city === selectedDepartureCity,
+  );
+  let allowedRegions = null;
+
+  if (selectedDep && selectedDep.subtitle) {
+    // 查找所有匹配的 subtitle 部分
+    const subtitles = selectedDep.subtitle.split("/");
+    const regions = new Set();
+    subtitles.forEach((sub) => {
+      if (departureToRegionMap[sub]) {
+        departureToRegionMap[sub].forEach((region) => regions.add(region));
+      }
+    });
+     if (regions.size > 0) {
+      allowedRegions = Array.from(regions);
+    }
+  } 
+
   saveTripSetup({
     departure: selectedDepartureCity,
     departureLabel: selectedDepartureCity,
-  });
+    allowedRegions: allowedRegions, // 儲存允許的區域
+  }); 
 
   // 使用動畫返回 setup.html
-  goBackWithTransition('setup.html');
+  goBackWithTransition("setup.html");
 }
 
 function searchDeparture() {

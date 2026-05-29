@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from controllers.map_controller import MapController
+from services.googlemap_service import GoogleMapService
 from decorators.auth_decorator import login_required
 
 map_bp = Blueprint('maps', __name__)
 map_controller = MapController()
+map_service = GoogleMapService()
 
 @map_bp.route('/search', methods=['POST'])
 @login_required
@@ -177,15 +179,63 @@ def get_place_business_info_by_name():
 def get_route_details():
     try:
         data = request.get_json()
+        origin = data.get('origin')          
+        destination = data.get('destination')  
+        mode = data.get('mode', 'driving')
+        
+        if not origin or not destination:
+            return jsonify({'success': False, 'error': '必須提供origin與destination的座標'}), 400
+            
+        result = map_controller.handle_route_details(origin, destination, mode)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+
+        if mode.lower() == 'transit' and origin and destination:
+            origin_text = f"{origin.get('latitude')},{origin.get('longitude')}"
+            destination_text = f"{destination.get('latitude')},{destination.get('longitude')}"
+
+            duration_result = map_service.get_distance_and_duration(origin_text, destination_text, mode='transit')
+            steps_result = map_service.get_route_details(origin_text, destination_text, mode='transit')
+
+            if duration_result.get('success') and steps_result.get('success'):
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'duration': duration_result.get('duration'),
+                        'distance': duration_result.get('distance'),
+                        'steps': steps_result.get('steps', []),
+                        'mode': mode,
+                        'origin': origin,
+                        'destination': destination,
+                        'source': 'legacy_directions_api'
+                    }
+                }), 200
+
+        return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@map_bp.route('/estimate_transit', methods=['POST'])
+@login_required
+def estimate_transit():
+    """估算大眾運輸時間"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': '請求體不能為空'}), 400
+        
         origin = data.get('origin')
         destination = data.get('destination')
-        mode = data.get('mode', 'driving')
+
         if not origin or not destination:
-            return jsonify({'success': False, 'error': '必須提供origin與destination'}), 400
-        result = map_controller.handle_route_details(origin, destination, mode)
-        if result['success']:
+            return jsonify({'success': False, 'error': '必須提供起點和終點'}), 400
+
+        result = map_controller.handle_estimate_transit(origin, destination)
+        
+        if result.get('success'):
             return jsonify(result), 200
         else:
             return jsonify(result), 400
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'服務器錯誤: {str(e)}'}), 500
