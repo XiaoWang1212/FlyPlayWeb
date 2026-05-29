@@ -42,7 +42,7 @@
             <!-- 可展開的天數選擇器 -->
             <div class="form-group expandable-picker" id="days-picker-group">
                 <div class="picker-header" onclick="toggleDaysPicker()">
-                    <label>天數</label>
+                    <label class="label-with-hint">天數<span class="label-hint">不含出發及返程日</span></label>
                     <div class="picker-display">
                         <span id="selected-days">任何天數</span>
                         <span class="arrow-icon">›</span>
@@ -87,26 +87,18 @@
                 </div>
             </div>
 
-            <!-- 預算選擇器（新增） -->
-            <div class="form-group card-picker-group layer-above" id="budget-picker-group">
-                <div class="picker-header" onclick="toggleBudgetPicker()">
-                    <label>預算</label>
+            <!-- 早上出發時間選擇器 -->
+            <div class="form-group card-picker-group layer-above" id="morning-departure-picker-group">
+                <div class="picker-header" onclick="toggleMorningDeparturePicker()">
+                    <label>早上出發時間</label>
                     <div class="picker-display">
-                        <span id="selected-budget">中等</span>
+                        <span id="selected-morning-departure">任何時間</span>
                         <span class="arrow-icon">›</span>
                     </div>
                 </div>
                 <div class="card-picker-body">
-                    <div class="card-picker-grid" id="budget-cards">
-                        <div class="picker-card" data-budget="經濟">
-                            <div class="picker-card-label">經濟</div>
-                        </div>
-                        <div class="picker-card" data-budget="中等">
-                            <div class="picker-card-label">中等</div>
-                        </div>
-                        <div class="picker-card" data-budget="高級">
-                            <div class="picker-card-label">高級</div>
-                        </div>
+                    <div class="card-picker-grid" id="morning-departure-cards">
+                        <!-- 早上出發時間卡片會由 JavaScript 動態生成 -->
                     </div>
                 </div>
             </div>

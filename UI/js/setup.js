@@ -230,16 +230,16 @@ window.onload = function () {
       tripSetup.travelTypeLabel;
   }
 
-  // 回填預算
-  if (tripSetup.budgetLabel) {
-    document.getElementById("selected-budget").textContent =
-      tripSetup.budgetLabel;
+  // 回填早上出發時間
+  if (tripSetup.morningDepartureLabel) {
+    document.getElementById("selected-morning-departure").textContent =
+      tripSetup.morningDepartureLabel;
   }
 
   // 重要：不要再使用不存在的 departureSelect.addEventListener(...)
   // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
 
-  initBudgetPicker();
+  initMorningDeparturePicker();
   updateAIRecommendButtonState();
 };
 
@@ -520,7 +520,7 @@ function closeAllPickers() {
   document
     .getElementById("travel-type-picker-group")
     ?.classList.remove("active");
-  document.getElementById("budget-picker-group")?.classList.remove("active");
+  document.getElementById("morning-departure-picker-group")?.classList.remove("active");
 }
 
 // 顯示 AI 推薦按鈕
@@ -588,14 +588,29 @@ function hideAIRecommendButton() {
   }
 }
 
-// ========== 預算 picker ==========
-function toggleBudgetPicker() {
-  const pickerGroup = document.getElementById("budget-picker-group");
+// ========== 早上出發時間 picker ==========
+const morningDepartureOptions = [
+  { value: "", label: "任何時間" },
+  { value: "6am-7am", label: "6:00-7:00" },
+  { value: "7am-8am", label: "7:00-8:00" },
+  { value: "8am-9am", label: "8:00-9:00" },
+  { value: "9am-10am", label: "9:00-10:00" },
+  { value: "10am-11am", label: "10:00-11:00" },
+];
+
+function toggleMorningDeparturePicker() {
+  const pickerGroup = document.getElementById("morning-departure-picker-group");
+  const cardsContainer = document.getElementById("morning-departure-cards");
+
   const wasActive = pickerGroup.classList.contains("active");
 
   if (!wasActive) {
     closeAllPickers();
     hideAIRecommendButton();
+  }
+
+  if (cardsContainer.children.length === 0) {
+    generateMorningDepartureCards(cardsContainer);
   }
 
   pickerGroup.classList.toggle("active");
@@ -605,44 +620,57 @@ function toggleBudgetPicker() {
   }
 }
 
-function initBudgetPicker() {
-  const cards = document.querySelectorAll("#budget-cards .picker-card");
-  const selectedText = document.getElementById("selected-budget");
-  const tripSetup = loadTripSetup();
+function generateMorningDepartureCards(container) {
+  container.innerHTML = "";
+  morningDepartureOptions.forEach((opt) => {
+    const card = document.createElement("div");
+    card.className = "picker-card";
+    card.innerHTML = `
+            <div class="picker-card-label">${opt.label}</div>
+        `;
+    card.dataset.value = opt.value;
+    card.dataset.label = opt.label;
 
-  // 回填
-  const savedBudget = tripSetup.budgetLabel || "中等";
-  if (selectedText) selectedText.textContent = savedBudget;
-  cards.forEach((card) => {
-    card.classList.toggle("selected", card.dataset.budget === savedBudget);
-    card.classList.toggle("active", card.dataset.budget === savedBudget);
-  });
-
-  // 綁定
-  cards.forEach((card) => {
     card.addEventListener("click", () => {
-      cards.forEach((c) => {
-        c.classList.remove("selected");
-        c.classList.remove("active");
-      });
+      container
+        .querySelectorAll(".picker-card")
+        .forEach((c) => c.classList.remove("selected"));
       card.classList.add("selected");
-      card.classList.add("active");
 
-      const budgetLabel = card.dataset.budget || "中等";
-      if (selectedText) selectedText.textContent = budgetLabel;
+      document.getElementById("selected-morning-departure").textContent = opt.label;
 
       saveTripSetup({
-        budget: budgetLabel,
-        budgetLabel,
+        morningDeparture: opt.value,
+        morningDepartureLabel: opt.label,
       });
 
-      // 關掉選擇器
       document
-        .getElementById("budget-picker-group")
+        .getElementById("morning-departure-picker-group")
         ?.classList.remove("active");
       showAIRecommendButton();
     });
+
+    container.appendChild(card);
   });
+
+  // 回填已選項目
+  const tripSetup = loadTripSetup();
+  if (tripSetup.morningDeparture) {
+    const selectedCard = container.querySelector(
+      `[data-value="${tripSetup.morningDeparture}"]`,
+    );
+    if (selectedCard) selectedCard.classList.add("selected");
+  } else {
+    const anyTimeCard = container.querySelector('[data-value=""]');
+    if (anyTimeCard) anyTimeCard.classList.add("selected");
+  }
+}
+
+function initMorningDeparturePicker() {
+  const cardsContainer = document.getElementById("morning-departure-cards");
+  if (cardsContainer && cardsContainer.children.length === 0) {
+    generateMorningDepartureCards(cardsContainer);
+  }
 }
 
 // 頁面初始化
@@ -685,16 +713,9 @@ window.onload = function () {
       tripSetup.travelTypeLabel;
   }
 
-  // 回填預算
-  if (tripSetup.budgetLabel) {
-    document.getElementById("selected-budget").textContent =
-      tripSetup.budgetLabel;
-  }
-
   // 重要：不要再使用不存在的 departureSelect.addEventListener(...)
   // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
 
-  initBudgetPicker();
   updateAIRecommendButtonState();
 };
 
@@ -751,7 +772,6 @@ function buildItineraryPayload() {
       ? tripSetup.companion
       : "any";
 
-  const budget = tripSetup.budgetLabel || tripSetup.budget || "中等";
   const interests =
     selectedTravelTypes.length > 0
       ? selectedTravelTypes
@@ -770,7 +790,6 @@ function buildItineraryPayload() {
     destination,
     type,
     companion,
-    budget,
     interests,
     start_date: tripSetup.startDate || startDateDefault,
   };
@@ -852,15 +871,12 @@ function isSetupComplete() {
     !!tripSetup.travelType ||
     (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0);
 
-  const hasBudget = !!(tripSetup.budget || tripSetup.budgetLabel || "中等");
-
   return (
     selectedDestinations.length > 0 &&
     !!tripSetup.departure &&
     Number(tripSetup.daysValue) > 0 &&
     hasCompanion &&
-    hasTravelType &&
-    hasBudget
+    hasTravelType
   );
 }
 
@@ -915,25 +931,19 @@ window.onload = function () {
       tripSetup.travelTypeLabel;
   }
 
-  // 回填預算
-  if (tripSetup.budgetLabel) {
-    document.getElementById("selected-budget").textContent =
-      tripSetup.budgetLabel;
+  // 回填早上出發時間
+  if (tripSetup.morningDepartureLabel) {
+    document.getElementById("selected-morning-departure").textContent =
+      tripSetup.morningDepartureLabel;
   }
 
   // 重要：不要再使用不存在的 departureSelect.addEventListener(...)
   // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
 
-  initBudgetPicker();
+  initMorningDeparturePicker();
   showAIRecommendButton();
   updateAIRecommendButtonState();
 };
-
-// 確保預算預設值會被存進 localStorage（不點也算已選）
-const tripSetup = loadTripSetup();
-if (!tripSetup.budget && !tripSetup.budgetLabel) {
-  saveTripSetup({ budget: "中等", budgetLabel: "中等" });
-}
 
 if (
   tripSetup.travelTypeAny === undefined &&

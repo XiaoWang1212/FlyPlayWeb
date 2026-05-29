@@ -422,8 +422,11 @@ h1 {
 }
 
 .picker-card-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .picker-card.selected .picker-card-label {
