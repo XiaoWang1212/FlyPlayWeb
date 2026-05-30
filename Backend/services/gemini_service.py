@@ -155,8 +155,11 @@ class GeminiService:
             context_lines.append(f"出發地：{trip_context.get('departure')}")
         if trip_context.get("companion"):
             context_lines.append(f"旅伴類型：{trip_context.get('companion')}")
-        if trip_context.get("budget"):
-            context_lines.append(f"預算：{trip_context.get('budget')}")
+        morning_departure = trip_context.get("morningDeparture") or trip_context.get(
+            "morning_departure"
+        )
+        if morning_departure:
+            context_lines.append(f"早上出發時間：{morning_departure}")
         if trip_context.get("travelType"):
             context_lines.append(f"旅遊偏好：{trip_context.get('travelType')}")
         if trip_context.get("startDate"):
@@ -331,7 +334,7 @@ class GeminiService:
                     '    "day": 2,\n'
                     '    "weekday": "星期五",\n'
                     '    "activities": [\n'
-                    '      {"time": "09:00", "place_name": "...", "description": "...", "type": "景點", "cost": "免費", "location": null}\n'
+                    '      {"time": "建議停留 2 小時", "place_name": "...", "description": "...", "type": "景點", "cost": "免費", "location": null}\n'
                     "    ]\n"
                     "  }\n"
                     "}\n"
@@ -369,7 +372,7 @@ class GeminiService:
             return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
 
     def generate_itinerary(
-        self, location, days, budget, traveler_type, interests, start_date=None
+        self, location, days, morning_departure, traveler_type, interests, start_date=None
     ):
         """生成完整詳細行程 (結構化輸出)"""
         try:
@@ -382,7 +385,7 @@ class GeminiService:
 
             prompt = f"""請為以下旅客創建完整的{days}天{location}行程。
             旅客類型: {traveler_type}
-            預算: {budget}
+            早上出發時間: {morning_departure}
             興趣: {interests_str}
             {date_info}
             
@@ -394,7 +397,7 @@ class GeminiService:
                         "weekday": "星期幾 (例如：星期一)", 
                         "location": [
                             {{
-                                "time": "09:00",
+                                "time": "建議停留 2 小時",
                                 "location_name": "地點名稱",
                             }}
                         ]
@@ -403,7 +406,7 @@ class GeminiService:
 
             }}
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
-            一天最多四個景點就好。
+            根據早上出發時間來決定一天要有幾個景點，最多不超過四個景點。
             景點請勿重複。
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
@@ -412,6 +415,7 @@ class GeminiService:
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             檢查每日景點的距離不要超過120公里。
+            如果景點
 
             """
             # 嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
@@ -422,7 +426,7 @@ class GeminiService:
             #             "weekday": "星期幾 (例如：星期一)",
             #             "activities": [
             #                 {{
-            #                     "time": "09:00",
+            #                     "time": "建議停留 2 小時",
             #                     "place_name": "地點名稱",
             #                     "description": "活動簡述",
             #                     "type": "景點/美食/交通/住宿",
@@ -476,7 +480,7 @@ class GeminiService:
         self,
         location,
         days,
-        budget,
+        morning_departure,
         traveler_type,
         interests,
         start_date=None,
@@ -543,10 +547,10 @@ class GeminiService:
                             )
                             if not loc_name:
                                 continue
-                            hour = 9 + (loc_idx * 3)
+                            stay_hours = 2 + min(loc_idx, 2)
                             normalized_locations.append(
                                 {
-                                    "time": f"{hour:02d}:00",
+                                    "time": f"建議停留 {stay_hours} 小時",
                                     "place_name": loc_name,
                                     "description": "",
                                     "type": "景點",
@@ -577,7 +581,7 @@ class GeminiService:
 
             修改要求：
             旅客類型: {traveler_type}
-            預算: {budget}
+            早上出發時間: {morning_departure}
             興趣: {interests_str}
             {date_info}
 
@@ -590,7 +594,7 @@ class GeminiService:
                         "weekday": "星期幾 (例如：星期一)", 
                         "location": [
                             {{
-                                "time": "09:00",
+                                "time": "建議停留 X 小時",
                                 "place_name": "地點名稱",
                                 "description": "活動簡述",
                                 "type": "景點/美食/交通/住宿",
@@ -612,11 +616,12 @@ class GeminiService:
             - 不確定的估算：約 JPY 2,000
             - 禁止輸出沒有幣別或沒有千分位的格式。
             5. 只回傳純 JSON，不要包含任何 markdown 標記。
-            6. 確保修改後的行程符合用戶預算和興趣。
+            6. 確保修改後的行程符合用戶早上出發時間偏好和興趣。
             7. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
             8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
             9. 不要推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類地點；若原始內容包含這類地點，請替換成相鄰且更適合旅遊的景點。
             10. 每一天的 location 裡面至少要有一個 type 為「美食」的項目；如果原始行程沒有美食，請補上一個合適的餐廳或在地美食。
+            12. location[].time 請表示建議停留時間，不要使用 09:00 這類實際時刻；請用「建議停留 X 小時」或相近的自然語句。
             """
 
             response = self.model.generate_content(

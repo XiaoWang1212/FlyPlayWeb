@@ -1,112 +1,88 @@
 /**
  * choose_departure.js - 出發地選擇頁面
  * 單選出發地，存到 tripSetup（localStorage）
+ *
+ * 資料欄位：
+ *   city      機場中文名稱
+ *   code      IATA 代碼
+ *   region    日本地區（用於下拉樹狀分組與顯示）
+ *   area      所在縣市/地點（顯示於清單副標題，幫助辨識較陌生的機場）
+ *   keywords  搜尋關鍵字（空格分隔；含中英地點、英文機場名、別名等）
+ *   direct    是否台灣直飛（顯示於下拉樹狀清單）
+ *   card      是否顯示為常用卡片
  */
-
-// 只有前面幾個機場會顯示 其他的不顯示但是搜尋的時候找得到
 const departures = [
-  { city: "成田國際機場", code: "NRT", subtitle: "千葉/東京", display: true },
-  { city: "羽田國際機場", code: "HND", subtitle: "東京", display: true },
-  { city: "關西國際機場", code: "KIX", subtitle: "大阪", display: true },
-  { city: "中部國際機場", code: "NGO", subtitle: "名古屋", display: true },
-  { city: "福岡機場", code: "FUK", subtitle: "九州", display: true },
+  // 關東
+  { city: "成田國際機場", code: "NRT", region: "關東", area: "東京/千葉", keywords: "東京 千葉 TOKYO NARITA Narita International Airport", direct: true, card: true },
+  { city: "羽田機場", code: "HND", region: "關東", area: "東京", keywords: "東京 TOKYO HANEDA Haneda Airport", direct: true, card: true },
+  { city: "茨城機場", code: "IBR", region: "關東", area: "茨城", keywords: "茨城 IBARAKI Ibaraki Airport", direct: true },
+  { city: "靜岡機場", code: "FSZ", region: "關東", area: "靜岡", keywords: "靜岡 SHIZUOKA Shizuoka Airport" },
 
-  { city: "新千歲機場", code: "CTS", subtitle: "北海道", display: true },
-  { city: "那霸機場", code: "OKA", subtitle: "沖繩", display: true },
-  { city: "大阪國際機場", code: "ITM", subtitle: "大阪/伊丹", display: true },
-  { city: "鹿兒島機場", code: "KOJ", subtitle: "九州", display: true },
-  { city: "仙台機場", code: "SDJ", subtitle: "東北", display: true },
+  // 關西
+  { city: "關西國際機場", code: "KIX", region: "關西", area: "大阪", keywords: "大阪 OSAKA KANSAI Kansai International Airport", direct: true, card: true },
+  { city: "大阪國際機場", code: "ITM", region: "關西", area: "大阪/伊丹", keywords: "大阪 伊丹 OSAKA ITAMI Itami Airport" },
 
-  { city: "函館機場", code: "HKD", subtitle: "北海道", display: false },
-  { city: "旭川機場", code: "AKJ", subtitle: "北海道", display: false },
-  { city: "釧路機場", code: "KUH", subtitle: "北海道", display: false },
-  { city: "帶廣機場", code: "OBO", subtitle: "北海道", display: false },
-  { city: "女滿別機場", code: "MMB", subtitle: "北海道", display: false },
-  { city: "稚內機場", code: "WKJ", subtitle: "北海道", display: false },
-  { city: "中標津機場", code: "", subtitle: "北海道", display: false },
-  { city: "紋別機場", code: "", subtitle: "北海道", display: false },
-  { city: "利尻機場", code: "", subtitle: "北海道", display: false },
+  // 中部
+  { city: "中部國際機場", code: "NGO", region: "中部", area: "名古屋", keywords: "名古屋 NAGOYA CENTRAIR Chubu Centrair International Airport", direct: true, card: true },
+  { city: "小松機場", code: "KMQ", region: "中部", area: "石川/小松", keywords: "石川 小松 KOMATSU Komatsu Airport", direct: true },
+  { city: "新潟機場", code: "KIJ", region: "中部", area: "新潟", keywords: "新潟 NIIGATA Niigata Airport", direct: true },
+  { city: "富山機場", code: "TOY", region: "中部", area: "富山", keywords: "富山 TOYAMA Toyama Airport" },
+  { city: "能登機場", code: "NTQ", region: "中部", area: "石川/能登", keywords: "石川 能登 NOTO Noto Airport" },
+  { city: "信州松本機場", code: "MMJ", region: "中部", area: "長野/松本", keywords: "長野 松本 MATSUMOTO Matsumoto Airport" },
 
-  { city: "青森機場", code: "AOJ", subtitle: "東北", display: false },
-  { city: "三澤機場", code: "MSJ", subtitle: "東北", display: false },
-  { city: "秋田機場", code: "AXT", subtitle: "東北", display: false },
-  { city: "花卷機場", code: "HNA", subtitle: "東北", display: false },
-  { city: "山形機場", code: "GAJ", subtitle: "東北", display: false },
-  { city: "庄內機場", code: "SYO", subtitle: "東北", display: false },
-  { city: "福島機場", code: "FKS", subtitle: "東北", display: false },
+  // 北海道
+  { city: "新千歲機場", code: "CTS", region: "北海道", area: "札幌/千歲", keywords: "札幌 千歲 SAPPORO CHITOSE New Chitose Airport", direct: true, card: true },
+  { city: "函館機場", code: "HKD", region: "北海道", area: "函館", keywords: "函館 HAKODATE Hakodate Airport", direct: true },
+  { city: "旭川機場", code: "AKJ", region: "北海道", area: "旭川", keywords: "旭川 ASAHIKAWA Asahikawa Airport", direct: true },
+  { city: "釧路機場", code: "KUH", region: "北海道", area: "釧路", keywords: "釧路 KUSHIRO Kushiro Airport" },
+  { city: "帶廣機場", code: "OBO", region: "北海道", area: "十勝/帶廣", keywords: "帶廣 十勝 OBIHIRO TOKACHI Obihiro Airport" },
+  { city: "女滿別機場", code: "MMB", region: "北海道", area: "網走/女滿別", keywords: "女滿別 網走 MEMANBETSU Memanbetsu Airport" },
+  { city: "稚內機場", code: "WKJ", region: "北海道", area: "稚內", keywords: "稚內 WAKKANAI Wakkanai Airport" },
 
-  { city: "茨城機場", code: "IBR", subtitle: "關東/中部", display: false },
-  { city: "靜岡機場", code: "FSZ", subtitle: "關東/中部", display: false },
-  { city: "新潟機場", code: "KIJ", subtitle: "關東/中部", display: false },
-  { city: "富山機場", code: "TOY", subtitle: "關東/中部", display: false },
-  { city: "小松機場", code: "KMQ", subtitle: "關東/中部", display: false },
-  { city: "能登機場", code: "NTQ", subtitle: "關東/中部", display: false },
-  { city: "信州松本機場", code: "MMJ", subtitle: "關東/中部", display: false },
+  // 東北
+  { city: "仙台機場", code: "SDJ", region: "東北", area: "宮城/仙台", keywords: "仙台 宮城 SENDAI Sendai Airport", direct: true, card: true },
+  { city: "秋田機場", code: "AXT", region: "東北", area: "秋田", keywords: "秋田 AKITA Akita Airport", direct: true },
+  { city: "青森機場", code: "AOJ", region: "東北", area: "青森", keywords: "青森 AOMORI Aomori Airport", direct: true },
+  { city: "花卷機場", code: "HNA", region: "東北", area: "岩手/花卷", keywords: "岩手 花卷 HANAMAKI Hanamaki Airport", direct: true },
+  { city: "福島機場", code: "FKS", region: "東北", area: "福島", keywords: "福島 FUKUSHIMA Fukushima Airport", direct: true },
+  { city: "三澤機場", code: "MSJ", region: "東北", area: "青森/三澤", keywords: "青森 三澤 MISAWA Misawa Airport" },
+  { city: "山形機場", code: "GAJ", region: "東北", area: "山形", keywords: "山形 YAMAGATA Yamagata Airport" },
+  { city: "庄內機場", code: "SYO", region: "東北", area: "山形/庄內", keywords: "山形 庄內 SHONAI Shonai Airport" },
 
-  { city: "廣島機場", code: "HIJ", subtitle: "中國/四國", display: false },
-  { city: "岡山機場", code: "OKJ", subtitle: "中國/四國", display: false },
-  { city: "鳥取機場", code: "TTJ", subtitle: "中國/四國", display: false },
-  { city: "米子機場", code: "YGJ", subtitle: "中國/四國", display: false },
-  { city: "出雲機場", code: "IZO", subtitle: "中國/四國", display: false },
-  { city: "山口宇部機場", code: "UBJ", subtitle: "中國/四國", display: false },
-  { city: "岩國機場", code: "IWK", subtitle: "中國/四國", display: false },
-  { city: "德島機場", code: "TKS", subtitle: "中國/四國", display: false },
-  { city: "高松機場", code: "TAK", subtitle: "中國/四國", display: false },
-  { city: "松山機場", code: "MYJ", subtitle: "中國/四國", display: false },
-  { city: "高知機場", code: "KCZ", subtitle: "中國/四國", display: false },
+  // 中國
+  { city: "廣島機場", code: "HIJ", region: "中國", area: "廣島", keywords: "廣島 HIROSHIMA Hiroshima Airport", direct: true, card: true },
+  { city: "岡山機場", code: "OKJ", region: "中國", area: "岡山", keywords: "岡山 OKAYAMA Okayama Airport", direct: true },
+  { city: "米子機場", code: "YGJ", region: "中國", area: "鳥取/米子", keywords: "鳥取 米子 YONAGO Yonago Airport", direct: true },
+  { city: "鳥取機場", code: "TTJ", region: "中國", area: "鳥取", keywords: "鳥取 TOTTORI Tottori Airport" },
+  { city: "出雲機場", code: "IZO", region: "中國", area: "島根/出雲", keywords: "島根 出雲 IZUMO Izumo Airport" },
+  { city: "山口宇部機場", code: "UBJ", region: "中國", area: "山口/宇部", keywords: "山口 宇部 UBE Yamaguchi Ube Airport" },
+  { city: "岩國機場", code: "IWK", region: "中國", area: "山口/岩國", keywords: "山口 岩國 IWAKUNI Iwakuni Airport" },
 
-  { city: "北九州機場", code: "KKJ", subtitle: "九州/離島", display: false },
-  { city: "佐賀機場", code: "HSG", subtitle: "九州/離島", display: false },
-  { city: "長崎機場", code: "NGS", subtitle: "九州/離島", display: false },
-  { city: "大分機場", code: "OIT", subtitle: "九州/離島", display: false },
-  { city: "熊本機場", code: "KMJ", subtitle: "九州/離島", display: false },
-  { city: "宮崎機場", code: "KMI", subtitle: "九州/離島", display: false },
-  { city: "對馬機場", code: "", subtitle: "九州/離島", display: false },
-  { city: "五島福江機場", code: "", subtitle: "九州/離島", display: false },
-  { city: "屋久島機場", code: "", subtitle: "九州/離島", display: false },
-  { city: "奄美大島機場", code: "", subtitle: "九州/離島", display: false },
-  { city: "宮古機場", code: "MMY", subtitle: "九州/離島", display: false },
-  { city: "下地島機場", code: "SHI", subtitle: "九州/離島", display: false },
-  { city: "新石垣機場", code: "ISG", subtitle: "九州/離島", display: false },
+  // 四國
+  { city: "高松機場", code: "TAK", region: "四國", area: "香川/高松", keywords: "高松 香川 TAKAMATSU Takamatsu Airport", direct: true },
+  { city: "松山機場", code: "MYJ", region: "四國", area: "愛媛/松山", keywords: "愛媛 松山 MATSUYAMA Matsuyama Airport", direct: true },
+  { city: "高知機場", code: "KCZ", region: "四國", area: "高知", keywords: "高知 KOCHI Kochi Ryoma Airport", direct: true },
+  { city: "德島機場", code: "TKS", region: "四國", area: "德島", keywords: "德島 TOKUSHIMA Tokushima Airport" },
 
-  { city: "奧尻機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "隱岐機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "種子島機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "喜界機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "德之島機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "沖永良部機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "與論機場", code: "", subtitle: "冷門/離島", display: false },
-  { city: "大島機場", code: "", subtitle: "伊豆諸島", display: false },
-  { city: "新島機場", code: "", subtitle: "伊豆諸島", display: false },
-  { city: "神津島機場", code: "", subtitle: "伊豆諸島", display: false },
-  { city: "三宅島機場", code: "", subtitle: "伊豆諸島", display: false },
-  { city: "八丈島機場", code: "", subtitle: "伊豆諸島", display: false },
-  { city: "粟國機場", code: "", subtitle: "沖繩離島", display: false },
-  { city: "久米島機場", code: "", subtitle: "沖繩離島", display: false },
-  { city: "北大東機場", code: "", subtitle: "沖繩離島", display: false },
-  { city: "南大東機場", code: "", subtitle: "沖繩離島", display: false },
-  { city: "多良間機場", code: "", subtitle: "沖繩離島", display: false },
-  { city: "與那國機場", code: "", subtitle: "沖繩離島", display: false },
+  // 九州
+  { city: "福岡機場", code: "FUK", region: "九州", area: "福岡", keywords: "福岡 FUKUOKA Fukuoka Airport", direct: true, card: true },
+  { city: "熊本機場", code: "KMJ", region: "九州", area: "熊本", keywords: "熊本 KUMAMOTO Kumamoto Airport", direct: true },
+  { city: "鹿兒島機場", code: "KOJ", region: "九州", area: "鹿兒島", keywords: "鹿兒島 KAGOSHIMA Kagoshima Airport", direct: true, card: true },
+  { city: "宮崎機場", code: "KMI", region: "九州", area: "宮崎", keywords: "宮崎 MIYAZAKI Miyazaki Airport", direct: true },
+  { city: "佐賀機場", code: "HSG", region: "九州", area: "佐賀", keywords: "佐賀 SAGA Saga Airport", direct: true },
+  { city: "大分機場", code: "OIT", region: "九州", area: "大分", keywords: "大分 OITA Oita Airport", direct: true },
+  { city: "北九州機場", code: "KKJ", region: "九州", area: "北九州", keywords: "北九州 KITAKYUSHU Kitakyushu Airport" },
+  { city: "長崎機場", code: "NGS", region: "九州", area: "長崎", keywords: "長崎 NAGASAKI Nagasaki Airport" },
 
-  { city: "調布飛行場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "八尾機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "福井機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "但馬飛行場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "佐渡機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "岡南飛行場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "大分縣央機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "百里機場", code: "", subtitle: "共用基地", display: false },
-  { city: "小牧機場", code: "", subtitle: "共用基地", display: false },
-  { city: "美保機場", code: "", subtitle: "共用基地", display: false },
-  { city: "禮文機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "小值賀機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "上五島機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "慶良間機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "伊江島機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "波照間機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "薩摩硫黃島機場", code: "", subtitle: "特殊/停航", display: false },
-  { city: "諏訪之瀨島機場", code: "", subtitle: "特殊/停航", display: false },
+  // 沖繩
+  { city: "那霸機場", code: "OKA", region: "沖繩", area: "那霸", keywords: "那霸 沖繩 NAHA OKINAWA Naha Airport", direct: true, card: true },
+  { city: "新石垣機場", code: "ISG", region: "沖繩", area: "石垣島", keywords: "石垣 沖繩 ISHIGAKI New Ishigaki Airport", direct: true },
+  { city: "宮古機場", code: "MMY", region: "沖繩", area: "宮古島", keywords: "宮古 沖繩 MIYAKO Miyako Airport" },
+  { city: "下地島機場", code: "SHI", region: "沖繩", area: "宮古/下地島", keywords: "宮古 下地島 SHIMOJISHIMA Shimojishima Airport" },
 ];
+
+// 地區排序（與下拉樹狀清單順序一致）
+const REGION_ORDER = ["北海道", "東北", "關東", "中部", "關西", "中國", "四國", "九州", "沖繩"];
 
 const STORAGE_KEY_TRIP_SETUP = "tripSetup";
 
@@ -132,86 +108,190 @@ function init() {
   const tripSetup = loadTripSetup();
   selectedDepartureCity = tripSetup.departureLabel || "";
 
-  renderDepartures();
-  updateConfirmButton();
+  renderCards();
+  renderDropdownTree();
   setupScrollShadow();
+  setupSearchEvents();
+  syncSelectionUI();
 }
 
-function renderDepartures() {
+/* ============= 常用機場卡片 ============= */
+function renderCards() {
   const listContainer = document.getElementById("departure-list");
   if (!listContainer) return;
-
   listContainer.innerHTML = "";
 
-  departures.forEach((dep) => {
+  departures.filter((d) => d.card).forEach((dep) => {
     const item = document.createElement("div");
     item.className = "departure-item";
-    const searchData = [dep.code, dep.city, dep.subtitle]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    item.setAttribute("data-search", searchData);
-    item.setAttribute("data-display", dep.display ? "1" : "0");
-
-    if (dep.image) {
-      item.style.backgroundImage = `url('${dep.image}')`;
-      item.classList.add("has-image");
-    }
-
-    if (!dep.display) item.classList.add("hidden");
     if (dep.city === selectedDepartureCity) item.classList.add("selected");
 
     const codeHtml = dep.code ? `<div class="airport-code">${dep.code}</div>` : "";
-    const subtitleHtml = dep.subtitle ? `<div class="country-name">${dep.subtitle}</div>` : "";
+    const subtitleHtml = dep.area ? `<div class="country-name">${dep.area}</div>` : "";
     item.innerHTML = `${codeHtml}<div class="city-name">${dep.city}</div>${subtitleHtml}`;
     item.onclick = () => selectDeparture(dep.city);
-
     listContainer.appendChild(item);
   });
+}
+
+/* ============= 階層式下拉清單（顯示直飛機場） ============= */
+function renderDropdownTree() {
+  const panel = document.getElementById("dropdown-panel");
+  if (!panel) return;
+  panel.innerHTML = "";
+
+  const grouped = {};
+  departures.filter((d) => d.direct).forEach((d) => {
+    (grouped[d.region] ||= []).push(d);
+  });
+
+  REGION_ORDER.forEach((region) => {
+    const list = grouped[region];
+    if (!list || !list.length) return;
+
+    const group = document.createElement("div");
+    group.className = "dd-group expanded";
+
+    const header = document.createElement("div");
+    header.className = "dd-region";
+    header.innerHTML =
+      `<img class="dd-caret" src="assets/icons/back-arrow.svg" alt="" aria-hidden="true">` +
+      `<span>${region}地區</span>`;
+    header.onclick = () => group.classList.toggle("expanded");
+    group.appendChild(header);
+
+    const items = document.createElement("div");
+    items.className = "dd-items";
+    list.forEach((dep) => items.appendChild(buildItemRow(dep)));
+    group.appendChild(items);
+
+    panel.appendChild(group);
+  });
+
+  const hint = document.createElement("div");
+  hint.className = "dd-hint";
+  hint.textContent = "沒看到想要的抵達機場？試試直接搜尋名稱、代碼或地點";
+  panel.appendChild(hint);
+}
+
+/* ============= 搜尋結果（平面列表，跨全部機場） ============= */
+function renderSearchResults(keyword) {
+  const panel = document.getElementById("dropdown-panel");
+  if (!panel) return;
+  panel.innerHTML = "";
+
+  const kw = keyword.trim().toLowerCase();
+  if (!kw) {
+    renderDropdownTree();
+    return;
+  }
+
+  // 以空白拆成多個關鍵字，全部都要命中（順序不限）
+  const tokens = kw.split(/\s+/).filter(Boolean);
+  const matches = departures.filter((d) => {
+    const hay = `${d.city} ${d.code} ${d.region} ${d.area || ""} ${d.keywords || ""}`.toLowerCase();
+    return tokens.every((t) => hay.includes(t));
+  });
+
+  if (!matches.length) {
+    const empty = document.createElement("div");
+    empty.className = "dd-empty";
+    empty.textContent = "找不到符合的機場";
+    panel.appendChild(empty);
+    return;
+  }
+
+  matches.forEach((dep) => panel.appendChild(buildItemRow(dep, true)));
+}
+
+/**
+ * 建立一個下拉清單項目
+ * @param {object} dep   機場資料
+ * @param {boolean} flat 是否平面樣式（搜尋結果用，會顯示地區）
+ */
+function buildItemRow(dep, flat = false) {
+  const row = document.createElement("div");
+  row.className = "dd-item" + (flat ? " flat" : "");
+
+  const codeText = dep.code ? ` (${dep.code})` : "";
+  const subParts = [];
+  if (flat) subParts.push(dep.region);
+  if (dep.area) subParts.push(dep.area);
+  const subHtml = subParts.length ? `<div class="dd-sub">${subParts.join(" · ")}</div>` : "";
+
+  row.innerHTML = `<div class="dd-name">${dep.city}${codeText}</div>${subHtml}`;
+  row.onclick = () => selectFromDropdown(dep.city);
+  return row;
+}
+
+/* ============= 搜尋框事件 ============= */
+function setupSearchEvents() {
+  const input = document.getElementById("search-input");
+  const panel = document.getElementById("dropdown-panel");
+  const box = input?.closest(".search-box");
+  if (!input || !panel || !box) return;
+
+  const open = () => { panel.classList.add("open"); box.classList.add("open"); };
+  const close = () => {
+    panel.classList.remove("open");
+    box.classList.remove("open");
+    input.blur();
+  };
+
+  input.addEventListener("focus", open);
+  input.addEventListener("input", () => {
+    open();
+    renderSearchResults(input.value);
+  });
+
+  // 點右側箭頭可切換開關
+  const caret = box.querySelector(".search-caret");
+  if (caret) {
+    caret.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (box.classList.contains("open")) close();
+      else { input.focus(); open(); }
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target)) close();
+  });
+}
+
+// 將目前選擇同步到卡片高亮、輸入欄與確認按鈕
+function syncSelectionUI() {
+  document.querySelectorAll("#departure-list .departure-item").forEach((item) => {
+    const itemCity = item.querySelector(".city-name")?.textContent || "";
+    item.classList.toggle("selected", itemCity === selectedDepartureCity);
+  });
+  const input = document.getElementById("search-input");
+  if (input) input.value = selectedDepartureCity;
+  updateConfirmButton();
+}
+
+function selectFromDropdown(city) {
+  selectedDepartureCity = city;
+  document.querySelector(".search-box")?.classList.remove("open");
+  document.getElementById("dropdown-panel")?.classList.remove("open");
+  syncSelectionUI();
 }
 
 function selectDeparture(city) {
   // 單選：點同一個可取消
   selectedDepartureCity = (selectedDepartureCity === city) ? "" : city;
-
-  document.querySelectorAll("#departure-list .departure-item").forEach((item) => {
-    const itemCity = item.querySelector(".city-name")?.textContent || "";
-    item.classList.toggle("selected", itemCity === selectedDepartureCity);
-  });
-
-  updateConfirmButton();
-}
-
-function removeDeparture() {
-  selectedDepartureCity = "";
-  document.querySelectorAll("#departure-list .departure-item").forEach((item) => item.classList.remove("selected"));
-  updateConfirmButton();
+  syncSelectionUI();
 }
 
 function updateConfirmButton() {
   const confirmBtn = document.getElementById("confirm-btn");
-  const selectedList = document.getElementById("selected-list");
-
-  if (confirmBtn) {
-    if (selectedDepartureCity) {
-      confirmBtn.textContent = "確認選擇";
-      confirmBtn.disabled = false;
-    } else {
-      confirmBtn.textContent = "請選擇出發地";
-      confirmBtn.disabled = true;
-    }
-  }
-
-  if (selectedList) {
-    if (selectedDepartureCity) {
-      selectedList.innerHTML = "";
-      const tag = document.createElement("span");
-      tag.className = "selected-tag";
-      tag.innerHTML = `${selectedDepartureCity} <button class="remove-btn" onclick="removeDeparture()">×</button>`;
-      selectedList.appendChild(tag);
-    } else {
-      selectedList.innerHTML = '<span class="no-selection">尚未選擇</span>';
-    }
+  if (!confirmBtn) return;
+  if (selectedDepartureCity) {
+    confirmBtn.textContent = "確認選擇";
+    confirmBtn.disabled = false;
+  } else {
+    confirmBtn.textContent = "請選擇出發地";
+    confirmBtn.disabled = true;
   }
 }
 
@@ -220,29 +300,11 @@ function confirmSelection() {
     alert("請選擇出發地");
     return;
   }
-
   saveTripSetup({
     departure: selectedDepartureCity,
     departureLabel: selectedDepartureCity,
   });
-
-  // 使用動畫返回 setup.html
   goBackWithTransition('setup.html');
-}
-
-function searchDeparture() {
-  const searchText = document.getElementById("search-input").value.toLowerCase();
-  document.querySelectorAll("#departure-list .departure-item").forEach((item) => {
-    const searchData = item.getAttribute("data-search") || "";
-    const isDisplay = item.getAttribute("data-display") === "1";
-    if (!searchText) {
-      // 沒有輸入搜尋時只顯示主畫面要看的機場
-      item.classList.toggle("hidden", !isDisplay);
-      return;
-    }
-    // 有搜尋時顯示所有可匹配的機場（含平常隱藏的）
-    item.classList.toggle("hidden", !searchData.includes(searchText));
-  });
 }
 
 function setupScrollShadow() {

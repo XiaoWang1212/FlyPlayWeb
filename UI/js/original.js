@@ -1,3 +1,5 @@
+// 原始版本的js（從index.html分出來的）
+
 let map;
 let allDays = [];
 let currentDayIndex = -1;

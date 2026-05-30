@@ -3,29 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>選擇出發地</title>
+    <title>選擇抵達機場</title>
     <link rel="stylesheet" href="css/choose_departure.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <button class="back-btn" onclick="goBackWithTransition('setup.html')">‹ 返回</button>
-            <h1>選擇出發地</h1>
+            <h1>選擇抵達機場</h1>
         </header>
 
-        <!-- 搜尋框 -->
+        <!-- 搜尋框 + 下拉式選單 -->
         <div class="search-box">
-            <input type="text" id="search-input" placeholder="搜尋城市" oninput="searchDeparture()">
+            <input type="text" id="search-input" placeholder="搜尋機場、代碼、地點或地區" autocomplete="off">
+            <span class="search-caret" aria-hidden="true"></span>
+            <div class="dropdown-panel" id="dropdown-panel"></div>
         </div>
 
         <!-- 城市列表 -->
+        <h2 class="section-title">常用機場</h2>
         <div class="departure-list" id="departure-list">
             <!-- JavaScript 會動態生成 -->
         </div>
 
         <!-- 確認按鈕 -->
         <button class="confirm-btn" id="confirm-btn" onclick="confirmSelection()" disabled>
-            請選擇出發地
+            請選擇抵達機場
         </button>
     </div>
 

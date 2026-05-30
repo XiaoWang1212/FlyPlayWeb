@@ -21,7 +21,7 @@ class TravelController:
         destination,
         type_,
         companion,
-        budget,
+        morning_departure,
         interests,
         start_date,
     ):
@@ -33,7 +33,7 @@ class TravelController:
                 destination,
                 type_,
                 companion,
-                budget,
+                morning_departure,
                 start_date,
             ]
         ):
@@ -47,7 +47,7 @@ class TravelController:
         ai_result = self.gemini_service.generate_itinerary(
             location=destination,
             days=days,
-            budget=budget,
+            morning_departure=morning_departure,
             traveler_type=companion,
             interests=interests,
             start_date=start_date,
@@ -66,7 +66,7 @@ class TravelController:
             destination=destination,
             type=type_,
             companion=companion,
-            budget=budget,
+            morning_departure=morning_departure,
             interests=interests,
             start_date=start_date,
             data_json=parsed,
@@ -111,10 +111,10 @@ class TravelController:
         return {"success": True, "data": data}
 
     async def generate_itinerary(
-        self, location, days, budget, traveler_type, interests, start_date=None
+        self, location, days, morning_departure, traveler_type, interests, start_date=None
     ):
         res = self.gemini_service.generate_itinerary(
-            location, days, budget, traveler_type, interests, start_date
+            location, days, morning_departure, traveler_type, interests, start_date
         )
         return res
 

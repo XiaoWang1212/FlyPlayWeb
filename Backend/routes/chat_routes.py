@@ -91,7 +91,7 @@ def generate_itinerary():
         
         location = data.get('location')
         days = data.get('days')
-        budget = data.get('budget', '中等')
+        morning_departure = data.get('morningDeparture') or data.get('morning_departure') or '任何時間'
         traveler_type = data.get('travelerType', '獨旅')
         interests = data.get('interests', [])
         start_date = data.get('startDate') or data.get('start_date') # 支援兩種命名
@@ -100,7 +100,7 @@ def generate_itinerary():
             return unified_response(400, '必須提供 location 與 days 參數')
         
         result = chat_controller.handle_generate_itinerary(
-            location, days, budget, traveler_type, interests, start_date
+            location, days, morning_departure, traveler_type, interests, start_date
         )
         
         if result['success']:

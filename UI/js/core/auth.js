@@ -1,4 +1,5 @@
 // ===== 登入驗證 =====
+// 目前沒有接到這一個檔案，是接到資料夾外面的。
 
 const userId = Number(localStorage.getItem("userId"));
 const token = localStorage.getItem("userToken");

@@ -206,7 +206,8 @@ async function sendMessage() {
 			.join("、"),
 		departure: tripSetup.departureLabel || tripSetup.departure || "",
 		companion: tripSetup.companionLabel || tripSetup.companion || "",
-		budget: tripSetup.budgetLabel || tripSetup.budget || "",
+		morningDeparture:
+			tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
 		travelType:
 			(tripSetup.travelTypeLabels || []).join("、") ||
 			tripSetup.travelTypeLabel ||

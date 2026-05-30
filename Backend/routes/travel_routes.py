@@ -59,6 +59,11 @@ def create_itinerary():
     payload = request.get_json(force=True, silent=True)
     if not payload:
         return unified_response(400, "請求體需為 JSON")
+    morning_departure = payload.get("morning_departure") or payload.get(
+        "morningDeparture"
+    )
+    normalized_payload = dict(payload)
+    normalized_payload["morning_departure"] = morning_departure
     required = [
         "project_id",
         "days",
@@ -66,23 +71,23 @@ def create_itinerary():
         "destination",
         "type",
         "companion",
-        "budget",
+        "morning_departure",
         "interests",
         "start_date",
     ]
-    if not all(k in payload for k in required):
-        missing = [k for k in required if k not in payload]
+    if not all(normalized_payload.get(k) is not None for k in required):
+        missing = [k for k in required if normalized_payload.get(k) is None]
         return unified_response(400, f"缺少欄位: {', '.join(missing)}")
     result = travel_ctrl.create_itinerary(
-        payload["project_id"],
-        payload["days"],
-        payload["departure_airport"],
-        payload["destination"],
-        payload["type"],
-        payload["companion"],
-        payload["budget"],
-        payload["interests"],
-        payload["start_date"],
+        normalized_payload["project_id"],
+        normalized_payload["days"],
+        normalized_payload["departure_airport"],
+        normalized_payload["destination"],
+        normalized_payload["type"],
+        normalized_payload["companion"],
+        normalized_payload["morning_departure"],
+        normalized_payload["interests"],
+        normalized_payload["start_date"],
     )
     if not result["success"]:
         return unified_response(400, result["error"])
@@ -99,7 +104,7 @@ def generate_itinerary():
     coro = travel_ctrl.generate_itinerary(
         location=req.get("location"),
         days=req.get("days"),
-        budget=req.get("budget"),
+        morning_departure=req.get("morningDeparture") or req.get("morning_departure"),
         traveler_type=req.get("travelerType"),
         interests=req.get("interests", []),
         start_date=req.get("startDate"),

@@ -178,7 +178,11 @@ def create_app():
                 else "東京"
             )
             days = int(data.get("daysValue") or data.get("days", 3))
-            budget = data.get("budgetLabel") or data.get("budget") or "中等"
+            morning_departure = (
+                data.get("morningDeparture")
+                or data.get("morning_departure")
+                or "任何時間"
+            )
             traveler_type = (
                 data.get("companionLabel") or data.get("companion") or "個人"
             )
@@ -193,13 +197,13 @@ def create_app():
                 interests = []
 
             print(f"→ 呼叫 generate_itinerary_detail")
-            print(f"   位置: {location}, 天數: {days}, 預算: {budget}")
+            print(f"   位置: {location}, 天數: {days}, 早上出發時間: {morning_departure}")
 
             # 調用 GeminiService
             result = gemini_service.generate_itinerary_detail(
                 location=location,
                 days=days,
-                budget=budget,
+                morning_departure=morning_departure,
                 traveler_type=traveler_type,
                 interests=interests,
                 existing_itinerary=existing_itinerary,
