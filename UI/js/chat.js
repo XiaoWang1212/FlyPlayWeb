@@ -122,7 +122,7 @@ function applyChatItineraryUpdate(parsed) {
 }
 
 // 逐字顯示訊息（打字機效果）
-async function typeMessage(text, type, speed = 45) {
+async function typeMessage(text, type, speed = 30) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);
@@ -147,6 +147,17 @@ async function showPendingChatOutput() {
 	if (!pendingChatOutput) return false;
 
 	localStorage.removeItem("pendingChatOutput");
+
+	// 如果是透過飛機動畫從 setup 跳轉過來，等動畫完全結束再顯示聊天
+	if (sessionStorage.getItem("navigationType") === "planeLead") {
+		// 等待 navigationType 被移除（flyInFromTop 的 cleanup 會移除），最多等 5 秒
+		const start = Date.now();
+		while (sessionStorage.getItem("navigationType") === "planeLead" && Date.now() - start < 5000) {
+			await new Promise((r) => setTimeout(r, 100));
+		}
+		// 再額外等待 1 秒，確保動畫的視覺收尾完成
+		await new Promise((r) => setTimeout(r, 1000));
+	}
 
 	if (!isChatMode) {
 		toggleChatMode();
