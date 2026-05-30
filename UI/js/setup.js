@@ -816,8 +816,8 @@ async function submitAIRecommendation() {
   }
 
   const payload = buildItineraryPayload();
-  if (!payload.destination || !payload.days) {
-    alert("請先完成目的地與天數");
+  if (!payload.destination) {
+    alert("請先選擇目的地");
     return;
   }
 
@@ -861,17 +861,13 @@ async function submitAIRecommendation() {
 }
 
 function isSetupComplete() {
-  // 必填：出發地、目的地、天數；旅伴、旅遊類型、出發時間可以是「任何」
+  // 必填：出發地、目的地；天數、旅伴、旅遊類型、出發時間都可以是「任何」
   const tripSetup = loadTripSetup() || {};
   const selectedDestinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
 
-  return (
-    selectedDestinations.length > 0 &&
-    !!tripSetup.departure &&
-    Number(tripSetup.daysValue) > 0
-  );
+  return selectedDestinations.length > 0 && !!tripSetup.departure;
 }
 
 function updateAIRecommendButtonState() {
