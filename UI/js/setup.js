@@ -861,22 +861,16 @@ async function submitAIRecommendation() {
 }
 
 function isSetupComplete() {
+  // 必填：出發地、目的地、天數；旅伴、旅遊類型、出發時間可以是「任何」
   const tripSetup = loadTripSetup() || {};
   const selectedDestinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
-  const hasCompanion = tripSetup.companionAny === true || !!tripSetup.companion;
-  const hasTravelType =
-    tripSetup.travelTypeAny === true ||
-    !!tripSetup.travelType ||
-    (Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0);
 
   return (
     selectedDestinations.length > 0 &&
     !!tripSetup.departure &&
-    Number(tripSetup.daysValue) > 0 &&
-    hasCompanion &&
-    hasTravelType
+    Number(tripSetup.daysValue) > 0
   );
 }
 
@@ -940,29 +934,31 @@ window.onload = function () {
   // 重要：不要再使用不存在的 departureSelect.addEventListener(...)
   // 出發地請由 choose_departure 頁寫入 localStorage，這裡只做回填
 
+  // 沒選過旅遊類型 → 預設「任何類型」
+  if (
+    tripSetup.travelTypeAny === undefined &&
+    !tripSetup.travelType &&
+    !(Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0)
+  ) {
+    saveTripSetup({
+      travelTypeAny: true,
+      travelTypes: [],
+      travelTypeLabels: [],
+      travelType: "any",
+      travelTypeLabel: "任何類型",
+    });
+  }
+
+  // 沒選過旅伴 → 預設「任何旅伴」
+  if (tripSetup.companionAny === undefined && !tripSetup.companion) {
+    saveTripSetup({
+      companionAny: true,
+      companion: "",
+      companionLabel: "任何旅伴",
+    });
+  }
+
   initMorningDeparturePicker();
   showAIRecommendButton();
   updateAIRecommendButtonState();
 };
-
-if (
-  tripSetup.travelTypeAny === undefined &&
-  !tripSetup.travelType &&
-  !(Array.isArray(tripSetup.travelTypes) && tripSetup.travelTypes.length > 0)
-) {
-  saveTripSetup({
-    travelTypeAny: true,
-    travelTypes: [],
-    travelTypeLabels: [],
-    travelType: "any",
-    travelTypeLabel: "任何類型",
-  });
-}
-
-if (tripSetup.companionAny === undefined && !tripSetup.companion) {
-  saveTripSetup({
-    companionAny: true,
-    companion: "",
-    companionLabel: "任何旅伴",
-  });
-}
