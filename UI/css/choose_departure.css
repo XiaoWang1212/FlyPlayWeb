@@ -83,32 +83,174 @@ h1 {
 .search-box {
     margin-bottom: 20px;
     flex-shrink: 0;
+    position: relative;  /* 下拉面板的定位基準 */
 }
 
 .search-box input {
     width: 100%;
-    padding: 12px 15px;
-    background-color: var(--input-bg);  
-    border: 1px solid var(--text-sub); 
+    padding: 12px 40px 12px 15px;  /* 右側留空間給下拉三角 */
+    background-color: var(--input-bg);
+    border: 1px solid var(--text-sub);
     border-radius: 8px;
     color: #333;
     font-size: 16px;
     outline: none;
 }
 
+/* 輸入欄右側的下拉箭頭（用 mask 染色為 border 同色） */
+.search-caret {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%) rotate(-90deg);
+    background-color: var(--text-sub);
+    -webkit-mask: url("../assets/icons/back-arrow.svg") center / contain no-repeat;
+            mask: url("../assets/icons/back-arrow.svg") center / contain no-repeat;
+    transition: transform 0.2s ease;
+}
+
+.search-box.open .search-caret {
+    transform: translateY(-50%) rotate(90deg);  /* 向上 */
+}
+
+/* 打開時輸入欄與下拉面板合為一體（共用一個矩形） */
+.search-box.open input {
+    border-bottom-color: transparent;
+    border-radius: 8px 8px 0 0;
+}
+
 .search-box input::placeholder {
-    color: #999;  
+    color: #999;
 }
 
 .search-box input:focus {
-    border-color: var(--text-main); 
+    border-color: var(--text-main);
 }
 
+/* 下拉式選單 */
+.dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    /* 視窗 70vh，避免遮到確認按鈕，且小螢幕仍有可用空間 */
+    max-height: min(70vh, calc(100dvh - 200px));
+    overflow-y: auto;
+    background-color: var(--input-bg);
+    border: 1px solid var(--text-sub);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    z-index: 100;
+    padding: 4px 0;
+    /* 打開動畫 */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transform-origin: top;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+}
+
+.dropdown-panel.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dd-region {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    background-color: var(--bg-overlay);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* back-arrow 預設指左：收起為 180°（向右），展開為 270°（向下）
+   270 > 180，由關到開時 CSS 走順時針方向 */
+.dd-caret {
+    width: 12px;
+    height: 12px;
+    transform: rotate(270deg);
+    transition: transform 0.18s ease;
+}
+
+.dd-group:not(.expanded) .dd-caret {
+    transform: rotate(180deg);
+}
+
+.dd-group:not(.expanded) .dd-items {
+    display: none;
+}
+
+.dd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px 10px 28px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    border-top: 1px solid #f0f0f0;
+}
+
+.dd-item .dd-name {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 次要資訊（地區） */
+.dd-item .dd-sub {
+    font-size: 12px;
+    color: var(--text-sub);
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* 平面搜尋結果：去除左側縮排 */
+.dd-item.flat {
+    padding-left: 14px;
+}
+
+.dd-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 14px;
+}
+
+/* 樹狀清單底部提示 */
+.dd-hint {
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text-sub);
+    text-align: center;
+    border-top: 1px solid #f0f0f0;
+    background-color: #f3f3f3;
+}
+
+
+/* 區塊標題 */
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-sub);
+    margin: 0 0 10px;
+    flex-shrink: 0;
+}
 
 /* 城市列表 */
 .departure-list {
     flex: 1;
-    overflow-y: scroll;  
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -160,34 +302,6 @@ h1 {
     transform: scale(0.95);
 }
 
-/* 有圖片的卡片樣式 */
-.departure-item.has-image {
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-/* 有圖片的話加上半透明遮罩讓文字更清楚 */
-.departure-item.has-image::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 100%);
-    z-index: 1;
-}
-
-.departure-item.has-image .airport-code,
-.departure-item.has-image .city-name,
-.departure-item.has-image .country-name {
-    position: relative;
-    z-index: 2;
-    color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-}
-
 /* 選中狀態 */
 .departure-item.selected {
     border-color: var(--color-secondary);
@@ -215,10 +329,6 @@ h1 {
 .departure-item .country-name {
     font-size: 12px;
     color: #666;
-}
-
-.departure-item.hidden {
-    display: none;
 }
 
 /* 確認按鈕 */

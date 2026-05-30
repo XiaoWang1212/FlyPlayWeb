@@ -422,8 +422,11 @@ h1 {
 }
 
 .picker-card-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .picker-card.selected .picker-card-label {
@@ -506,6 +509,13 @@ textarea {
   color: #222;
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* 讓特定選擇器卡片浮在飛機圖層上方，製造穿插感 */
+/* plane SVG 是 z-index:5，這些卡片設為 10 → 飛機從其下方穿過 */
+.layer-above {
+  position: relative;
+  z-index: 10;
 }
 
 /* ==================== 缺少必填欄位提醒 ==================== */

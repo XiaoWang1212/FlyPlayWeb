@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <!-- 白色三角形（右上角） -->
+  <polygon points="8,0 40,0 40,32" fill="white"/>
+
+  <!-- 藍色勾勾 -->
+  <g transform="translate(32, 10)">
+    <path d="M -5 0 L -1 3.5 L 5 -2.5"
+          stroke="#0b559e"
+          stroke-width="2.8"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+</svg>
