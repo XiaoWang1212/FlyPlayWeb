@@ -273,8 +273,10 @@ class GeminiService:
                 itinerary_text = str(source_data or raw_output or "")
 
             prompt = f"""請把以下旅遊行程內容整理成使用者容易閱讀的繁體中文摘要。
-                        不要輸出 JSON，不要輸出 Markdown，不要輸出 code block，不要使用 #、*、-、數字編號或表格。
-                        請直接輸出純文字，使用自然段落和清楚的標籤呈現，例如「行程總覽」、「第 1 天」、「住宿建議」、「用餐建議」。
+                        不要輸出 JSON，不要輸出 code block。
+                        請用精簡列點式輸出，每一天只保留一個簡短標題，且每個景點/餐廳/住宿各自獨立一列。
+                        不要使用「上午、下午、晚上」這種分段詞，也不要寫長篇敘述。
+                        每一列格式盡量固定為「• 地點名稱｜建議停留時間｜一句話簡述」，若有費用可附在最後。
                         如果內容有日期、景點、交通、住宿、餐飲，請保留並整理順序。
 
                         行程內容：
@@ -397,7 +399,7 @@ class GeminiService:
                         "weekday": "星期幾 (例如：星期一)", 
                         "location": [
                             {{
-                                "time": "建議停留 2 小時",
+                                "time": "建議停留 X 小時",
                                 "location_name": "地點名稱",
                             }}
                         ]
@@ -547,10 +549,14 @@ class GeminiService:
                             )
                             if not loc_name:
                                 continue
-                            stay_hours = 2 + min(loc_idx, 2)
+                            loc_time = (
+                                str(loc.get("time") or "").strip()
+                                if isinstance(loc, dict)
+                                else ""
+                            )
                             normalized_locations.append(
                                 {
-                                    "time": f"建議停留 {stay_hours} 小時",
+                                    "time": loc_time,
                                     "place_name": loc_name,
                                     "description": "",
                                     "type": "景點",
@@ -621,6 +627,7 @@ class GeminiService:
             8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
             9. 不要推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類地點；若原始內容包含這類地點，請替換成相鄰且更適合旅遊的景點。
             10. 每一天的 location 裡面至少要有一個 type 為「美食」的項目；如果原始行程沒有美食，請補上一個合適的餐廳或在地美食。
+            11. 如果原始行程沒有提供 time，請你依照景點類型、規模與行程節奏自行判斷建議停留時間，不要使用固定預設值。
             12. location[].time 請表示建議停留時間，不要使用 09:00 這類實際時刻；請用「建議停留 X 小時」或相近的自然語句。
             """
 

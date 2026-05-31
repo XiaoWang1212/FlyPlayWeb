@@ -121,8 +121,9 @@ function applyChatItineraryUpdate(parsed) {
 	return true;
 }
 
+
 // 逐字顯示訊息（打字機效果）
-async function typeMessage(text, type, speed = 30) {
+async function typeMessage(text, type, speed = 20) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);

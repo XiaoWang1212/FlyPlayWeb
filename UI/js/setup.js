@@ -47,10 +47,13 @@ function formatItineraryFallbackText(rawOutput, parsedOutput) {
         items.forEach((item) => {
           const name = item?.place_name || item?.location_name || item?.name || "";
           const time = item?.time ? `${item.time}` : "";
-          const description = item?.description ? `｜${item.description}` : "";
-          const type = item?.type ? `｜${item.type}` : "";
-          const cost = item?.cost ? `｜費用 ${item.cost}` : "";
-          const line = [time, name].filter(Boolean).join(" ") + description + type + cost;
+          const description = item?.description ? `${item.description}` : "";
+          const cost = item?.cost ? `｜${item.cost}` : "";
+          const parts = ["•", name, time ? `｜${time}` : "", description ? `｜${description}` : "", cost]
+            .filter(Boolean)
+            .join(" ")
+            .replace(/\s+\|/g, "｜");
+          const line = parts;
           if (line.trim()) {
             lines.push(line.trim());
           }
@@ -65,6 +68,7 @@ function formatItineraryFallbackText(rawOutput, parsedOutput) {
   if (!fallbackText) return "行程摘要暫時無法顯示";
 
   return fallbackText
+    .replace(/上午|下午|晚上/g, "")
     .replace(/^#{1,6}\s*/gm, "")
     .replace(/^\s*[-*+]\s+/gm, "")
     .replace(/^\s*\d+[.)]\s+/gm, "")
