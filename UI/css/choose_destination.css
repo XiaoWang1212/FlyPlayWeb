@@ -141,7 +141,7 @@ h1 {
 /* 城市列表 */
 .destination-list {
     flex: 1;
-    overflow-y: scroll;  
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -219,6 +219,13 @@ h1 {
     text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 
+/* 禁用狀態（距離 > 120km） */
+.destination-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(60%);
+}
+
 /* 選中狀態 */
 .destination-item.selected {
     border-color: var(--color-secondary);
@@ -231,16 +238,16 @@ h1 {
 
 /* 選中勾勾徽章（右上角） */
 .destination-item.selected::after {
-    content: '✓';
+    content: '';
     position: absolute;
-    top: 5px;
-    right: 7px;
-    color: var(--color-primary);
-    font-size: 13px;
-    font-weight: 700;
+    top: 0;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    background-image: url('../assets/icons/checkmark-badge.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
     z-index: 3;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
-    line-height: 1;
 }
 
 .destination-item .city-name {
