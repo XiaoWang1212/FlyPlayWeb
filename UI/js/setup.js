@@ -386,6 +386,12 @@ function generateTravelTypeCards(container) {
           travelType: "any",
           travelTypeLabel: opt.label,
         });
+
+        // 只有選「任何類型」才自動收起選擇器；選其他具體類型維持展開（多選）
+        document
+          .getElementById("travel-type-picker-group")
+          ?.classList.remove("active");
+        showAIRecommendButton();
       } else {
         // 點擊具體類型時，先取消「任何類型」的選中狀態
         const anyTypeCard = container.querySelector('[data-value=""]');
