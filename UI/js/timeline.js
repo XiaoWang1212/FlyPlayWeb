@@ -12,11 +12,7 @@ function createDayButtons() {
 	allBtn.textContent = "全部";
 	allBtn.classList.add("active"); // 預設為選中狀態
 
-	// 新增：網頁一開始載入時，就幫「全部」按鈕上色
-	const allColor = getColorByDay(-1);
-	allBtn.style.backgroundColor = allColor;
-	allBtn.style.color = "#FFFFFF";
-	allBtn.style.borderColor = allColor;
+	// 外觀由 CSS nth-child 規則控制，不設 inline style
 
 	allBtn.onclick = () => switchDay(-1, allBtn);
 	buttonContainer.appendChild(allBtn);
@@ -25,7 +21,6 @@ function createDayButtons() {
 		const btn = document.createElement("button");
 		btn.textContent = `第 ${day.day} 天`;
 		btn.setAttribute("data-day-index", index);
-		btn.style.borderColor = getColorByDay(index);
 		btn.onclick = () => switchDay(index, btn);
 		buttonContainer.appendChild(btn);
 	});
@@ -233,21 +228,12 @@ function switchDay(dayIndex, clickedBtn) {
 	allBtns.forEach((btn) => {
 		btn.classList.remove("active");
 		btn.style.backgroundColor = "";
-		const idx = btn.getAttribute("data-day-index");
-		if (idx !== null) {
-			btn.style.borderColor = getColorByDay(Number(idx));
-		} else {
-			btn.style.borderColor = "";
-		}
+		btn.style.borderColor = "";
 		btn.style.color = "";
 	});
 
-  // 2. 設定當前被點擊按鈕的專屬顏色
+	// 2. 加上 active class，由 CSS 控制外觀
 	clickedBtn.classList.add("active");
-	const activeColor = getColorByDay(dayIndex);
-	clickedBtn.style.backgroundColor = activeColor;
-	clickedBtn.style.color = "#FFFFFF"; // 把文字變成白色，避免背景太深看不清楚文字
-	clickedBtn.style.borderColor = activeColor;
 
   // 3. 判斷要顯示單天還是全部
 	if (dayIndex === -1) {

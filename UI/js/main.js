@@ -138,10 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	// 機器人每 6 秒揮一次手
 	setInterval(() => {
 		const fab = document.getElementById("robotFab");
-		if (!fab) return;
+		if (!fab || fab.classList.contains("chat-open")) return;
 		fab.classList.add("robot-wave");
 		fab.addEventListener("animationend", () => fab.classList.remove("robot-wave"), { once: true });
-	}, 6000);
+	}, 3500);
 });
 
 document.addEventListener("click", () => {

@@ -539,60 +539,7 @@
             display: none;
         }
 
-        #dayButtonContainer button {
-            padding: 1px 18px;
-            border: 2px solid #999;
-            background: white;
-            color: #333;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        #dayButtonContainer button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        #dayButtonContainer button:active {
-            transform: translateY(0);
-            opacity: 0.8;
-        }
-
-        /* 被選中的按鈕樣式 - 針對不同天數的顏色 */
-        #dayButtonContainer button:nth-child(1).active {
-            background: #2962FF;
-            color: white;
-            border-color: #2962FF;
-        }
-
-        #dayButtonContainer button:nth-child(2).active {
-            background: #34A853;
-            color: white;
-            border-color: #34A853;
-        }
-
-        #dayButtonContainer button:nth-child(3).active {
-            background: #EA4335;
-            color: white;
-            border-color: #EA4335;
-        }
-
-        #dayButtonContainer button:nth-child(4).active {
-            background: #FBBC04;
-            color: white;
-            border-color: #FBBC04;
-        }
-
-        #dayButtonContainer button:nth-child(5).active {
-            background: #9C27B0;
-            color: white;
-            border-color: #9C27B0;
-        }
+        /* 按鈕樣式已移至 timeline.css 統一管理 */
 
         /* 日期標題樣式 */
         [data-day-title] {

@@ -269,12 +269,13 @@
 #dayButtonContainer {
 	display: flex;
 	gap: 10px;
-	padding: 10px 20px 15px 20px;
-	min-height: 60px;
+	padding: 10px 20px 20px 20px;
+	min-height: 65px;
 	justify-content: flex-start;
+	align-items: center;
 	flex-wrap: nowrap;
 	overflow-x: auto;
-	overflow-y: hidden;
+	overflow-y: visible;
 	-webkit-overflow-scrolling: touch;
 	scrollbar-width: none;
 	background: white;
@@ -293,57 +294,93 @@
 }
 
 #dayButtonContainer button {
-	padding: 1px 18px;
-	border: 2px solid #999;
-	background: white;
-	color: #333;
-	border-radius: 20px;
+	padding: 5px 16px;
+	border: 2px solid transparent;
+	color: white !important;
+	border-radius: 50px;
 	cursor: pointer;
 	font-size: 14px;
-	transition: all 0.3s ease;
-	font-weight: 500;
+	transition: transform 0.08s ease;
+	font-weight: 600;
 	white-space: nowrap;
 	flex-shrink: 0;
+	position: relative;
+	user-select: none;
 }
 
-#dayButtonContainer button:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+#dayButtonContainer button:nth-child(1) {
+	background: linear-gradient(to bottom, #3a4e70 0%, #0f1a3a 100%);
+	border-color: #0a1230;
+	box-shadow: 0 7px 0 #05091a, 0 10px 14px rgba(10, 20, 60, 0.65);
 }
 
-#dayButtonContainer button:active {
-	transform: translateY(0);
-	opacity: 0.8;
+#dayButtonContainer button:nth-child(2) {
+	background: linear-gradient(to bottom, #5b8aff 0%, #2962ff 100%);
+	border-color: #1a47cc;
+	box-shadow: 0 7px 0 #0f33a8, 0 10px 14px rgba(41, 98, 255, 0.65);
+}
+
+#dayButtonContainer button:nth-child(3) {
+	background: linear-gradient(to bottom, #4dc86e 0%, #34a853 100%);
+	border-color: #267a3e;
+	box-shadow: 0 7px 0 #1a5c2d, 0 10px 14px rgba(52, 168, 83, 0.65);
+}
+
+#dayButtonContainer button:nth-child(4) {
+	background: linear-gradient(to bottom, #f06a5e 0%, #ea4335 100%);
+	border-color: #b0322a;
+	box-shadow: 0 7px 0 #8c2219, 0 10px 14px rgba(234, 67, 53, 0.65);
+}
+
+#dayButtonContainer button:nth-child(5) {
+	background: linear-gradient(to bottom, #fdc83a 0%, #fbbc04 100%);
+	border-color: #c49403;
+	box-shadow: 0 7px 0 #9e7800, 0 10px 14px rgba(251, 188, 4, 0.65);
+}
+
+#dayButtonContainer button:nth-child(6) {
+	background: linear-gradient(to bottom, #b040c6 0%, #9c27b0 100%);
+	border-color: #6e1b7c;
+	box-shadow: 0 7px 0 #520f5e, 0 10px 14px rgba(156, 39, 176, 0.65);
+}
+
+#dayButtonContainer button.active {
+	transform: translateY(7px);
 }
 
 #dayButtonContainer button:nth-child(1).active {
-	background: #2962ff;
-	color: white;
-	border-color: #2962ff;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+	border-color: #3a4a5a;
 }
 
 #dayButtonContainer button:nth-child(2).active {
-	background: #34a853;
-	color: white;
-	border-color: #34a853;
+	box-shadow: 0 2px 8px rgba(41, 98, 255, 0.45);
+	border-color: #2a3a70;
 }
 
 #dayButtonContainer button:nth-child(3).active {
-	background: #ea4335;
-	color: white;
-	border-color: #ea4335;
+	box-shadow: 0 2px 8px rgba(52, 168, 83, 0.45);
+	border-color: #2a4a32;
 }
 
 #dayButtonContainer button:nth-child(4).active {
-	background: #fbbc04;
-	color: white;
-	border-color: #fbbc04;
+	box-shadow: 0 2px 8px rgba(234, 67, 53, 0.45);
+	border-color: #6a3030;
 }
 
 #dayButtonContainer button:nth-child(5).active {
-	background: #9c27b0;
-	color: white;
-	border-color: #9c27b0;
+	box-shadow: 0 2px 8px rgba(251, 188, 4, 0.45);
+	border-color: #6a5828;
+}
+
+#dayButtonContainer button:nth-child(6).active {
+	box-shadow: 0 2px 8px rgba(156, 39, 176, 0.45);
+	border-color: #4a2858;
+}
+
+#dayButtonContainer button:active {
+	transform: translateY(6px);
+	box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 3px 5px rgba(0, 0, 0, 0.35) !important;
 }
 
 [data-day-title] {

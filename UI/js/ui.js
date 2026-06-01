@@ -164,11 +164,15 @@ async function downloadPDF() {
 	const selectedDests = JSON.parse(localStorage.getItem("selectedDestinations") || "[]");
 	let tripTitle;
 	if (selectedDests.length > 0) {
-		const countries = [...new Set(selectedDests.map((d) => d.country))];
-		const cities = selectedDests.map((d) => d.city).join("");
-		tripTitle = countries.length === 1
-			? `${countries[0]}${cities}之旅`
-			: `${cities}之旅`;
+		const countries = [...new Set(selectedDests.map((d) => d.country).filter(Boolean))];
+		const cities = selectedDests.map((d) => d.city).filter(Boolean).join("");
+		if (cities) {
+			tripTitle = countries.length === 1
+				? `${countries[0]}${cities}之旅`
+				: `${cities}之旅`;
+		} else {
+			tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
+		}
 	} else {
 		tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
 	}
