@@ -9,13 +9,86 @@ nest_asyncio.apply()
 class ChatController:
     def __init__(self):
         self.chat_service = GeminiService()
+
+    def _is_travel_related(self, message):
+        """簡單判斷是否屬於旅遊相關問題"""
+        text = str(message or "").strip().lower()
+        if not text:
+            return False
+
+        travel_keywords = [
+            "旅遊",
+            "行程",
+            "景點",
+            "住宿",
+            "飯店",
+            "機票",
+            "交通",
+            "捷運",
+            "公車",
+            "地鐵",
+            "航班",
+            "預算",
+            "天數",
+            "目的地",
+            "出發",
+            "回程",
+            "自由行",
+            "跟團",
+            "推薦",
+            "附近",
+            "餐廳",
+            "美食",
+            "小吃",
+            "拉麵",
+            "拉麵店",
+            "店家",
+            "店",
+            "必吃",
+            "好吃",
+            "旅館",
+            "城市",
+            "國家",
+            "日本",
+            "東京",
+            "大阪",
+            "京都",
+            "機場",
+        ]
+
+        return any(keyword in text for keyword in travel_keywords)
     
-    # def handle_chat_message(self, message, conversation_history):
-    #     """處理用戶聊天消息"""
-    #     try:
-    #         return self.chat_service.chat_with_ai(message, conversation_history)
-    #     except Exception as e:
-    #         return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
+    def handle_chat_message(
+        self,
+        message,
+        conversation_history,
+        trip_context=None,
+        current_itinerary=None,
+        current_day_index=-1,
+    ):
+        """處理用戶聊天消息"""
+        try:
+            if not self._is_travel_related(message):
+                return {
+                    'success': True,
+                    'data': {
+                        'response': '我無法回答你的問題',
+                        'history': (conversation_history or []) + [
+                            {'role': 'user', 'content': message},
+                            {'role': 'assistant', 'content': '我無法回答你的問題'},
+                        ],
+                    },
+                }
+
+            return self.chat_service.chat_with_ai(
+                message,
+                conversation_history,
+                trip_context,
+                current_itinerary,
+                current_day_index,
+            )
+        except Exception as e:
+            return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
     
     def handle_travel_recommendation(self, location, days, transportation, preferences):
         """處理旅遊推薦請求"""
@@ -26,11 +99,13 @@ class ChatController:
         except Exception as e:
             return {'success': False, 'error': f'推薦生成失敗: {str(e)}'}
     
-    def handle_generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
+    def handle_generate_itinerary(
+        self, location, days, morning_departure, traveler_type, interests, start_date=None
+    ):
         """處理完整行程生成"""
         try:
             return self.chat_service.generate_itinerary(
-                location, days, budget, traveler_type, interests, start_date
+                location, days, morning_departure, traveler_type, interests, start_date
             )
         except Exception as e:
             return {'success': False, 'error': f'行程生成失敗: {str(e)}'}

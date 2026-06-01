@@ -70,7 +70,9 @@ class ChatGPTService:
     #     except Exception as e:
     #         return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
     
-    async def generate_itinerary(self, location, days, budget, traveler_type, interests, start_date=None):
+    async def generate_itinerary(
+        self, location, days, morning_departure, traveler_type, interests, start_date=None
+    ):
         """生成完整詳細行程 (結構化輸出)"""
         try:
             interests_str = ', '.join(interests) if interests else '通用興趣'
@@ -78,7 +80,7 @@ class ChatGPTService:
             
             prompt = f"""請為以下旅客創建完整的{days}天{location}行程。
             旅客類型: {traveler_type}
-            預算: {budget}
+            早上出發時間: {morning_departure}
             興趣: {interests_str}
             {date_info}
             

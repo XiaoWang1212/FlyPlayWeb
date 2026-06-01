@@ -38,21 +38,31 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        position: fixed;
-        top: 0;
-        left: 0;
-        background-color: var(--bg-color-main);
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.45), transparent 35%),
+          linear-gradient(180deg, #c8c8c8 0%, #a9a9a9 100%);
         font-family: -apple-system, system-ui, sans-serif;
         overscroll-behavior: none;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
       }
 
       #viewport-app {
         position: relative;
         display: flex;
         flex-direction: column;
-        width: 100%;
-        height: 100%;
+        width: min(100%, 860px);
+        height: min(100dvh - 28px, 980px);
+        max-height: 100%;
+        border-radius: 28px;
+        overflow: hidden;
         background-color: var(--bg-color-main);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
       }
 
       /* --- Header --- */
@@ -109,6 +119,8 @@
         font-size: 16px;
         line-height: 1.4;
         word-wrap: break-word;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
       }
 
       .bot-msg {
@@ -220,6 +232,27 @@
         cursor: not-allowed;
         pointer-events: none;
       }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 8px;
+        }
+
+        #viewport-app {
+          width: 100%;
+          height: calc(100dvh - 16px);
+          border-radius: 22px;
+        }
+
+        .chat-container {
+          padding: 16px;
+        }
+
+        .input-area {
+          padding: 10px 16px;
+          padding-bottom: calc(10px + var(--safe-area-bottom));
+        }
+      }
     </style>
   </head>
   <body>
@@ -276,6 +309,7 @@
 
         // 對話歷史紀錄，用於送給 AI API
         let conversationHistory = [];
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
         const handleViewportChange = () => {
           if (!window.visualViewport) return;
@@ -402,6 +436,28 @@
           scrollToBottom();
         };
 
+        const appendMessageWithTypewriter = async (
+          text,
+          className,
+          speed = 12,
+        ) => {
+          const msgDiv = document.createElement("div");
+          msgDiv.className = `message ${className}`;
+          msgDiv.textContent = "";
+          chatContainer.appendChild(msgDiv);
+          scrollToBottom();
+
+          if (!text) return;
+
+          const chunkSize = Math.max(1, Math.ceil(text.length / 250));
+
+          for (let index = 0; index < text.length; index += chunkSize) {
+            msgDiv.textContent = text.slice(0, index + chunkSize);
+            scrollToBottom();
+            await sleep(speed);
+          }
+        };
+
         const sendMessage = async () => {
           const text = userInput.value.trim();
           if (!text) return;
@@ -465,7 +521,15 @@
         // ==================================================
         // 初始化對話
         // ==================================================
-        function initializeChat() {
+        async function initializeChat() {
+          const pendingChatOutput = localStorage.getItem("pendingChatOutput");
+
+          if (pendingChatOutput) {
+            localStorage.removeItem("pendingChatOutput");
+            await appendMessageWithTypewriter(pendingChatOutput, "bot-msg");
+            return;
+          }
+
           // AI 的第一句問候
           const welcomeMessage = "你好！有什麼我可以幫你的嗎？";
           appendMessage(welcomeMessage, "bot-msg");
@@ -488,7 +552,7 @@
         );
 
         // 初始化對話
-        initializeChat();
+        void initializeChat();
       });
     </script>
   </body>
