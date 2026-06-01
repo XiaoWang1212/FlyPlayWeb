@@ -150,7 +150,7 @@
 
             const distance = calculateDistance(base.lat, base.lng, coord.lat, coord.lng);
 
-            if (distance > 1000) {
+            if (distance > 300) { // 先關閉這功能 
                 disabledDestinations.push(dest.city);
             }
         });
@@ -409,6 +409,11 @@
     }
 
     // -------------------- start --------------------
+
+    function confirmSelection() {
+        saveSelectedDestinations();
+        goBackWithTransition("setup.html");
+    }
 
     window.onload = init;
 
