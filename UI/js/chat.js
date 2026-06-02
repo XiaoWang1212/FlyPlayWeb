@@ -179,6 +179,8 @@ async function showPendingChatOutput() {
 function toggleChatMode() {
 	isChatMode = !isChatMode;
 
+	const robotFab = document.getElementById("robotFab");
+
 	if (isChatMode) {
 		timelineView.classList.remove("active");
 		chatView.classList.add("active");
@@ -187,6 +189,7 @@ function toggleChatMode() {
 
 		robotFabIcon.classList.remove("fa-robot");
 		robotFabIcon.classList.add("fa-list-ul");
+		robotFab.classList.add("chat-open");
 
 		setTimeout(() => document.getElementById("chatInput").focus(), 300);
 	} else {
@@ -197,6 +200,7 @@ function toggleChatMode() {
 
 		robotFabIcon.classList.remove("fa-list-ul");
 		robotFabIcon.classList.add("fa-robot");
+		robotFab.classList.remove("chat-open");
 	}
 }
 
