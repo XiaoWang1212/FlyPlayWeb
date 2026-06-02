@@ -1,4 +1,6 @@
 // UI/js/page_transition.js
+// 目前沒有接到這一個檔案，是接到資料夾外面的。
+
 
 document.addEventListener('DOMContentLoaded', function() {
     const navigationType = sessionStorage.getItem('navigationType');

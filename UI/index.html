@@ -7,6 +7,37 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>飛遊 App Prototype</title>
+    <!-- 轉場前置：把整頁推到畫面上方，避免閃出最終畫面。
+         實際俯衝動畫由 flight-animation.js 的 flyInFromTop() 接手。 -->
+    <script>
+      if (sessionStorage.getItem("navigationType") === "planeLead") {
+        var s = document.createElement("style");
+        s.id = "planeLeadInit";
+        s.textContent = "body{transform:translateY(-100%)}";
+        document.documentElement.appendChild(s);
+        // 轉場期間把根背景換成 setup 同款天空，露出區才不會是灰色
+        var de = document.documentElement.style;
+        de.backgroundColor = "#1a1a1a";
+        de.backgroundImage =
+          "linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5))," +
+          "url('assets/background/setup_bg.svg')";
+        de.backgroundSize = "cover";
+        de.backgroundPosition = "center";
+        de.backgroundRepeat = "no-repeat";
+        de.backgroundAttachment = "fixed";
+        // 保險：flight-animation.js 沒跑時 4s 自動還原，避免頁面卡在畫面外
+        setTimeout(function () {
+          var st = document.getElementById("planeLeadInit");
+          if (st) {
+            st.remove();
+            var d = document.documentElement.style;
+            d.background = "";
+            document.body && (document.body.style.transform = "");
+            sessionStorage.removeItem("navigationType");
+          }
+        }, 4000);
+      }
+    </script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -28,6 +59,7 @@
     </style>
   </head>
   <body>
+    <!-- 飛機 overlay 由 js/flight-animation.js 動態注入 -->
     <header>
       <div class="menu-btn" onclick="toggleSidebar()">
         <i class="fas fa-bars"></i>
@@ -287,5 +319,8 @@
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
 
+    <!-- 飛機俯衝轉場（與 setup.html 同一套渲染） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="js/flight-animation.js"></script>
   </body>
 </html>

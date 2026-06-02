@@ -7,22 +7,29 @@
         <link rel="stylesheet" href="css/setup.css" />
     </head>
     <body>
+        <!-- 飛機 overlay 由 js/flight-animation.js 動態注入 -->
+        <!-- 臨時測試按鈕（之後要刪掉） -->
+        <button id="test-anim-btn"
+                onclick="testPlaneAnim()"
+                style="position:fixed;top:16px;right:16px;z-index:999;background:rgba(255,233,102,0.85);color:#333;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:pointer;">
+          ✈
+        </button>
         <div class="container">
             <button class="back-btn" onclick="goBackWithTransition()">
                 <img src="assets/icons/back-arrow.svg" alt="返回">
             </button>
             <h1>旅程規劃</h1>
             <div class="form-group">
-                <label>出發地</label>
+                <label>抵達機場</label>
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDeparturePage()">
-                        <span id="selected-departure">請選擇出發地</span>
+                        <span id="selected-departure">請選擇抵達機場</span>
                         <span class="arrow-icon">›</span>
                     </button>
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group layer-above">
                 <label>目的地</label>
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDestinationPage()">
@@ -35,7 +42,7 @@
             <!-- 可展開的天數選擇器 -->
             <div class="form-group expandable-picker" id="days-picker-group">
                 <div class="picker-header" onclick="toggleDaysPicker()">
-                    <label>天數</label>
+                    <label class="label-with-hint">天數<span class="label-hint">不含出發及返程日</span></label>
                     <div class="picker-display">
                         <span id="selected-days">任何天數</span>
                         <span class="arrow-icon">›</span>
@@ -49,7 +56,7 @@
             </div>
 
             <!-- 旅伴選擇器（卡片式 + icon） -->
-            <div class="form-group card-picker-group" id="companion-picker-group">
+            <div class="form-group card-picker-group layer-above" id="companion-picker-group">
                 <div class="picker-header" onclick="toggleCompanionPicker()">
                     <label>旅伴</label>
                     <div class="picker-display">
@@ -67,7 +74,7 @@
             <!-- 旅遊類型選擇器（卡片式 + icon） -->
             <div class="form-group card-picker-group" id="travel-type-picker-group">
                 <div class="picker-header" onclick="toggleTravelTypePicker()">
-                    <label>旅遊類型</label>
+                    <label class="label-with-hint">旅遊類型<span class="label-hint">可多選</span></label>
                     <div class="picker-display">
                         <span id="selected-travel-type">任何類型</span>
                         <span class="arrow-icon">›</span>
@@ -80,26 +87,18 @@
                 </div>
             </div>
 
-            <!-- 預算選擇器（新增） -->
-            <div class="form-group card-picker-group" id="budget-picker-group">
-                <div class="picker-header" onclick="toggleBudgetPicker()">
-                    <label>預算</label>
+            <!-- 行程緊湊度選擇器 -->
+            <div class="form-group card-picker-group layer-above" id="trip-pace-picker-group">
+                <div class="picker-header" onclick="toggleTripPacePicker()">
+                    <label>行程緊湊度</label>
                     <div class="picker-display">
-                        <span id="selected-budget">中等</span>
+                        <span id="selected-trip-pace">輕鬆</span>
                         <span class="arrow-icon">›</span>
                     </div>
                 </div>
                 <div class="card-picker-body">
-                    <div class="card-picker-grid" id="budget-cards">
-                        <div class="picker-card" data-budget="經濟">
-                            <div class="picker-card-label">經濟</div>
-                        </div>
-                        <div class="picker-card" data-budget="中等">
-                            <div class="picker-card-label">中等</div>
-                        </div>
-                        <div class="picker-card" data-budget="高級">
-                            <div class="picker-card-label">高級</div>
-                        </div>
+                    <div class="card-picker-grid cols-2" id="trip-pace-cards">
+                        <!-- 行程緊湊度卡片會由 JavaScript 動態生成 -->
                     </div>
                 </div>
             </div>
@@ -112,7 +111,9 @@
             <!-- 提示缺少欄位 -->
             <div id="missing-field-hint" class="missing-field-hint"></div>
 
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
             <script src="js/page_transition.js"></script>
+            <script src="js/flight-animation.js"></script>
             <script src="js/setup.js"></script>
         </body>
     </html>

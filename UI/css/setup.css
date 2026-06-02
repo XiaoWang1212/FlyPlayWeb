@@ -132,6 +132,22 @@ h1 {
     font-weight 0.3s ease;
 }
 
+/* 旅遊類型多選提示標籤 */
+.label-with-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-hint {
+  font-size: 12px;
+  color: #666;
+  background-color: #eaeaea;
+  padding: 2px 6px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
 /* 展開時放大 label */
 .expandable-picker.active label,
 .card-picker-group.active label {
@@ -258,7 +274,7 @@ h1 {
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
-  max-width: 200px;
+  max-width: 120px;
   opacity: 1;
   transition: opacity 0.2s ease;
 }
@@ -376,9 +392,14 @@ h1 {
   padding: 0 20px 12px;
 }
 
+/* 只有兩個選項的選擇器，改成兩欄填滿 */
+.card-picker-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .picker-card {
   background-color: #e8e8e8;
-  border: 2px solid #d0d0d0;
+  border: 1px solid #e8e8e8;
   border-radius: 12px;
   padding: 12px;
   text-align: center;
@@ -397,7 +418,7 @@ h1 {
 }
 
 .picker-card.selected {
-  border-color: #888;
+  border-color: #bababa;
   background-color: #d5d5d5;
 }
 
@@ -406,8 +427,11 @@ h1 {
 }
 
 .picker-card-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .picker-card.selected .picker-card-label {
@@ -490,6 +514,13 @@ textarea {
   color: #222;
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* 讓特定選擇器卡片浮在飛機圖層上方，製造穿插感 */
+/* plane SVG 是 z-index:5，這些卡片設為 10 → 飛機從其下方穿過 */
+.layer-above {
+  position: relative;
+  z-index: 10;
 }
 
 /* ==================== 缺少必填欄位提醒 ==================== */

@@ -16,23 +16,69 @@ function openTransitModal(block) {
 
   Object.keys(_MODES).forEach(k => {
     document.getElementById('tm_' + k)?.classList.remove('selected', 'disabled');
-    const info = document.getElementById('tmi_' + k);
-    if (info) info.innerHTML = '<span class="tno-route">計算中…</span>';
   });
-  document.getElementById('tm_' + _defaultTransitMode)?.classList.add('selected');
+  // 讀取該 block 的最佳模式
+  const bestMode = block.dataset.bestMode || 'WALKING';
+  document.getElementById('tm_' + bestMode)?.classList.add('selected');
 
-  const oLat = parseFloat(block.dataset.originLat);
-  const oLng = parseFloat(block.dataset.originLng);
-  const dLat = parseFloat(block.dataset.destLat);
-  const dLng = parseFloat(block.dataset.destLng);
-
-  if (!isNaN(oLat) && !isNaN(dLat)) {
-    _fetchTransitData(oLat, oLng, dLat, dLng);
-  } else {
-    ['DRIVING', 'TRANSIT', 'WALKING', 'STRAIGHT'].forEach(k => {
-      const el = document.getElementById('tmi_' + k);
-      if (el) el.innerHTML = '<span class="tno-route">無位置資訊</span>';
+  // 檢查是否已有計算結果
+  const hasResults = ['DRIVING', 'TRANSIT', 'WALKING'].some(mode => block.dataset['cached_' + mode]);
+  
+  if (hasResults) {
+    // 已有數據，從 block 讀取並顯示
+    ['DRIVING', 'TRANSIT', 'WALKING'].forEach(modeKey => {
+      const el = document.getElementById('tmi_' + modeKey);
+      const raw = block.dataset['cached_' + modeKey];
+      if (el && raw) {
+        try {
+          const { dur, dist } = JSON.parse(raw);
+          
+          // 如果是大眾運輸，檢查走路時間是否 <= 5 分鐘
+          if (modeKey === 'TRANSIT') {
+            const walkingRaw = block.dataset['cached_WALKING'];
+            if (walkingRaw) {
+              try {
+                const { dur: walkDur } = JSON.parse(walkingRaw);
+                const walkMinutes = parseInt(walkDur, 10);
+                if (walkMinutes <= 5) {
+                  el.innerHTML = `<span class="tno-route">建議步行</span>`;
+                  return;
+                }
+              } catch (e) {}
+            }
+          }
+          
+          el.innerHTML = `<span class="ttime">${dur}</span> <span class="tdist">${dist}</span>`;
+        } catch (e) {
+          el.innerHTML = '<span class="tno-route">無法計算</span>';
+        }
+      }
     });
+    // 直線距離
+    const sEl = document.getElementById('tmi_STRAIGHT');
+    if (sEl && block.dataset.cached_STRAIGHT) {
+      sEl.innerHTML = `<span class="tdist">${block.dataset.cached_STRAIGHT}</span>`;
+    }
+  } else {
+    // 沒有數據，重新計算
+    Object.keys(_MODES).forEach(k => {
+      const info = document.getElementById('tmi_' + k);
+      if (info) info.innerHTML = '<span class="tno-route">計算中…</span>';
+    });
+
+    const oLat = parseFloat(block.dataset.originLat);
+    const oLng = parseFloat(block.dataset.originLng);
+    const dLat = parseFloat(block.dataset.destLat);
+    const dLng = parseFloat(block.dataset.destLng);
+
+    if (!isNaN(oLat) && !isNaN(dLat)) {
+      _fetchTransitDataForModal(oLat, oLng, dLat, dLng);
+    } else {
+      ['DRIVING', 'TRANSIT', 'WALKING', 'STRAIGHT'].forEach(k => {
+        const el = document.getElementById('tmi_' + k);
+        if (el) el.innerHTML = '<span class="tno-route">無位置資訊</span>';
+      });
+    }
   }
 }
 
@@ -42,7 +88,10 @@ function closeTransitModal() {
 
 function selectTransitMode(mode) {
   if (document.getElementById('tm_' + mode)?.classList.contains('disabled')) return;
-  _defaultTransitMode = mode;
+  // 保存到該 block 的 dataset
+  if (_currentTransitBlock) {
+    _currentTransitBlock.dataset.bestMode = mode;
+  }
   Object.keys(_MODES).forEach(k =>
     document.getElementById('tm_' + k)?.classList.toggle('selected', k === mode)
   );
@@ -52,7 +101,8 @@ function selectTransitMode(mode) {
 
 function openGoogleMapsRoute(event, block) {
   event.stopPropagation();
-  const gmMode = _MODES[_defaultTransitMode]?.gmMode || 'walking';
+  const bestMode = block.dataset.bestMode || 'WALKING';
+  const gmMode = _MODES[bestMode]?.gmMode || 'walking';
   const oLat = block.dataset.originLat;
   const oLng = block.dataset.originLng;
   const dLat = block.dataset.destLat;
@@ -66,53 +116,104 @@ function openGoogleMapsRoute(event, block) {
   window.open(url, '_blank');
 }
 
-function _fetchTransitData(oLat, oLng, dLat, dLng) {
+async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelectFastest = false) {
   // 直線距離（Haversine）
   const toRad = x => x * Math.PI / 180;
   const dLa = toRad(dLat - oLat), dLo = toRad(dLng - oLng);
   const a = Math.sin(dLa / 2) ** 2 + Math.cos(toRad(oLat)) * Math.cos(toRad(dLat)) * Math.sin(dLo / 2) ** 2;
   const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const sText = dist < 1 ? `${Math.round(dist * 1000)} 公尺` : `${dist.toFixed(1)} 公里`;
-  const sEl = document.getElementById('tmi_STRAIGHT');
-  if (sEl) sEl.innerHTML = `<span class="tdist">${sText}</span>`;
-  if (_currentTransitBlock) _currentTransitBlock.dataset.cachedSTRAIGHT = sText;
+  if (block) block.dataset.cached_STRAIGHT = sText;
 
-  if (!window.google?.maps) return;
-  const ds = new google.maps.DirectionsService();
-  const origin = new google.maps.LatLng(oLat, oLng);
-  const destination = new google.maps.LatLng(dLat, dLng);
+  const origin = { latitude: oLat, longitude: oLng };
+  const destination = { latitude: dLat, longitude: dLng };
 
-  const now = new Date();
-  [
-    { key: 'DRIVING', mode: google.maps.TravelMode.DRIVING,  extra: {} },
-    { key: 'TRANSIT', mode: google.maps.TravelMode.TRANSIT,  extra: { transitOptions: { departureTime: now } } },
-    { key: 'WALKING', mode: google.maps.TravelMode.WALKING,  extra: {} },
-  ].forEach(({ key, mode, extra }) => {
-    ds.route({ origin, destination, travelMode: mode, ...extra }, (result, status) => {
-      const el = document.getElementById('tmi_' + key);
-      if (!el) return;
-      if (status === 'OK') {
-        const leg = result.routes[0].legs[0];
-        el.innerHTML = `<span class="tdur">${leg.duration.text}</span><span class="tdist">${leg.distance.text}</span>`;
-        if (_currentTransitBlock) {
-          _currentTransitBlock.dataset['cached_' + key] = JSON.stringify({ dur: leg.duration.text, dist: leg.distance.text });
-          if (key === _defaultTransitMode) _updateBlockDisplay(_currentTransitBlock);
+  // 記錄各模式的耗時（分鐘），用於判斷最快模式
+  const modeDurations = {};
+
+  // 使用 Promise.all 確保所有 fetch 都完成
+  const promises = ['DRIVING', 'TRANSIT', 'WALKING'].map(async (modeKey) => {
+    try {
+      const isTransit = modeKey === 'TRANSIT';
+      const endpoint = isTransit ? 'estimate_transit' : 'route_details';
+      
+      const bodyPayload = {
+        origin: origin,
+        destination: destination,
+      };
+      if (!isTransit) {
+        bodyPayload.mode = modeKey.toLowerCase();
+      }
+
+      const response = await fetch(`${API_BASE}/api/maps/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('userToken')}`
+        },
+        body: JSON.stringify(bodyPayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        let durationText, distanceText, durationMinutes;
+
+        if (isTransit) {
+          durationMinutes = data.duration_minutes;
+          durationText = `${durationMinutes} 分`;
+          distanceText = `(估算)`;
+        } else {
+          durationText = data.duration;
+          distanceText = data.distance;
+          let hours = 0, minutes = 0;
+          const hourMatch = durationText.match(/(\d+)\s*小時/);
+          const minMatch = durationText.match(/(\d+)\s*分/);
+          
+          if (hourMatch) hours = parseInt(hourMatch[1], 10);
+          if (minMatch) minutes = parseInt(minMatch[1], 10);
+          
+          durationMinutes = hours > 0 || minutes > 0 ? hours * 60 + minutes : 999;
+        }
+
+        modeDurations[modeKey] = durationMinutes;
+
+        // 只保存到 block，不直接更新 DOM
+        if (block) {
+          block.dataset['cached_' + modeKey] = JSON.stringify({
+            dur: durationText,
+            dist: distanceText
+          });
         }
       } else {
-        if (key === 'TRANSIT' && _currentTransitBlock) {
-          const oLat = _currentTransitBlock.dataset.originLat;
-          const oLng = _currentTransitBlock.dataset.originLng;
-          const dLat = _currentTransitBlock.dataset.destLat;
-          const dLng = _currentTransitBlock.dataset.destLng;
-          const url = `https://www.google.com/maps/dir/?api=1&origin=${oLat},${oLng}&destination=${dLat},${dLng}&travelmode=transit`;
-          el.innerHTML = `<a class="tdetail-link" href="${url}" target="_blank" onclick="event.stopPropagation()">點選查看詳情</a>`;
-        } else {
-          el.innerHTML = '<span class="tno-route">目前沒有適用路線</span>';
-          document.getElementById('tm_' + key)?.classList.add('disabled');
-        }
+        throw new Error(data.error || '計算失敗');
       }
-    });
+    } catch (error) {
+      console.error(`Route calculation failed for mode ${modeKey}:`, error);
+    }
   });
+
+  await Promise.all(promises);
+  
+  if (block && autoSelectFastest) {
+    // 如果走路 <= 15 分鐘，優先走路
+    if (modeDurations['WALKING'] !== undefined && modeDurations['WALKING'] <= 15) {
+      block.dataset.bestMode = 'WALKING';
+    } else {
+      // 否則選擇最快的模式
+      const validModes = Object.entries(modeDurations)
+        .filter(([_, minutes]) => minutes < 999)
+        .sort(([_, a], [__, b]) => a - b);
+      
+      if (validModes.length > 0) {
+        block.dataset.bestMode = validModes[0][0];
+      }
+    }
+  }
 }
 
 function _updateBlockDisplay(block) {
@@ -120,51 +221,113 @@ function _updateBlockDisplay(block) {
   const iconEl = block.querySelector('.transit-mode-icon');
   if (!textEl || !iconEl) return;
 
-  const mode = _MODES[_defaultTransitMode];
+  // 使用該 block 的 bestMode
+  const bestMode = block.dataset.bestMode || 'WALKING';
+  const mode = _MODES[bestMode];
   if (!mode) return;
   iconEl.className = mode.icon + ' transit-mode-icon';
 
-  if (_defaultTransitMode === 'STRAIGHT') {
+  if (bestMode === 'STRAIGHT') {
     const dist = block.dataset.cachedSTRAIGHT || '';
     textEl.textContent = dist ? `直線距離 ${dist}` : '直線距離';
     return;
   }
-  const raw = block.dataset['cached_' + _defaultTransitMode];
+  const raw = block.dataset['cached_' + bestMode];
   if (raw) {
     try {
       const { dur, dist } = JSON.parse(raw);
-      const prefix = _defaultTransitMode === 'WALKING' ? '步行距離 ' : '';
+      const prefix = bestMode === 'WALKING' ? '步行距離 ' : '';
       textEl.textContent = `${dur}・${prefix}${dist}`;
     } catch (e) { textEl.textContent = '計算中…'; }
   }
 }
 
-async function initTransitBlocks() {
-  if (!window.google?.maps?.DirectionsService) return;
-  const blocks = document.querySelectorAll('.transit-block[data-origin-lat]');
-  if (!blocks.length) return;
+async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
+  // 用於在 modal 中即時計算（沒有預先計算結果時）
+  const origin = { latitude: oLat, longitude: oLng };
+  const destination = { latitude: dLat, longitude: dLng };
 
-  const ds = new google.maps.DirectionsService();
-  await Promise.allSettled(Array.from(blocks).map(block => {
+  const promises = ['DRIVING', 'TRANSIT', 'WALKING'].map(async (modeKey) => {
+    const el = document.getElementById('tmi_' + modeKey);
+    if (!el) return;
+
+    try {
+      const isTransit = modeKey === 'TRANSIT';
+      const endpoint = isTransit ? 'estimate_transit' : 'route_details';
+      
+      const bodyPayload = {
+        origin: origin,
+        destination: destination,
+      };
+      if (!isTransit) {
+        bodyPayload.mode = modeKey.toLowerCase();
+      }
+
+      const response = await fetch(`${API_BASE}/api/maps/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('userToken')}`
+        },
+        body: JSON.stringify(bodyPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        let durationText, distanceText;
+
+        if (isTransit) {
+          durationText = `${data.duration_minutes} 分`;
+          distanceText = `(估算)`;
+        } else {
+          durationText = data.duration;
+          distanceText = data.distance;
+        }
+
+        el.innerHTML = `<span class="ttime">${durationText}</span> <span class="tdist">${distanceText}</span>`;
+      } else {
+        throw new Error(data.error || '計算失敗');
+      }
+    } catch (error) {
+      console.error(`Route calculation failed for mode ${modeKey}:`, error);
+      el.innerHTML = `<span class="tno-route">無法計算</span>`;
+      document.getElementById('tm_' + modeKey)?.classList.add('disabled');
+    }
+  });
+
+  await Promise.all(promises);
+  
+  // 計算完成後，檢查走路時間，如果 <= 5 分鐘，在大眾運輸顯示「建議步行」
+  const walkingEl = document.getElementById('tmi_WALKING');
+  const transitEl = document.getElementById('tmi_TRANSIT');
+  if (walkingEl && transitEl) {
+    const walkingText = walkingEl.textContent || '';
+    const walkMinutes = parseInt(walkingText, 10);
+    if (walkMinutes <= 5) {
+      transitEl.innerHTML = `<span class="tno-route">建議步行</span>`;
+    }
+  }
+}
+
+async function initTransitBlocks() {
+  // 頁面載入完成時，自動計算所有 transit block 的時間並選擇最佳方案
+  const transitBlocks = document.querySelectorAll('.transit-block');
+  
+  for (const block of transitBlocks) {
     const oLat = parseFloat(block.dataset.originLat);
     const oLng = parseFloat(block.dataset.originLng);
     const dLat = parseFloat(block.dataset.destLat);
     const dLng = parseFloat(block.dataset.destLng);
-    if (isNaN(oLat) || isNaN(dLat)) return Promise.resolve();
 
-    return new Promise(resolve => {
-      ds.route({
-        origin: { lat: oLat, lng: oLng },
-        destination: { lat: dLat, lng: dLng },
-        travelMode: google.maps.TravelMode.WALKING,
-      }, (result, status) => {
-        if (status === 'OK') {
-          const leg = result.routes[0].legs[0];
-          block.dataset['cached_WALKING'] = JSON.stringify({ dur: leg.duration.text, dist: leg.distance.text });
-          if (_defaultTransitMode === 'WALKING') _updateBlockDisplay(block);
-        }
-        resolve();
-      });
-    });
-  }));
+    // 確保坐標有效
+    if (!isNaN(oLat) && !isNaN(oLng) && !isNaN(dLat) && !isNaN(dLng)) {
+      // 自動計算並選擇最佳模式，將 block 傳入
+      await _fetchTransitData(oLat, oLng, dLat, dLng, block, true);
+      _updateBlockDisplay(block);
+    }
+  }
 }
