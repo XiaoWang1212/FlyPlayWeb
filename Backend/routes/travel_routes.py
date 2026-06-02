@@ -59,6 +59,11 @@ def create_itinerary():
     payload = request.get_json(force=True, silent=True)
     if not payload:
         return unified_response(400, "請求體需為 JSON")
+    morning_departure = payload.get("morning_departure") or payload.get(
+        "morningDeparture"
+    )
+    normalized_payload = dict(payload)
+    normalized_payload["morning_departure"] = morning_departure
     required = [
         "project_id",
         "days",
@@ -66,23 +71,23 @@ def create_itinerary():
         "destination",
         "type",
         "companion",
-        "budget",
+        "morning_departure",
         "interests",
         "start_date",
     ]
-    if not all(k in payload for k in required):
-        missing = [k for k in required if k not in payload]
+    if not all(normalized_payload.get(k) is not None for k in required):
+        missing = [k for k in required if normalized_payload.get(k) is None]
         return unified_response(400, f"缺少欄位: {', '.join(missing)}")
     result = travel_ctrl.create_itinerary(
-        payload["project_id"],
-        payload["days"],
-        payload["departure_airport"],
-        payload["destination"],
-        payload["type"],
-        payload["companion"],
-        payload["budget"],
-        payload["interests"],
-        payload["start_date"],
+        normalized_payload["project_id"],
+        normalized_payload["days"],
+        normalized_payload["departure_airport"],
+        normalized_payload["destination"],
+        normalized_payload["type"],
+        normalized_payload["companion"],
+        normalized_payload["morning_departure"],
+        normalized_payload["interests"],
+        normalized_payload["start_date"],
     )
     if not result["success"]:
         return unified_response(400, result["error"])
@@ -99,7 +104,7 @@ def generate_itinerary():
     coro = travel_ctrl.generate_itinerary(
         location=req.get("location"),
         days=req.get("days"),
-        budget=req.get("budget"),
+        morning_departure=req.get("morningDeparture") or req.get("morning_departure"),
         traveler_type=req.get("travelerType"),
         interests=req.get("interests", []),
         start_date=req.get("startDate"),
@@ -108,6 +113,23 @@ def generate_itinerary():
     if not result["success"]:
         return unified_response(500, result.get("error"))
     return unified_response(200, "行程生成成功", result["data"])
+
+
+@travel_bp.route("/itinerary/summary", methods=["POST"])
+@login_required
+def summarize_itinerary():
+    payload = request.get_json(force=True, silent=True)
+    if not payload:
+        return unified_response(400, "請求體需為 JSON")
+
+    result = travel_ctrl.format_itinerary_for_display(
+        raw_output=payload.get("raw_output"),
+        parsed=payload.get("parsed"),
+    )
+    if not result["success"]:
+        return unified_response(500, result.get("error"))
+
+    return unified_response(200, "行程摘要生成成功", result["data"])
 
 
 @travel_bp.route("/itinerary/<int:itinerary_id>", methods=["GET"])

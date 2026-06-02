@@ -21,7 +21,7 @@ class TravelController:
         destination,
         type_,
         companion,
-        budget,
+        morning_departure,
         interests,
         start_date,
     ):
@@ -33,7 +33,7 @@ class TravelController:
                 destination,
                 type_,
                 companion,
-                budget,
+                morning_departure,
                 start_date,
             ]
         ):
@@ -47,7 +47,7 @@ class TravelController:
         ai_result = self.gemini_service.generate_itinerary(
             location=destination,
             days=days,
-            budget=budget,
+            morning_departure=morning_departure,
             traveler_type=companion,
             interests=interests,
             start_date=start_date,
@@ -66,13 +66,21 @@ class TravelController:
             destination=destination,
             type=type_,
             companion=companion,
-            budget=budget,
+            morning_departure=morning_departure,
             interests=interests,
             start_date=start_date,
             data_json=parsed,
         )
         if itinerary_id:
-            return {"success": True, "data": {"itinerary_id": itinerary_id}}
+            return {
+                "success": True,
+                "data": {
+                    "itinerary_id": itinerary_id,
+                    "raw_output": ai_result.get("data", {}).get("raw_output"),
+                    "parsed": parsed,
+                    "token_usage": ai_result.get("data", {}).get("token_usage"),
+                },
+            }
         return {"success": False, "error": "寫入失敗"}
 
     def list_itineraries(self, project_id):
@@ -103,12 +111,15 @@ class TravelController:
         return {"success": True, "data": data}
 
     async def generate_itinerary(
-        self, location, days, budget, traveler_type, interests, start_date=None
+        self, location, days, morning_departure, traveler_type, interests, start_date=None
     ):
         res = self.gemini_service.generate_itinerary(
-            location, days, budget, traveler_type, interests, start_date
+            location, days, morning_departure, traveler_type, interests, start_date
         )
         return res
+
+    def format_itinerary_for_display(self, raw_output=None, parsed=None):
+        return self.gemini_service.format_itinerary_for_display(raw_output, parsed)
 
     def delete_project(self, project_id):
         data = self.travel_service.delete_project(project_id)

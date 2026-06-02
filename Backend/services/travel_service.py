@@ -9,9 +9,21 @@ class TravelService:
         self.database_url = database_url or os.getenv("DATABASE_URL")
         if not self.database_url:
             raise ValueError("未偵測到 DATABASE_URL")
+        self._ensure_schema()
 
     def _conn(self):
         return connect(self.database_url, cursor_factory=RealDictCursor)
+
+    def _ensure_schema(self):
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    ALTER TABLE itineraries
+                    ADD COLUMN IF NOT EXISTS morning_departure VARCHAR(50);
+                    """
+                )
+            conn.commit()
 
     def create_project(self, user_id, title):
         with self._conn() as conn:
@@ -34,7 +46,7 @@ class TravelService:
         destination,
         type,
         companion,
-        budget,
+        morning_departure,
         interests,
         start_date,
         data_json,
@@ -43,7 +55,7 @@ class TravelService:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
-                    INSERT INTO itineraries (project_id, days, departure_airport, destination, type, data_json, companion, budget, interests, start_date)
+                    INSERT INTO itineraries (project_id, days, departure_airport, destination, type, data_json, companion, morning_departure, interests, start_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING itinerary_id
                     """,
@@ -55,7 +67,7 @@ class TravelService:
                         type,
                         json.dumps(data_json),
                         companion,
-                        budget,
+                        morning_departure,
                         json.dumps(interests if isinstance(interests, list) else []),
                         start_date,
                     ),
