@@ -2,6 +2,7 @@ import requests
 from typing import Optional, Dict, List
 from config import Config
 from models.cache_model import PlaceCache
+from datetime import datetime, timezone
 
 class GoogleMapService:
     def __init__(self):
@@ -397,6 +398,182 @@ class GoogleMapService:
             return result
         except Exception as e:
             return {'success': False, 'error': str(e)}
+        
+    def compute_routes(self, origin: Dict, destination: Dict, mode: str = 'driving'):
+
+        mode = mode.lower()
+
+        cache_key = (
+            f"routes_v2_"
+            f"{origin.get('latitude')}_"
+            f"{origin.get('longitude')}_"
+            f"{destination.get('latitude')}_"
+            f"{destination.get('longitude')}_"
+            f"{mode}"
+        )
+
+        cached = self.place_cache.get(cache_key)
+        if cached:
+            return cached
+
+        try:
+            url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+
+            travel_mode_map = {
+                'driving': 'DRIVE',
+                'transit': 'TRANSIT',
+                'walking': 'WALK'
+            }
+
+            travel_mode = travel_mode_map.get(mode, 'DRIVE')
+
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': self.api_key,
+                'X-Goog-FieldMask': (
+                    'routes.duration,'
+                    'routes.distanceMeters'
+                )
+            }
+
+            payload = {
+                'origin': {
+                    'location': {
+                        'latLng': {
+                            'latitude': origin.get('latitude'),
+                            'longitude': origin.get('longitude')
+                        }
+                    }
+                },
+                'destination': {
+                    'location': {
+                        'latLng': {
+                            'latitude': destination.get('latitude'),
+                            'longitude': destination.get('longitude')
+                        }
+                    }
+                },
+                'travelMode': travel_mode,
+                'languageCode': 'zh-TW',
+                'units': 'METRIC'
+            }
+
+            if travel_mode == 'DRIVE':
+                payload['computeAlternativeRoutes'] = True
+
+            if travel_mode == 'TRANSIT':
+                # payload['departureTime'] = datetime.now(timezone.utc).isoformat()
+                payload['departureTime'] = (
+                    datetime.now(timezone.utc)
+                    .replace(hour=9, minute=0, second=0)
+                    .isoformat()
+                )
+            response = requests.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=15
+            )
+
+            response.raise_for_status()
+            data = response.json()
+
+            if not data.get('routes'):
+                return {
+                    'success': False,
+                    'error': 'ZERO_RESULTS',
+                    'fallback_url': (
+                        "https://www.google.com/maps/dir/?api=1"
+                        f"&origin={origin.get('latitude')},{origin.get('longitude')}"
+                        f"&destination={destination.get('latitude')},{destination.get('longitude')}"
+                        f"&travelmode={mode}"
+                    )
+                }
+
+            route = data['routes'][0]
+
+            duration_seconds = int(route.get('duration', '0s').replace('s', ''))
+
+            if duration_seconds < 3600:
+                duration_text = f"{duration_seconds // 60} 分"
+            else:
+                hours = duration_seconds // 3600
+                minutes = (duration_seconds % 3600) // 60
+                duration_text = f"{hours} 小時 {minutes} 分"
+
+            distance_meters = route.get('distanceMeters', 0)
+
+            if distance_meters < 1000:
+                distance_text = f"{distance_meters} 公尺"
+            else:
+                distance_text = f"{distance_meters / 1000:.1f} 公里"
+
+            result = {
+                'success': True,
+                'duration': duration_text,
+                'distance': distance_text
+            }
+
+            self.place_cache.set(cache_key, result)
+
+            return result
+
+        except requests.RequestException as e:
+            return {
+                'success': False,
+                'error': f"網路錯誤: {str(e)}"
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def estimate_transit_time(self, origin: Dict, destination: Dict):
+        # 首先，使用DRIVING模式獲取距離
+        drive_route = self.compute_routes(origin, destination, mode='driving')
+        
+        if not drive_route.get('success'):
+            return {
+                "success": False,
+                "error": "無法計算基礎距離以進行估算",
+                "source": "distance_calculation_failed"
+            }
+
+        # 從 '12.3 公里' 或 '500 公尺' 的格式中提取純數字的公尺
+        distance_text = drive_route.get('distance', '0 公尺')
+        distance_parts = distance_text.split()
+        distance_value = float(distance_parts[0])
+        
+        if '公里' in distance_parts[1]:
+            distance_meters = distance_value * 1000
+        else: # 預設為公尺
+            distance_meters = distance_value
+
+        distance_km = distance_meters / 1000
+
+        #  short distance heuristic (GUARANTEED NO FAILURE)
+        if distance_km < 2:
+            walk_time = distance_km / 4.5 * 60
+            return {
+                "success": True,
+                "duration_minutes": int(walk_time + 10),  # buffer
+                "source": "heuristic_short_distance"
+            }
+
+        #  medium distance
+        transit_speed = 22  # km/h
+        travel_time = distance_km / transit_speed * 60
+        wait_time = 6  # avg
+        transfer_penalty = 4  # avg
+        total = travel_time + wait_time + transfer_penalty + 10  # buffer
+
+        return {
+            "success": True,
+            "duration_minutes": int(total),
+            "source": "heuristic_model"
+        }
         
     def get_route_details(self, origin: str, destination: str, mode: str = 'driving'):
         cache_key = f"route_{origin}_{destination}_{mode}"

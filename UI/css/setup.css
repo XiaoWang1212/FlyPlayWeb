@@ -392,6 +392,11 @@ h1 {
   padding: 0 20px 12px;
 }
 
+/* 只有兩個選項的選擇器，改成兩欄填滿 */
+.card-picker-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .picker-card {
   background-color: #e8e8e8;
   border: 1px solid #e8e8e8;

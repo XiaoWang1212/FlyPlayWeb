@@ -58,7 +58,8 @@ class DataFixService:
                     place = search_result['places'][0]
                     location = place.get('location', {})
 
-                    if location.get('latitude') is not None:
+                    # 確保坐標完整（同時有 latitude 和 longitude）
+                    if location.get('latitude') is not None and location.get('longitude') is not None:
                         center_location = {
                             'latitude': location['latitude'],
                             'longitude': location['longitude']
@@ -99,7 +100,13 @@ class DataFixService:
                     location = place.get('location', {})
 
                     distance_km = self._calculate_distance_km(center_location, location)
-                    if distance_km is not None and distance_km > 50:
+                    
+                    # 距離計算失敗或超過50公里，都跳過
+                    if distance_km is None:
+                        print(f"跳過 {location_name}，無法計算距離（坐標不完整）")
+                        continue
+                    
+                    if distance_km > 50:
                         print(f"跳過 {location_name}，距離中心點 {distance_km:.2f} 公里，超過 50 公里")
                         continue
 
@@ -116,11 +123,9 @@ class DataFixService:
                             'longitude': location['longitude']
                         }
                 else:
-                    day_result["locations"].append({
-                        "location_name": location_name,
-                        "place_id": -1,
-                        "location": {}
-                    })
+                    # 搜尋失敗，無法確定坐標，無法計算距離，直接跳過
+                    print(f"無法搜尋 {location_name}，跳過")
+                    continue
 
             output_data.append(day_result)
 

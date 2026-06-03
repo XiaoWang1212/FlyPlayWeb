@@ -177,7 +177,7 @@ class MapController:
 
     def handle_distance_and_duration(self, origin: str, destination: str, mode: str = 'driving'):
         """
-        mode: 'driving' 或 'transit' (自駕或大眾運輸）
+        mode: 'driving' 或 'transit' (自駕或大眾運輸)
         """
         if not origin or not destination:
             return {
@@ -229,30 +229,49 @@ class MapController:
                 'error_type': result.get('error_type', 'UNKNOWN_ERROR')
             }
 
-    def handle_route_details(self, origin: str, destination: str, mode: str = 'driving'):
-        """
-        mode: 'driving' 或 'transit' (自駕或大眾運輸）
-        """
-        if not origin or not destination:
+    def handle_estimate_transit(self, origin: Dict, destination: Dict):
+        if not all(k in origin for k in ('latitude', 'longitude')) or \
+           not all(k in destination for k in ('latitude', 'longitude')):
             return {
                 'success': False,
-                'error': '必須提供起點與終點',
+                'error': '起點和終點都必須包含經緯度',
                 'code': 'INVALID_INPUT'
             }
-        result = self.map_service.get_route_details(origin, destination, mode)
+        
+        return self.map_service.estimate_transit_time(origin, destination)
+
+    def handle_route_details(self, origin: Dict, destination: Dict, mode: str = 'driving'):
+        """
+        使用新的 Routes API 計算路線詳情。
+        mode: 'driving', 'transit', 'walking'
+        """
+        if not origin or not isinstance(origin, dict) or 'latitude' not in origin:
+            return {
+                'success': False,
+                'error': '必須提供有效的起點座標',
+                'code': 'INVALID_INPUT'
+            }
+        if not destination or not isinstance(destination, dict) or 'latitude' not in destination:
+            return {
+                'success': False,
+                'error': '必須提供有效的終點座標',
+                'code': 'INVALID_INPUT'
+            }
+
+        origin_loc = {'latitude': origin['latitude'], 'longitude': origin['longitude']}
+        destination_loc = {'latitude': destination['latitude'], 'longitude': destination['longitude']}
+
+        result = self.map_service.compute_routes(origin_loc, destination_loc, mode)
+        
         if result.get('success'):
             return {
                 'success': True,
-                'data': {
-                    'steps': result.get('steps'),
-                    'mode': mode,
-                    'origin': origin,
-                    'destination': destination
-                }
+                'duration': result.get('duration'),
+                'distance': result.get('distance'),
+                'steps': result.get('steps', [])
             }
         else:
             return {
                 'success': False,
-                'error': result.get('error', '查詢失敗'),
-                'error_type': result.get('error_type', 'UNKNOWN_ERROR')
+                'error': result.get('error', '查詢失敗')
             }

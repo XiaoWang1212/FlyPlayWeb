@@ -295,7 +295,7 @@ header {
 /* ===== 機器人 FAB 動畫 ===== */
 #robotFab {
 	position: relative;
-	animation: robot-float 2.6s ease-in-out infinite;
+	animation: robot-float 1.4s ease-in-out infinite;
 }
 
 /* 脈衝光環 */
@@ -305,7 +305,7 @@ header {
 	inset: 0;
 	border-radius: 50%;
 	border: 2px solid rgba(80, 80, 80, 0.28);
-	animation: robot-pulse 3.5s ease-out 2s infinite;
+	animation: robot-pulse 2s ease-out 1s infinite;
 	pointer-events: none;
 }
 
@@ -313,6 +313,11 @@ header {
 	animation: none;
 	transform: scale(1.13);
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+
+#robotFab.chat-open,
+#robotFab.chat-open::after {
+	animation: none;
 }
 
 #robotFab.robot-wave {
