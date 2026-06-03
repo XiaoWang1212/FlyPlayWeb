@@ -214,12 +214,35 @@
           <!-- 聊天視圖 -->
           <div id="chatView" class="view-section">
             <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggestions" id="chatSuggestions">
+              <button
+                type="button"
+                class="chat-suggestion-chip"
+                onclick="sendSuggestedQuestion('推薦附近必去景點', this)"
+              >
+                推薦附近必去景點
+              </button>
+              <button
+                type="button"
+                class="chat-suggestion-chip"
+                onclick="sendSuggestedQuestion('調整行程', this)"
+              >
+                調整行程
+              </button>
+              <button
+                type="button"
+                class="chat-suggestion-chip"
+                onclick="sendSuggestedQuestion('尋找適合吃飯的地方', this)"
+              >
+                尋找適合吃飯的地方
+              </button>
+            </div>
             <div class="chat-input-bar">
               <input
                 type="text"
                 class="chat-input-field"
                 id="chatInput"
-                placeholder="輸入需求..."
+                placeholder="輸入內容..."
               />
               <button class="chat-send-btn" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>

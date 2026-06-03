@@ -11,7 +11,7 @@ class ChatController:
         self.chat_service = GeminiService()
 
     def _is_travel_related(self, message):
-        """簡單判斷是否屬於旅遊相關問題"""
+        """判斷是否屬於旅遊/行程/美食/交通相關問題。"""
         text = str(message or "").strip().lower()
         if not text:
             return False
@@ -22,6 +22,7 @@ class ChatController:
             "景點",
             "住宿",
             "飯店",
+            "民宿",
             "機票",
             "交通",
             "捷運",
@@ -40,10 +41,16 @@ class ChatController:
             "餐廳",
             "美食",
             "小吃",
+            "早餐",
+            "午餐",
+            "晚餐",
+            "咖啡",
+            "甜點",
             "拉麵",
             "拉麵店",
+            "壽司",
             "店家",
-            "店",
+            "商店街",
             "必吃",
             "好吃",
             "旅館",
@@ -54,9 +61,24 @@ class ChatController:
             "大阪",
             "京都",
             "機場",
+            "車站",
+            "神社",
+            "寺廟",
+            "博物館",
+            "公園",
+            "好玩",
+            "哪裡",
+            "怎麼去",
         ]
 
         return any(keyword in text for keyword in travel_keywords)
+
+    def _get_off_topic_response(self):
+        return (
+            "我主要協助旅遊、行程、景點、美食和交通相關問題。"
+            "如果你想問其他非旅遊主題，我不會在這裡回答。"
+            "你可以改問我景點推薦、餐廳、住宿或行程安排。"
+        )
     
     def handle_chat_message(
         self,
@@ -68,14 +90,21 @@ class ChatController:
     ):
         """處理用戶聊天消息"""
         try:
+            if not str(message or "").strip():
+                return {
+                    'success': False,
+                    'error': '必須提供聊天內容',
+                }
+
             if not self._is_travel_related(message):
+                off_topic_reply = self._get_off_topic_response()
                 return {
                     'success': True,
                     'data': {
-                        'response': '我無法回答你的問題',
+                        'response': off_topic_reply,
                         'history': (conversation_history or []) + [
                             {'role': 'user', 'content': message},
-                            {'role': 'assistant', 'content': '我無法回答你的問題'},
+                            {'role': 'assistant', 'content': off_topic_reply},
                         ],
                     },
                 }

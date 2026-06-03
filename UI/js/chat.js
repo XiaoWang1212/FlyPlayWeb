@@ -1,6 +1,8 @@
 // ===== 聊天功能 =====
 
 let conversationHistory = [];
+let hasShownChatWelcome = false;
+let hasHiddenChatSuggestions = false;
 
 function getChatCurrentItinerary() {
 	if (Array.isArray(allDays) && allDays.length > 0) {
@@ -123,7 +125,7 @@ function applyChatItineraryUpdate(parsed) {
 
 
 // 逐字顯示訊息（打字機效果）
-async function typeMessage(text, type, speed = 20) {
+async function typeMessage(text, type, speed = 10) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);
@@ -175,6 +177,28 @@ async function showPendingChatOutput() {
 	return true;
 }
 
+function showChatWelcomeMessage() {
+	if (hasShownChatWelcome) return;
+	const chatMessages = document.getElementById("chatMessages");
+	if (!chatMessages || chatMessages.children.length > 0) return;
+
+	hasShownChatWelcome = true;
+	void typeMessage(
+		"Hello! 我是飛遊小幫手。你可以直接告訴我想修改行程、查景點，或問我旅程上的任何問題。",
+		"bot",
+		40,
+	);
+}
+
+function hideChatSuggestions() {
+	if (hasHiddenChatSuggestions) return;
+	const chatSuggestions = document.getElementById("chatSuggestions");
+	if (!chatSuggestions) return;
+
+	hasHiddenChatSuggestions = true;
+	chatSuggestions.style.display = "none";
+}
+
 // 切換聊天模式
 function toggleChatMode() {
 	isChatMode = !isChatMode;
@@ -186,6 +210,7 @@ function toggleChatMode() {
 		chatView.classList.add("active");
 		openSheet();
 		syncSheetState("sheet-expanded");
+		showChatWelcomeMessage();
 
 		robotFabIcon.classList.remove("fa-robot");
 		robotFabIcon.classList.add("fa-list-ul");
@@ -233,6 +258,7 @@ async function sendMessage() {
 	};
 	const currentItinerary = getChatCurrentItinerary();
 
+	hideChatSuggestions();
 	appendMsg(text, "user");
 	input.value = "";
 
@@ -299,6 +325,24 @@ function appendMsg(text, type) {
 	div.textContent = text;
 	document.getElementById("chatMessages").appendChild(div);
 	scrollToBottom();
+}
+
+function sendSuggestedQuestion(question, buttonElement) {
+	const input = document.getElementById("chatInput");
+	if (!input || !question) return;
+
+	if (buttonElement && buttonElement.classList) {
+		buttonElement.classList.add("is-pressed");
+		window.setTimeout(() => {
+			buttonElement.classList.remove("is-pressed");
+		}, 140);
+	}
+
+	input.value = question;
+	input.focus();
+	if (typeof input.setSelectionRange === "function") {
+		input.setSelectionRange(question.length, question.length);
+	}
 }
 
 function scrollToBottom() {
