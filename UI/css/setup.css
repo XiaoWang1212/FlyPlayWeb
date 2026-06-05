@@ -372,6 +372,14 @@ h1 {
   font-weight: 500;
 }
 
+/* 占位選項「選擇天數」：不可選、淡化顯示 */
+.picker-scroll-inline .picker-item.disabled {
+  color: #ccc;
+  font-size: 24px;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ==================== 卡片式選擇器 ==================== */
 .card-picker-body {
   width: 100%;
