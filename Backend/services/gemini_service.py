@@ -156,11 +156,16 @@ class GeminiService:
             context_lines.append(f"出發地：{trip_context.get('departure')}")
         if trip_context.get("companion"):
             context_lines.append(f"旅伴類型：{trip_context.get('companion')}")
-        morning_departure = trip_context.get("morningDeparture") or trip_context.get(
-            "morning_departure"
+        trip_pace = (
+            trip_context.get("pace")
+            or trip_context.get("tripPace")
+            or trip_context.get("morningDeparture")
+            or trip_context.get("morning_departure")
         )
-        if morning_departure:
-            context_lines.append(f"早上出發時間：{morning_departure}")
+        if trip_pace:
+            pace_text = str(trip_pace).strip()
+            pace_label = "緊湊" if pace_text in {"packed", "緊湊"} else "輕鬆"
+            context_lines.append(f"行程緊湊度：{pace_label}")
         if trip_context.get("travelType"):
             context_lines.append(f"旅遊偏好：{trip_context.get('travelType')}")
         if trip_context.get("startDate"):
@@ -375,7 +380,7 @@ class GeminiService:
             return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
 
     def generate_itinerary(
-        self, location, days, morning_departure, traveler_type, interests, start_date=None
+        self, location, days, trip_pace, traveler_type, interests, start_date=None
     ):
         """生成完整詳細行程 (結構化輸出)"""
         try:
@@ -385,10 +390,16 @@ class GeminiService:
                 if start_date
                 else "出發日期: 未指定 (請假設從星期一開始)"
             )
+            pace_label = "緊湊" if str(trip_pace).strip() in {"packed", "緊湊"} else "輕鬆"
+            pace_rule = (
+                "行程緊湊度：緊湊，請將每日景點數安排為 4 個，最多不得超過 4 個。"
+                if pace_label == "緊湊"
+                else "行程緊湊度：輕鬆，請將每日景點數安排為 2 個，最多不得超過 3 個。"
+            )
 
             prompt = f"""請為以下旅客創建完整的{days}天{location}行程。
             旅客類型: {traveler_type}
-            早上出發時間: {morning_departure}
+            行程緊湊度: {pace_label}
             興趣: {interests_str}
             {date_info}
             
@@ -409,11 +420,10 @@ class GeminiService:
 
             }}
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
-            請根據早上出發時間，使用下列明確對照規則決定當天要安排的景點數（以便模型有一致行為）：
-            - 出發時間 06:00 - 08:59：安排 4 個景點
-            - 出發時間 09:00 - 10:59：安排 3 個景點
-            - 出發時間 11:00 及之後：安排 2 個景點
-            每日最多不超過 4 個景點。請嚴格遵守上述規則，僅在特殊不可行時才做小幅調整。
+            請根據行程緊湊度決定每日景點數，並嚴格遵守以下規則：
+            - 輕鬆：每日安排 2 個景點，最多不超過 3 個
+            - 緊湊：每日安排 4 個景點，最多不超過 4 個
+            {pace_rule}
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
@@ -487,7 +497,7 @@ class GeminiService:
         self,
         location,
         days,
-        morning_departure,
+        trip_pace,
         traveler_type,
         interests,
         start_date=None,
@@ -504,6 +514,12 @@ class GeminiService:
                 f"出發日期: {start_date}"
                 if start_date
                 else "出發日期: 未指定 (請假設從星期一開始)"
+            )
+            pace_label = "緊湊" if str(trip_pace).strip() in {"packed", "緊湊"} else "輕鬆"
+            pace_rule = (
+                "行程緊湊度：緊湊，請將每日景點數安排為 4 個，最多不得超過 4 個。"
+                if pace_label == "緊湊"
+                else "行程緊湊度：輕鬆，請將每日景點數安排為 2 個，最多不得超過 3 個。"
             )
 
             # 將 existing_itinerary 正規化為 Gemini 可讀的結構
@@ -592,7 +608,7 @@ class GeminiService:
 
             修改要求：
             旅客類型: {traveler_type}
-            早上出發時間: {morning_departure}
+            行程緊湊度: {pace_label}
             興趣: {interests_str}
             {date_info}
 
@@ -627,16 +643,16 @@ class GeminiService:
             - 不確定的估算：約 JPY 2,000
             - 禁止輸出沒有幣別或沒有千分位的格式。
             5. 只回傳純 JSON，不要包含任何 markdown 標記。
-            6. 確保修改後的行程符合用戶早上出發時間偏好和興趣。
+            6. 確保修改後的行程符合用戶行程緊湊度偏好和興趣。
             7. 優先沿用原始行程中的 place_name（請不要改名或換成不同地點）。
             8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
             9. 不要推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類地點；若原始內容包含這類地點，請替換成相鄰且更適合旅遊的景點。
             10. 每一天的 location 裡面至少要有一個 type 為「美食」的項目；如果原始行程沒有美食，請補上一個合適的餐廳或在地美食。
             11. 如果原始行程沒有提供 time，請你依照景點類型、規模與行程節奏自行判斷建議停留時間，不要使用固定預設值。
-            如果需要根據出發時間估算整體行程節奏，請使用同樣的出發時間對照規則：
-            - 出發時間 06:00 - 08:59：視為密集行程，平均每個景點建議停留時間較短以容納 4 個景點。
-            - 出發時間 09:00 - 10:59：視為中等節奏，安排 3 個景點並相應調整停留時間。
-            - 出發時間 11:00 及之後：視為悠閒節奏，安排 2 個景點並增加每站停留時間。
+            如果需要根據行程節奏估算整體安排，請使用同樣的緊湊度規則：
+            - 輕鬆：視為悠閒節奏，安排 2 個景點並增加每站停留時間。
+            - 緊湊：視為密集行程，安排 4 個景點並相應縮短每站停留時間。
+            {pace_rule}
             12. location[].time 請表示建議停留時間，不要使用 09:00 這類實際時刻；請用「建議停留 X 小時」或相近的自然語句。
             """
 

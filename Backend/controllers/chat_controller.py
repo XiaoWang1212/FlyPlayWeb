@@ -129,12 +129,12 @@ class ChatController:
             return {'success': False, 'error': f'推薦生成失敗: {str(e)}'}
     
     def handle_generate_itinerary(
-        self, location, days, morning_departure, traveler_type, interests, start_date=None
+        self, location, days, trip_pace, traveler_type, interests, start_date=None
     ):
         """處理完整行程生成"""
         try:
             return self.chat_service.generate_itinerary(
-                location, days, morning_departure, traveler_type, interests, start_date
+                location, days, trip_pace, traveler_type, interests, start_date
             )
         except Exception as e:
             return {'success': False, 'error': f'行程生成失敗: {str(e)}'}

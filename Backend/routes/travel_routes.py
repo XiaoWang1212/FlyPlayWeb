@@ -59,11 +59,14 @@ def create_itinerary():
     payload = request.get_json(force=True, silent=True)
     if not payload:
         return unified_response(400, "請求體需為 JSON")
-    morning_departure = payload.get("morning_departure") or payload.get(
-        "morningDeparture"
+    trip_pace = (
+        payload.get("pace")
+        or payload.get("tripPace")
+        or payload.get("morning_departure")
+        or payload.get("morningDeparture")
     )
     normalized_payload = dict(payload)
-    normalized_payload["morning_departure"] = morning_departure
+    normalized_payload["pace"] = trip_pace
     required = [
         "project_id",
         "days",
@@ -71,7 +74,7 @@ def create_itinerary():
         "destination",
         "type",
         "companion",
-        "morning_departure",
+        "pace",
         "interests",
         "start_date",
     ]
@@ -85,7 +88,7 @@ def create_itinerary():
         normalized_payload["destination"],
         normalized_payload["type"],
         normalized_payload["companion"],
-        normalized_payload["morning_departure"],
+        normalized_payload["pace"],
         normalized_payload["interests"],
         normalized_payload["start_date"],
     )
@@ -101,10 +104,11 @@ def generate_itinerary():
     if not payload:
         return unified_response(400, "請求體需為 JSON")
     req = payload
+    trip_pace = req.get("pace") or req.get("tripPace") or req.get("morningDeparture") or req.get("morning_departure")
     coro = travel_ctrl.generate_itinerary(
         location=req.get("location"),
         days=req.get("days"),
-        morning_departure=req.get("morningDeparture") or req.get("morning_departure"),
+        trip_pace=trip_pace,
         traveler_type=req.get("travelerType"),
         interests=req.get("interests", []),
         start_date=req.get("startDate"),
