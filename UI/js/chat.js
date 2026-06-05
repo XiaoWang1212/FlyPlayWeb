@@ -180,7 +180,11 @@ async function showPendingChatOutput() {
 function showChatWelcomeMessage() {
 	if (hasShownChatWelcome) return;
 	const chatMessages = document.getElementById("chatMessages");
-	if (!chatMessages || chatMessages.children.length > 0) return;
+	// 如果已經有待顯示的聊天內容（例如從規劃跳轉而來），不要顯示歡迎訊息
+	const hasPendingOutput = !!localStorage.getItem('pendingChatOutput');
+	const hasLastSuggestion = !!localStorage.getItem('lastChatSuggestion');
+	const hasDetailed = !!localStorage.getItem('detailed_itinerary');
+	if (!chatMessages || chatMessages.children.length > 0 || hasPendingOutput || hasLastSuggestion || hasDetailed) return;
 
 	hasShownChatWelcome = true;
 	void typeMessage(
@@ -247,8 +251,9 @@ async function sendMessage() {
 			.join("、"),
 		departure: tripSetup.departureLabel || tripSetup.departure || "",
 		companion: tripSetup.companionLabel || tripSetup.companion || "",
-		morningDeparture:
-			tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
+		// 新增 pace（行程緊湊度），向下相容舊欄位 morningDeparture
+		pace: tripSetup.pace || tripSetup.tripPace || tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
+		morningDeparture: tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
 		travelType:
 			(tripSetup.travelTypeLabels || []).join("、") ||
 			tripSetup.travelTypeLabel ||
@@ -305,10 +310,7 @@ async function sendMessage() {
 			} else {
 				conversationHistory.push({ role: "assistant", content: aiText });
 			}
-			sheet.classList.remove("expanded");
-			sheet.classList.add("half");
-			fabGroup.classList.remove("horizontal");
-			fabGroup.classList.add("half-mode");
+				// 保持聊天視窗狀態，不在每次傳送後自動縮回半層
 		} else {
 			appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
 		}
