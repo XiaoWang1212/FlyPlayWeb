@@ -307,7 +307,8 @@
         .chat-messages {
             flex: 1;
             padding: 20px;
-            padding-bottom: 12px;
+            padding-bottom: calc(240px + var(--safe-bottom, 0px));
+            scroll-padding-bottom: calc(240px + var(--safe-bottom, 0px));
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -395,7 +396,7 @@
             border-top: 1px solid #eee;
             display: flex;
             gap: 10px;
-            padding-bottom: calc(10px + var(--safe-bottom));
+            padding-bottom: calc(10px + var(--safe-bottom, 0px));
             z-index: 600; /* 確保在 bottom-sheet 之上 */
         }
         .chat-input-field {

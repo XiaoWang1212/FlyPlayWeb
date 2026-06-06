@@ -47,7 +47,7 @@ function loadSingleDayTimeline(day, dayIndex) {
 	// 添加該天的日期標題
 	const dayTitle = document.createElement("div");
 	dayTitle.setAttribute("data-day-title", "true");
-	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode()">${isEditMode ? '取消' : '編輯'}</span></span>`;
+	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">${isEditMode ? '取消' : '編輯'}</span></span>`;
 	timelineList.appendChild(dayTitle);
 
 	// 編輯模式下在活動上方插入新增按鈕

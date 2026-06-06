@@ -321,19 +321,20 @@ function showSearchMessage(message) {
 
 // ===== 搜尋視窗與清單 =====
 // 開啟搜尋視窗並重置狀態。
-function openSpotSearchModal() {
+function openSpotSearchModal(initialKeyword = "") {
   spotSearchState.isOpen = true;
   spotSearchState.results = [];
   spotSearchState.selectedIndex = -1;
   spotSearchState.selectionToken =
     (spotSearchState.selectionToken || 0) + 1;
   selectedSpotForAdd = null;
+  const keyword = String(initialKeyword || "").trim();
 
   spotSearchOverlay.classList.add("active");
   spotSearchOverlay.classList.remove("results-collapsed");
   spotSearchOverlay.setAttribute("aria-hidden", "false");
   spotSearchResults.innerHTML = "";
-  spotSearchInput.value = "";
+  spotSearchInput.value = keyword;
 
   // 搜尋時先收起下方面板，避免遮住地圖。
   sheet.classList.remove("expanded", "half");
@@ -341,6 +342,9 @@ function openSpotSearchModal() {
 
   setTimeout(() => {
     spotSearchInput.focus();
+    if (keyword) {
+      triggerSpotSearch(true);
+    }
   }, 50);
 }
 

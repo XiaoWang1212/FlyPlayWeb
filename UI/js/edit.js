@@ -70,8 +70,11 @@ function saveAllDayOrder() {
 	});
 }
 
-function toggleEditMode() {
-	event.stopPropagation();
+function toggleEditMode(evt) {
+	const eventObject = evt || window.event;
+	if (eventObject && typeof eventObject.stopPropagation === "function") {
+		eventObject.stopPropagation();
+	}
 
 	if (!isEditMode) {
 		editedDays = JSON.parse(JSON.stringify(allDays));
@@ -82,7 +85,7 @@ function toggleEditMode() {
 		timelineView.classList.add("editing");
 		const editBtnGroup = document.querySelector("[data-day-title] .edit-btn-group");
 		if (editBtnGroup) {
-			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">完成</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode()">取消</span>';
+			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">完成</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">取消</span>';
 		}
 		const addBtn = document.createElement("div");
 		addBtn.className = "add-item-btn";

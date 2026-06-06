@@ -4,6 +4,12 @@ let conversationHistory = [];
 let hasShownChatWelcome = false;
 let hasHiddenChatSuggestions = false;
 
+const CHAT_FLOW_TRANSITION_DELAY_MS = 3000;
+
+function wait(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getChatCurrentItinerary() {
 	if (Array.isArray(allDays) && allDays.length > 0) {
 		return allDays;
@@ -123,9 +129,349 @@ function applyChatItineraryUpdate(parsed) {
 	return true;
 }
 
+const ITINERARY_EDIT_FLOW_KEY = "itineraryEditFlow";
+
+function readItineraryEditFlow() {
+	try {
+		return JSON.parse(localStorage.getItem(ITINERARY_EDIT_FLOW_KEY) || "null");
+	} catch (_) {
+		return null;
+	}
+}
+
+function writeItineraryEditFlow(flowState) {
+	if (!flowState) {
+		localStorage.removeItem(ITINERARY_EDIT_FLOW_KEY);
+		return;
+	}
+	localStorage.setItem(ITINERARY_EDIT_FLOW_KEY, JSON.stringify(flowState));
+}
+
+function clearItineraryEditFlow() {
+	localStorage.removeItem(ITINERARY_EDIT_FLOW_KEY);
+}
+
+function pushConversationMessage(role, content) {
+	conversationHistory.push({ role, content });
+}
+
+async function addBotMessage(content) {
+	await appendMsg(content, "bot");
+	pushConversationMessage("assistant", content);
+}
+
+function addUserMessage(content) {
+	appendMsg(content, "user");
+	pushConversationMessage("user", content);
+}
+
+function normalizeFlowText(text) {
+	return String(text || "")
+		.replace(/\s+/g, "")
+		.toLowerCase();
+}
+
+function parseChineseNumberToken(token) {
+	const normalized = String(token || "").replace(/兩/g, "二").trim();
+	if (!normalized) return null;
+	if (/^\d+$/.test(normalized)) {
+		return Number(normalized);
+	}
+
+	const digitMap = {
+		零: 0,
+		一: 1,
+		二: 2,
+		三: 3,
+		四: 4,
+		五: 5,
+		六: 6,
+		七: 7,
+		八: 8,
+		九: 9,
+	};
+
+	if (Object.prototype.hasOwnProperty.call(digitMap, normalized)) {
+		return digitMap[normalized];
+	}
+
+	if (normalized === "十") return 10;
+	if (!normalized.includes("十")) return null;
+
+	const [tenPart, onePart] = normalized.split("十");
+	const tens = tenPart ? digitMap[tenPart] || 0 : 1;
+	const ones = onePart ? digitMap[onePart] || 0 : 0;
+	return tens * 10 + ones;
+}
+
+function extractDayNumberFromText(text) {
+	const match = String(text || "").match(/第\s*([0-9一二三四五六七八九十百兩]+)\s*天/);
+	if (!match) return null;
+	const dayNumber = parseChineseNumberToken(match[1]);
+	return Number.isFinite(dayNumber) && dayNumber > 0 ? dayNumber : null;
+}
+
+function extractTargetItemFromText(text, dayNumber) {
+	let cleaned = String(text || "");
+	if (dayNumber) {
+		const dayPattern = new RegExp(`第\\s*${dayNumber}\\s*天`, "g");
+		cleaned = cleaned.replace(dayPattern, " ");
+	}
+	cleaned = cleaned
+		.replace(/第\s*[0-9一二三四五六七八九十百兩]+\s*天/g, " ")
+		.replace(/[，,。．.!！？?]/g, " ")
+		.replace(/(請|我要|想要|想|幫我|把|將|修改|更改|調整|替換|新增|刪除|加入|行程|景點|哪個|那個|這個|的|到|第|天|上午|下午|晚上)/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+
+	return cleaned || "";
+}
+
+function extractFlowActionFromText(text) {
+	const normalized = normalizeFlowText(text);
+	if (!normalized) return null;
+	if (/(新增|加入|添加|加進去|新增行程)/.test(normalized)) return "add";
+	if (/(刪除|移除|刪掉|刪去|刪除行程)/.test(normalized)) return "delete";
+	if (/(修改|更改|調整|替換|變更|修改行程)/.test(normalized)) return "update";
+	return null;
+}
+
+function extractRecommendationMode(text) {
+	const normalized = normalizeFlowText(text);
+	if (!normalized) return null;
+	if (/(ai|推薦|建議|幫我找|幫我推薦)/.test(normalized)) return "ai";
+	if (/(自己|手動|我知道|我自己|自行|手動輸入)/.test(normalized)) return "manual";
+	return null;
+}
+
+function buildChatTripContext() {
+	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
+	const selectedDestinations = JSON.parse(
+		localStorage.getItem("selectedDestinations") || "[]",
+	);
+
+	return {
+		days: tripSetup.daysValue || tripSetup.daysLabel || "",
+		destination: selectedDestinations
+			.map((dest) => dest.city || dest.name || dest.label)
+			.filter(Boolean)
+			.join("、"),
+		departure: tripSetup.departureLabel || tripSetup.departure || "",
+		companion: tripSetup.companionLabel || tripSetup.companion || "",
+		pace:
+			tripSetup.pace ||
+			tripSetup.tripPace ||
+			tripSetup.morningDepartureLabel ||
+			tripSetup.morningDeparture ||
+			"",
+		morningDeparture: tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
+		travelType:
+			(tripSetup.travelTypeLabels || []).join("、") ||
+			tripSetup.travelTypeLabel ||
+			tripSetup.travelType ||
+			"",
+		startDate: tripSetup.startDate || "",
+	};
+}
+
+function openEditModeWithSearchKeyword(keyword, targetDay) {
+	const searchKeyword = String(keyword || "").trim();
+	const dayNumber = Number(targetDay || 0);
+
+	if (dayNumber > 0 && Array.isArray(allDays) && allDays.length >= dayNumber) {
+		currentDayIndex = dayNumber - 1;
+		if (typeof displayDay === "function") {
+			displayDay(currentDayIndex);
+		}
+	}
+
+	if (isChatMode && typeof toggleChatMode === "function") {
+		toggleChatMode();
+	}
+
+	if (!isEditMode && typeof toggleEditMode === "function") {
+		toggleEditMode();
+	}
+
+	if (typeof openSheet === "function") {
+		openSheet();
+	}
+	if (typeof syncSheetState === "function") {
+		syncSheetState("sheet-expanded");
+	}
+	if (typeof openSpotSearchModal === "function") {
+		openSpotSearchModal(searchKeyword);
+	}
+}
+
+function startItineraryEditFlow() {
+	hideChatSuggestions();
+	writeItineraryEditFlow({
+		stage: "choose_action",
+		action: null,
+		targetDay: null,
+		targetItem: "",
+	});
+	addBotMessage("你想新增、修改、還是刪除行程？");
+}
+
+async function handleItineraryEditFlowInput(text) {
+	const currentFlow = readItineraryEditFlow();
+	if (!currentFlow) {
+		if (/修改行程/.test(String(text || ""))) {
+			addUserMessage(text);
+			startItineraryEditFlow();
+			return true;
+		}
+		return false;
+	}
+
+	const flowText = String(text || "").trim();
+	if (!flowText) return true;
+
+	if (/^(取消|結束|退出|離開)$/.test(normalizeFlowText(flowText))) {
+		clearItineraryEditFlow();
+		addUserMessage(text);
+		addBotMessage("已取消修改行程流程。若你想重新開始，可以再輸入「修改行程」。");
+		return true;
+	}
+
+	addUserMessage(text);
+
+	if (currentFlow.stage === "choose_action") {
+		const action = extractFlowActionFromText(flowText);
+		if (!action) {
+			addBotMessage("請先告訴我你想新增、修改，還是刪除行程。也可以直接輸入「新增」、「修改」或「刪除」。");
+			return true;
+		}
+
+		if (action === "add") {
+			clearItineraryEditFlow();
+			await addBotMessage("我已幫你打開新增行程的介面，現在可以直接加入景點。");
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeWithSearchKeyword("", currentFlow.targetDay || (currentDayIndex >= 0 ? currentDayIndex + 1 : 1));
+			return true;
+		}
+
+		if (action === "delete") {
+			clearItineraryEditFlow();
+			addBotMessage("刪除行程的話，請先點要刪除的那一天，進入編輯模式後，找到想刪除的景點，點它右邊的垃圾桶，最後再按確認就完成了。");
+			return true;
+		}
+
+		writeItineraryEditFlow({
+			...currentFlow,
+			action: "update",
+			stage: "ask_day_item",
+		});
+		addBotMessage("請告訴我你要修改第幾天，以及是哪個行程，例如「第 2 天下午的東京鐵塔」。");
+		return true;
+	}
+
+	if (currentFlow.stage === "ask_day_item") {
+		const dayNumber = extractDayNumberFromText(flowText);
+		const targetItem = extractTargetItemFromText(flowText, dayNumber);
+
+		if (!dayNumber || !targetItem) {
+			addBotMessage("我需要知道第幾天和要修改的行程名稱。可以直接輸入例如「第 3 天的京都塔」。");
+			return true;
+		}
+
+		writeItineraryEditFlow({
+			...currentFlow,
+			action: "update",
+			stage: "choose_mode",
+			targetDay: dayNumber,
+			targetItem,
+		});
+		addBotMessage("你想要 AI 推薦新的景點，還是直接輸入你知道的景點名稱？");
+		return true;
+	}
+
+	if (currentFlow.stage === "choose_mode") {
+		const mode = extractRecommendationMode(flowText);
+		if (!mode) {
+			addBotMessage("請回覆我你要 AI 推薦，或是自己輸入景點名稱。");
+			return true;
+		}
+
+		if (mode === "manual") {
+			writeItineraryEditFlow({
+				...currentFlow,
+				stage: "manual_spot_name",
+			});
+			addBotMessage("請直接輸入你想加入的景點名稱，我會幫你打開編輯頁面並預填搜尋框。");
+			return true;
+		}
+
+		try {
+			const tripContext = buildChatTripContext();
+			const currentItinerary = getChatCurrentItinerary();
+			const resp = await fetch(API_BASE + "/api/chat/itinerary-suggestion", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					tripContext,
+					currentItinerary,
+					targetDay: currentFlow.targetDay,
+					targetItem: currentFlow.targetItem,
+				}),
+			});
+
+			const result = await resp.json();
+			if (!(result && (result.code === 200 || result.success === true))) {
+				throw new Error(result?.message || result?.error || "AI 推薦失敗");
+			}
+
+			const data = result.data || result;
+			const parsed = data.parsed || {};
+			const suggestedSpot =
+				parsed.search_keyword ||
+				parsed.suggested_spot ||
+				parsed.spot_name ||
+				parsed.place_name ||
+				"";
+
+			if (!suggestedSpot) {
+				throw new Error(parsed.question || "AI 沒有回傳可用的景點名稱");
+			}
+
+			clearItineraryEditFlow();
+			await addBotMessage(`我幫你推薦了「${suggestedSpot}」，已經幫你打開編輯頁面並預填搜尋框。你只要按加入行程就可以完成修改。`);
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeWithSearchKeyword(suggestedSpot, currentFlow.targetDay);
+			return true;
+		} catch (error) {
+			addBotMessage(`AI 推薦時發生問題：${error.message || error}。你也可以改用自己知道的景點名稱。`);
+			return true;
+		}
+	}
+
+	if (currentFlow.stage === "manual_spot_name") {
+		const spotName = flowText.replace(/^[「"'【\[]|[」"'】\]]$/g, "").trim();
+		if (!spotName) {
+			addBotMessage("請輸入你想加入的景點名稱。");
+			return true;
+		}
+
+		const targetDay = currentFlow.targetDay;
+		clearItineraryEditFlow();
+		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
+		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+		openEditModeWithSearchKeyword(spotName, targetDay);
+		return true;
+	}
+
+	clearItineraryEditFlow();
+	return false;
+}
+
+
+const CHAT_TYPEWRITER_SPEED = 30;
+const CHAT_TYPEWRITER_SPEED_SLOW = 45;
 
 // 逐字顯示訊息（打字機效果）
-async function typeMessage(text, type, speed = 20) {
+async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);
@@ -169,7 +515,7 @@ async function showPendingChatOutput() {
 		syncSheetState("sheet-expanded");
 	}
 
-	await typeMessage(pendingChatOutput, "bot", 35);
+	await typeMessage(pendingChatOutput, "bot", CHAT_TYPEWRITER_SPEED_SLOW);
 	conversationHistory.push({
 		role: "assistant",
 		content: pendingChatOutput,
@@ -190,7 +536,7 @@ function showChatWelcomeMessage() {
 	void typeMessage(
 		"Hello! 我是飛遊小幫手。你可以直接告訴我想修改行程、查景點，或問我旅程上的任何問題。",
 		"bot",
-		40,
+		CHAT_TYPEWRITER_SPEED_SLOW,
 	);
 }
 
@@ -238,34 +584,17 @@ async function sendMessage() {
 	const input = document.getElementById("chatInput");
 	const text = input.value.trim();
 	if (!text) return;
+	input.value = "";
 
-	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
-	const selectedDestinations = JSON.parse(
-		localStorage.getItem("selectedDestinations") || "[]",
-	);
-	const tripContext = {
-		days: tripSetup.daysValue || tripSetup.daysLabel || "",
-		destination: selectedDestinations
-			.map((dest) => dest.city || dest.name || dest.label)
-			.filter(Boolean)
-			.join("、"),
-		departure: tripSetup.departureLabel || tripSetup.departure || "",
-		companion: tripSetup.companionLabel || tripSetup.companion || "",
-		// 新增 pace（行程緊湊度），向下相容舊欄位 morningDeparture
-		pace: tripSetup.pace || tripSetup.tripPace || tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
-		morningDeparture: tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "",
-		travelType:
-			(tripSetup.travelTypeLabels || []).join("、") ||
-			tripSetup.travelTypeLabel ||
-			tripSetup.travelType ||
-			"",
-		startDate: tripSetup.startDate || "",
-	};
+	if (await handleItineraryEditFlowInput(text)) {
+		return;
+	}
+
+	const tripContext = buildChatTripContext();
 	const currentItinerary = getChatCurrentItinerary();
 
 	hideChatSuggestions();
-	appendMsg(text, "user");
-	input.value = "";
+	addUserMessage(text);
 
 	const loadingId = "loading-" + Date.now();
 	document
@@ -298,11 +627,11 @@ async function sendMessage() {
 			const aiText =
 				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
 				"（無回覆）";
-			appendMsg(aiText, "bot");
+			await appendMsg(aiText, "bot");
 			if (data && data.parsed && data.parsed.action === "update_day") {
 				const updated = applyChatItineraryUpdate(data.parsed);
 				if (!updated) {
-					appendMsg("系統已回傳修改結果，但無法套用到目前行程。", "bot");
+					await appendMsg("系統已回傳修改結果，但無法套用到目前行程。", "bot");
 				}
 			}
 			if (Array.isArray(data.history) && data.history.length > 0) {
@@ -312,21 +641,30 @@ async function sendMessage() {
 			}
 				// 保持聊天視窗狀態，不在每次傳送後自動縮回半層
 		} else {
-			appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
+			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
 		}
 	} catch (err) {
 		const loader = document.getElementById(loadingId);
 		if (loader) loader.remove();
-		appendMsg("網路錯誤，請稍後再試", "bot");
+		await appendMsg("網路錯誤，請稍後再試", "bot");
 	}
 }
 
-function appendMsg(text, type) {
+async function appendMsg(text, type) {
+	if (type === "bot") {
+		return typeMessage(text, type, CHAT_TYPEWRITER_SPEED);
+	}
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	div.textContent = text;
-	document.getElementById("chatMessages").appendChild(div);
-	scrollToBottom();
+	const chatMessages = document.getElementById("chatMessages");
+	chatMessages.appendChild(div);
+	requestAnimationFrame(() => {
+		scrollToBottom();
+		if (typeof div.scrollIntoView === "function") {
+			div.scrollIntoView({ block: "end" });
+		}
+	});
 }
 
 function sendSuggestedQuestion(question, buttonElement) {

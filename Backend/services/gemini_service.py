@@ -379,6 +379,75 @@ class GeminiService:
         except Exception as e:
             return {'success': False, 'error': f"對話發生錯誤: {str(e)}"}
 
+    def suggest_itinerary_spot(
+        self,
+        current_itinerary,
+        target_day,
+        target_item,
+        trip_context=None,
+    ):
+        """根據目前行程與目標項目，推薦可加入或替換的景點名稱。"""
+        try:
+            day_value = int(target_day) if target_day else 0
+            trip_context_text = self._build_trip_context_text(trip_context)
+            itinerary_context_text = self._build_itinerary_context_text(
+                current_itinerary, day_value - 1 if day_value > 0 else -1
+            )
+
+            prompt = f"""你是一個旅遊行程編輯助理。
+請根據使用者目前的行程與想修改的目標，推薦一個最適合加入或替換的景點名稱。
+
+推薦限制：
+1. 推薦的景點必須與當天行程地點保持合理距離，與當天主要地點的距離不得超過 120 公里。
+2. 如果當天行程主要集中在同一城市或同一區域，請優先推薦同城市、同區域或鄰近區域的景點。
+3. 如果無法確認距離是否符合限制，請優先選擇更接近現有行程的地點，不要推薦太遠或跨區過多的景點。
+4. 請避免推薦與當天行程地點無明顯關聯、且搜尋框可能難以直接找到的地名。
+
+請只回傳純 JSON，不要輸出 Markdown 或多餘說明。
+
+現有旅遊上下文：
+{trip_context_text or '無'}
+
+現有行程：
+{itinerary_context_text or '無'}
+
+目標天數：第 {day_value} 天
+目標行程：{target_item}
+
+請輸出以下 JSON 結構：
+{{
+    "action": "recommend_spot",
+    "target_day": {day_value},
+    "target_item": "{target_item}",
+    "suggested_spot": "景點名稱",
+    "search_keyword": "同 suggested_spot",
+    "reason": "一句話理由"
+}}
+
+如果資訊不足，請輸出：
+{{
+    "action": "need_clarification",
+    "question": "請補充..."
+}}
+"""
+
+            response = self.model.generate_content(
+                prompt, generation_config=self.generation_config
+            )
+            token_usage = self._extract_token_usage(response)
+            raw_content, cleaned_json, parsed_json = self._parse_response_json(response)
+
+            return {
+                "success": True,
+                "data": {
+                    "raw_output": raw_content or cleaned_json,
+                    "parsed": parsed_json,
+                    "token_usage": token_usage,
+                },
+            }
+        except Exception as e:
+            return {"success": False, "error": f"景點推薦失敗: {str(e)}"}
+
     def generate_itinerary(
         self, location, days, trip_pace, traveler_type, interests, start_date=None
     ):

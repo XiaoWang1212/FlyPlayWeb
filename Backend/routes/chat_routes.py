@@ -133,6 +133,35 @@ def refine_itinerary():
     except Exception as e:
         return unified_response(500, f'服務器錯誤: {str(e)}')
 
+@chat_bp.route('/itinerary-suggestion', methods=['POST'])
+def itinerary_suggestion():
+    try:
+        data = request.get_json()
+        if not data:
+            return unified_response(400, '請求體不能為空')
+
+        current_itinerary = data.get('currentItinerary', [])
+        target_day = data.get('targetDay')
+        target_item = data.get('targetItem')
+        trip_context = data.get('tripContext', {})
+
+        if not target_day or not target_item:
+            return unified_response(400, '必須提供 targetDay 與 targetItem 參數')
+
+        result = chat_controller.handle_itinerary_suggestion(
+            current_itinerary,
+            target_day,
+            target_item,
+            trip_context,
+        )
+
+        if result['success']:
+            return unified_response(200, '景點推薦成功', result['data'])
+        else:
+            return unified_response(500, result['error'])
+    except Exception as e:
+        return unified_response(500, f'服務器錯誤: {str(e)}')
+
 # @chat_bp.route('/tips', methods=['POST'])
 # def get_travel_tips():
 #     try:

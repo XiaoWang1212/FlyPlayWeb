@@ -10,76 +10,6 @@ class ChatController:
     def __init__(self):
         self.chat_service = GeminiService()
 
-    def _is_travel_related(self, message):
-        """判斷是否屬於旅遊/行程/美食/交通相關問題。"""
-        text = str(message or "").strip().lower()
-        if not text:
-            return False
-
-        travel_keywords = [
-            "旅遊",
-            "行程",
-            "景點",
-            "住宿",
-            "飯店",
-            "民宿",
-            "機票",
-            "交通",
-            "捷運",
-            "公車",
-            "地鐵",
-            "航班",
-            "預算",
-            "天數",
-            "目的地",
-            "出發",
-            "回程",
-            "自由行",
-            "跟團",
-            "推薦",
-            "附近",
-            "餐廳",
-            "美食",
-            "小吃",
-            "早餐",
-            "午餐",
-            "晚餐",
-            "咖啡",
-            "甜點",
-            "拉麵",
-            "拉麵店",
-            "壽司",
-            "店家",
-            "商店街",
-            "必吃",
-            "好吃",
-            "旅館",
-            "城市",
-            "國家",
-            "日本",
-            "東京",
-            "大阪",
-            "京都",
-            "機場",
-            "車站",
-            "神社",
-            "寺廟",
-            "博物館",
-            "公園",
-            "好玩",
-            "哪裡",
-            "怎麼去",
-        ]
-
-        return any(keyword in text for keyword in travel_keywords)
-
-    def _get_off_topic_response(self):
-        return (
-            "我主要協助旅遊、行程、景點、美食和交通相關問題。"
-            "如果你想問其他非旅遊主題，我不會在這裡回答。"
-            "你可以改問我景點推薦、餐廳、住宿或行程安排。"
-        )
-    
     def handle_chat_message(
         self,
         message,
@@ -94,19 +24,6 @@ class ChatController:
                 return {
                     'success': False,
                     'error': '必須提供聊天內容',
-                }
-
-            if not self._is_travel_related(message):
-                off_topic_reply = self._get_off_topic_response()
-                return {
-                    'success': True,
-                    'data': {
-                        'response': off_topic_reply,
-                        'history': (conversation_history or []) + [
-                            {'role': 'user', 'content': message},
-                            {'role': 'assistant', 'content': off_topic_reply},
-                        ],
-                    },
                 }
 
             return self.chat_service.chat_with_ai(
@@ -145,6 +62,18 @@ class ChatController:
             return self.chat_service.refine_itinerary(itinerary, feedback)
         except Exception as e:
             return {'success': False, 'error': f'行程優化失敗: {str(e)}'}
+
+    def handle_itinerary_suggestion(self, current_itinerary, target_day, target_item, trip_context=None):
+        """處理行程景點推薦請求"""
+        try:
+            return self.chat_service.suggest_itinerary_spot(
+                current_itinerary,
+                target_day,
+                target_item,
+                trip_context,
+            )
+        except Exception as e:
+            return {'success': False, 'error': f'景點推薦失敗: {str(e)}'}
     
     # def handle_travel_tips(self, location, travel_time=None):
     #     """處理旅遊提示請求"""
