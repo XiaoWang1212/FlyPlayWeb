@@ -52,6 +52,9 @@ class GeminiService:
         if raw_text.endswith("```"):
             raw_text = raw_text[:-3].strip()
 
+        # 移除 trailing commas（,後面只跟著空白/換行再接 } 或 ]）
+        raw_text = re.sub(r",\s*([}\]])", r"\1", raw_text)
+
         return raw_text
 
     def _parse_response_json(self, response):
@@ -396,16 +399,15 @@ class GeminiService:
                 "data": [
                     {{
                         "day": 1,
-                        "weekday": "星期幾 (例如：星期一)", 
+                        "weekday": "星期幾 (例如：星期一)",
                         "location": [
                             {{
                                 "time": "建議停留 X 小時",
-                                "location_name": "地點名稱",
+                                "location_name": "地點名稱"
                             }}
                         ]
                     }}
-                ],
-
+                ]
             }}
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
             請根據早上出發時間，使用下列明確對照規則決定當天要安排的景點數（以便模型有一致行為）：

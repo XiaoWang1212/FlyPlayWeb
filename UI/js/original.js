@@ -675,6 +675,7 @@ async function loadCoordinatesFirst() {
 async function initMap() {
 	try {
 		let aiItinerary = localStorage.getItem("data_latlng");
+		console.log(aiItinerary);
 		let usedLocal = false;
 		if (aiItinerary) {
 			try {
