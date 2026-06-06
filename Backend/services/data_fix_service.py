@@ -186,16 +186,31 @@ class DataFixService:
                 print(f"[enrich_picture] {place_name} | 既有座標={existing_location} | 有效={has_valid_location}")
                 if place_name and place_name != '未命名':
                     try:
-                        search_result = self.google_map_service.search_places(
-                            place_name,
-                            language_code='zh-TW',
-                            max_results=1
-                        )
+                        if has_valid_location:
+                            # 有效座標 → 用座標做 nearby 搜尋，確保地址/照片是正確地點
+                            search_result = self.google_map_service.search_places_nearby(
+                                text_query=place_name,
+                                location={
+                                    'latitude': existing_location['lat'],
+                                    'longitude': existing_location['lng'],
+                                },
+                                radius=500,
+                                language_code='zh-TW',
+                                max_results=1
+                            )
+                            print(f"[enrich_picture] {place_name} → 保留既有座標，用座標搜附近資訊")
+                        else:
+                            # 沒有座標 → 全域搜尋
+                            search_result = self.google_map_service.search_places(
+                                place_name,
+                                language_code='zh-TW',
+                                max_results=1
+                            )
 
                         if search_result.get('success') and search_result.get('places'):
                             place = search_result['places'][0]
 
-                            # 只在沒有有效座標時才更新（避免蓋掉 data_fix 過濾後的結果）
+                            # 沒有有效座標時才更新座標
                             location = place.get('location', {})
                             if not has_valid_location and location.get('latitude') is not None and location.get('longitude') is not None:
                                 print(f"[enrich_picture] {place_name} → 更新座標為 {location}")
@@ -203,9 +218,7 @@ class DataFixService:
                                     'lat': location['latitude'],
                                     'lng': location['longitude']
                                 }
-                            elif has_valid_location:
-                                print(f"[enrich_picture] {place_name} → 保留既有座標，不覆蓋")
-                            
+
                             # 添加圖片
                             if place.get('photos'):
                                 modified_loc['photos'] = [place['photos'][0]]
@@ -213,10 +226,10 @@ class DataFixService:
                             # 添加相關信息
                             if place.get('rating'):
                                 modified_loc['rating'] = place['rating']
-                            
+
                             if place.get('address'):
                                 modified_loc['address'] = place['address']
-                            
+
                             if place.get('phone'):
                                 modified_loc['phone'] = place['phone']
                             
