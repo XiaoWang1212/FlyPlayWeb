@@ -588,6 +588,13 @@ async function openProject(project) {
 		if (detailedData) {
 			await enrichWithPictureInfo(detailedData);
 		}
+
+		if (typeof resetChatConversation === "function") {
+			resetChatConversation();
+		}
+		if (typeof queueChatInitialMessage === "function" && typeof buildChatInitialMessage === "function") {
+			queueChatInitialMessage(buildChatInitialMessage(project.title || ""));
+		}
 	} else {
 		// 沒 itinerary -> 轉 setup
 		sessionStorage.setItem("currentProjectId", project.project_id);

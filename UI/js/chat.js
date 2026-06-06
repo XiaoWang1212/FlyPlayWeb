@@ -155,6 +155,74 @@ function pushConversationMessage(role, content) {
 	conversationHistory.push({ role, content });
 }
 
+function resetChatConversation() {
+	conversationHistory = [];
+	hasShownChatWelcome = false;
+	hasHiddenChatSuggestions = false;
+	localStorage.removeItem("pendingChatOutput");
+	localStorage.removeItem("lastChatSuggestion");
+	localStorage.removeItem("itineraryEditFlow");
+	sessionStorage.removeItem("chatIntroShownProjectId");
+	const chatMessages = document.getElementById("chatMessages");
+	if (chatMessages) {
+		chatMessages.innerHTML = "";
+	}
+	const chatSuggestions = document.getElementById("chatSuggestions");
+	if (chatSuggestions) {
+		chatSuggestions.style.display = "flex";
+	}
+}
+
+function showChatSuggestions() {
+	const chatSuggestions = document.getElementById("chatSuggestions");
+	if (!chatSuggestions) return;
+	chatSuggestions.style.display = "flex";
+	hasHiddenChatSuggestions = false;
+}
+
+function buildChatInitialMessage(projectTitle) {
+	const tripContext = buildChatTripContext();
+	const tripDays = Array.isArray(allDays) ? allDays.length : 0;
+	const title = String(projectTitle || sessionStorage.getItem("currentProjectTitle") || "目前行程").trim();
+	const destination = tripContext.destination || "";
+	const daysText = tripContext.days || (tripDays > 0 ? `${tripDays} 天` : "");
+	const summaryParts = [
+		`已載入「${title}」`,
+		destination ? `目的地是 ${destination}` : "",
+		daysText ? `共有 ${daysText}` : "",
+	].filter(Boolean);
+
+	return `${summaryParts.join("，")}。你可以直接告訴我想調整哪一天，或請我找景點、交通和餐廳建議。`;
+}
+
+function queueChatInitialMessage(message) {
+	const text = String(message || "").trim();
+	if (!text) return false;
+	localStorage.setItem("pendingChatOutput", text);
+	return true;
+}
+
+async function showProjectChatIntroIfNeeded() {
+	const chatMessages = document.getElementById("chatMessages");
+	if (!chatMessages || chatMessages.children.length > 0) return false;
+
+	const projectId = String(
+		sessionStorage.getItem("currentProjectId") || localStorage.getItem("currentProjectId") || "",
+	).trim();
+	if (!projectId) return false;
+
+	if (sessionStorage.getItem("chatIntroShownProjectId") === projectId) return false;
+	if (localStorage.getItem("pendingChatOutput")) return false;
+
+	const introMessage = buildChatInitialMessage(sessionStorage.getItem("currentProjectTitle") || "");
+	if (!introMessage) return false;
+
+	await typeMessage(introMessage, "bot", CHAT_TYPEWRITER_SPEED_SLOW);
+	conversationHistory.push({ role: "assistant", content: introMessage });
+	sessionStorage.setItem("chatIntroShownProjectId", projectId);
+	return true;
+}
+
 async function addBotMessage(content) {
 	await appendMsg(content, "bot");
 	pushConversationMessage("assistant", content);
@@ -491,7 +559,8 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED) {
 	return div;
 }
 
-async function showPendingChatOutput() {
+async function showPendingChatOutput(options = {}) {
+	const { ensureChatMode = true } = options;
 	const pendingChatOutput = localStorage.getItem("pendingChatOutput");
 	if (!pendingChatOutput) return false;
 
@@ -509,8 +578,22 @@ async function showPendingChatOutput() {
 	}
 
 	if (!isChatMode) {
-		toggleChatMode();
-	} else {
+		if (ensureChatMode) {
+			isChatMode = true;
+			timelineView.classList.remove("active");
+			chatView.classList.add("active");
+			showChatSuggestions();
+			const robotFab = document.getElementById("robotFab");
+			if (robotFabIcon) {
+				robotFabIcon.classList.remove("fa-robot");
+				robotFabIcon.classList.add("fa-list-ul");
+			}
+			if (robotFab) {
+				robotFab.classList.add("chat-open");
+			}
+		}
+	}
+	if (isChatMode) {
 		openSheet();
 		syncSheetState("sheet-expanded");
 	}
@@ -550,7 +633,7 @@ function hideChatSuggestions() {
 }
 
 // 切換聊天模式
-function toggleChatMode() {
+async function toggleChatMode() {
 	isChatMode = !isChatMode;
 
 	const robotFab = document.getElementById("robotFab");
@@ -560,7 +643,13 @@ function toggleChatMode() {
 		chatView.classList.add("active");
 		openSheet();
 		syncSheetState("sheet-expanded");
-		showChatWelcomeMessage();
+		const showedPending = await showPendingChatOutput({ ensureChatMode: false });
+		if (!showedPending) {
+			const showedProjectIntro = await showProjectChatIntroIfNeeded();
+			if (!showedProjectIntro) {
+			showChatWelcomeMessage();
+			}
+		}
 
 		robotFabIcon.classList.remove("fa-robot");
 		robotFabIcon.classList.add("fa-list-ul");
