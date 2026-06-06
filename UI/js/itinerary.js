@@ -22,6 +22,37 @@ async function loadCoordinatesFirst() {
 
 		console.log(`使用 itinerary_id: ${itinerary_id} 加載行程`);
 
+		// 若 localStorage 已有同一 itinerary 的座標，直接使用不重新打 API
+		const cached = localStorage.getItem("data_latlng");
+		if (cached) {
+			try {
+				const cachedData = JSON.parse(cached);
+				const cachedId =
+					cachedData?.itinerary_id ||
+					cachedData?.meta?.itinerary_id;
+				if (cachedId && String(cachedId) === String(itinerary_id)) {
+					console.log("使用快取的 data_latlng，跳過 API 呼叫");
+					allDays = cachedData.data.map((dayData) => ({
+						day: dayData.day,
+						weekday: dayData.weekday || `第${dayData.day}天`,
+						activities: (dayData.locations || []).map((loc) => ({
+							place_name: loc.location_name,
+							location: {
+								lat: loc.location?.latitude || 0,
+								lng: loc.location?.longitude || 0,
+							},
+							place_id: loc.place_id || "",
+							time: "",
+							description: "",
+							type: "",
+							cost: "",
+						})),
+					}));
+					return true;
+				}
+			} catch (_) {}
+		}
+
 		// 調用後端 API 獲取行程數據
 		const response = await fetch(`${API_BASE}/data/latlng`, {
 			method: "POST",

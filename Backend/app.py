@@ -112,6 +112,7 @@ def create_app():
                     400,
                 )
 
+            print(f"[data/latlng] 呼叫，itinerary_id={itinerary_id}")
             # 从数据库获取行程
             itinerary = travel_service.get_itinerary(int(itinerary_id))
 
@@ -123,11 +124,9 @@ def create_app():
             if isinstance(data_json, str):
                 data_json = json.loads(data_json)
 
-            # 测试用：使用 test_data_2 (JSON 格式)
-            # data = test_data_2
-
+            destination = itinerary.get("destination", "")
             print(data_json)
-            result = data_fix_service.enrich_data_with_location(data_json)
+            result = data_fix_service.enrich_data_with_location(data_json, destination=destination)
 
             if result["success"]:
                 try:
@@ -137,7 +136,7 @@ def create_app():
                 except Exception as save_err:
                     print(f"儲存 data_latlng 失敗: {save_err}")
 
-                return jsonify({"success": True, "data": result["data"]}), 200
+                return jsonify({"success": True, "data": result["data"], "itinerary_id": itinerary_id}), 200
             else:
                 return jsonify(result), 400
 

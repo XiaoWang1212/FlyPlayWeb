@@ -36,38 +36,54 @@ class DataFixService:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return earth_radius_km * c
     
-    def enrich_data_with_location(self, data):
+    def enrich_data_with_location(self, data, destination=None):
         output_data = []
         center_location = None
 
         days = data.get("data", [])
 
-        # 第一步：找到第一個有座標的地點
-        for day in days:
-            for loc in day.get('location', []):  
-                location_name = loc.get('location_name', '')
-                print(f"🔍 正在查詢第一個中心點: {location_name}")
+        # 第一步：用目的地城市 geocode 取得固定中心點
+        if destination:
+            print(f"🌐 用目的地 '{destination}' 確定中心點")
+            dest_result = self.google_map_service.search_places(
+                text_query=destination,
+                language_code='zh-TW',
+                max_results=1
+            )
+            if dest_result.get('success') and dest_result.get('places'):
+                place = dest_result['places'][0]
+                location = place.get('location', {})
+                if location.get('latitude') is not None and location.get('longitude') is not None:
+                    center_location = {
+                        'latitude': location['latitude'],
+                        'longitude': location['longitude']
+                    }
+                    print(f"✓ 中心點已確定（來自目的地）: {center_location}")
 
-                search_result = self.google_map_service.search_places(
-                    text_query=location_name,
-                    language_code='zh-TW',
-                    max_results=1
-                )
-
-                if search_result.get('success') and search_result.get('places'):
-                    place = search_result['places'][0]
-                    location = place.get('location', {})
-
-                    # 確保坐標完整（同時有 latitude 和 longitude）
-                    if location.get('latitude') is not None and location.get('longitude') is not None:
-                        center_location = {
-                            'latitude': location['latitude'],
-                            'longitude': location['longitude']
-                        }
-                        print(f"✓ 中心點已確定: {center_location}")
-                        break
-            if center_location:
-                break
+        # fallback：目的地 geocode 失敗時，從第一個景點取中心
+        if not center_location:
+            print("⚠️ 目的地 geocode 失敗，改從第一個景點取中心點")
+            for day in days:
+                for loc in day.get('location', []):
+                    location_name = loc.get('location_name', '')
+                    print(f"🔍 正在查詢第一個中心點: {location_name}")
+                    search_result = self.google_map_service.search_places(
+                        text_query=location_name,
+                        language_code='zh-TW',
+                        max_results=1
+                    )
+                    if search_result.get('success') and search_result.get('places'):
+                        place = search_result['places'][0]
+                        location = place.get('location', {})
+                        if location.get('latitude') is not None and location.get('longitude') is not None:
+                            center_location = {
+                                'latitude': location['latitude'],
+                                'longitude': location['longitude']
+                            }
+                            print(f"✓ 中心點已確定（來自景點）: {center_location}")
+                            break
+                if center_location:
+                    break
 
         if not center_location:
             return {
@@ -98,14 +114,16 @@ class DataFixService:
                 if nearby_result.get('success') and nearby_result.get('places'):
                     place = nearby_result['places'][0]
                     location = place.get('location', {})
+                    place_name_found = place.get('name', location_name)
 
                     distance_km = self._calculate_distance_km(center_location, location)
-                    
+                    print(f"[datafx] {location_name} → 找到「{place_name_found}」lat={location.get('latitude'):.4f} lng={location.get('longitude'):.4f} 距中心 {distance_km:.1f} km")
+
                     # 距離計算失敗或超過50公里，都跳過
                     if distance_km is None:
                         print(f"跳過 {location_name}，無法計算距離（坐標不完整）")
                         continue
-                    
+
                     if distance_km > 50:
                         print(f"跳過 {location_name}，距離中心點 {distance_km:.2f} 公里，超過 50 公里")
                         continue
@@ -159,24 +177,34 @@ class DataFixService:
                 
                 # 使用 search_places 獲取圖片
                 place_name = modified_loc['place_name']
+                existing_location = modified_loc.get('location')
+                has_valid_location = (
+                    isinstance(existing_location, dict)
+                    and existing_location.get('lat') not in (None, 0)
+                    and existing_location.get('lng') not in (None, 0)
+                )
+                print(f"[enrich_picture] {place_name} | 既有座標={existing_location} | 有效={has_valid_location}")
                 if place_name and place_name != '未命名':
                     try:
                         search_result = self.google_map_service.search_places(
-                            place_name, 
+                            place_name,
                             language_code='zh-TW',
                             max_results=1
                         )
-                        
+
                         if search_result.get('success') and search_result.get('places'):
                             place = search_result['places'][0]
-                            
-                            # 更新坐標
+
+                            # 只在沒有有效座標時才更新（避免蓋掉 data_fix 過濾後的結果）
                             location = place.get('location', {})
-                            if location.get('latitude') is not None and location.get('longitude') is not None:
+                            if not has_valid_location and location.get('latitude') is not None and location.get('longitude') is not None:
+                                print(f"[enrich_picture] {place_name} → 更新座標為 {location}")
                                 modified_loc['location'] = {
                                     'lat': location['latitude'],
                                     'lng': location['longitude']
                                 }
+                            elif has_valid_location:
+                                print(f"[enrich_picture] {place_name} → 保留既有座標，不覆蓋")
                             
                             # 添加圖片
                             if place.get('photos'):
