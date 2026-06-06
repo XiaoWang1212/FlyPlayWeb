@@ -383,6 +383,12 @@ function confirmSelection() {
   const allowedRegions = departureToRegionMap[selectedDepartureCity] || null;
   console.log("Selected airport:", selectedDepartureCity, "allowed regions:", allowedRegions); // 調試用
 
+  // 出發地變更時清空已選目的地（目的地受出發地的可選區域限制）
+  const prevDeparture = loadTripSetup().departure || "";
+  if (prevDeparture !== selectedDepartureCity) {
+    localStorage.removeItem("selectedDestinations");
+  }
+
   saveTripSetup({
     departure: selectedDepartureCity,
     departureLabel: selectedDepartureCity,

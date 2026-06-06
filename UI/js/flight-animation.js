@@ -26,6 +26,16 @@ const DIVE_NOSE_DEG = 93 + PLANE_NOSE_OFFSET;
 // 尾跡起點往機身後方退多少（SVG 單位），讓尾跡從機尾冒出而不是機身中段。
 const TAIL_OFFSET = 30;
 
+// 近大遠小：飛機越往畫面下方（離視角越近）越大，越往上方（越遠）越小。
+const PLANE_SCALE_NEAR = 1.5; // 畫面下緣（最近）
+const PLANE_SCALE_FAR = 0.7;   // 畫面上緣（最遠）
+
+// 依 SVG y 座標（0=最上、1024=最下）換算飛機縮放，做出景深感。
+function scaleAt(y) {
+  const f = Math.min(1, Math.max(0, y / 1024));
+  return PLANE_SCALE_FAR + (PLANE_SCALE_NEAR - PLANE_SCALE_FAR) * f;
+}
+
 // 飛機停機點與「抵達機場」選擇器頂端之間保留的間距（螢幕 px），
 // 確保任何螢幕尺寸下飛機都不會壓到選擇器。
 const HOME_GAP_PX = 60;
@@ -190,11 +200,12 @@ function onPlaneTick() {
   pushTrail(tailX, tailY);
   renderTrail(trailCount, 7);
 
-  // 機頭跟著行進方向
+  // 機頭跟著行進方向，並依 y 做近大遠小縮放
   if (elMover) {
     const angle = travelDeg + PLANE_NOSE_OFFSET;
+    const scale = scaleAt(y);
     elMover.setAttribute('transform',
-      `translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${angle.toFixed(1)})`);
+      `translate(${x.toFixed(2)},${y.toFixed(2)}) rotate(${angle.toFixed(1)}) scale(${scale.toFixed(3)})`);
   }
 }
 
@@ -247,7 +258,7 @@ function resetTrail() {
   if (elMover) {
     const h = SPLINE_PTS[0];
     elMover.setAttribute('transform',
-      `translate(${h.x},${h.y}) rotate(${headingAt(0).toFixed(1)})`);
+      `translate(${h.x},${h.y}) rotate(${headingAt(0).toFixed(1)}) scale(${scaleAt(h.y).toFixed(3)})`);
   }
 }
 
@@ -359,7 +370,7 @@ function flyToIndex() {
     }
     if (elMover) {
       elMover.setAttribute('transform',
-        `translate(${p.x.toFixed(2)},${p.y.toFixed(2)}) rotate(${angle.toFixed(1)})`);
+        `translate(${p.x.toFixed(2)},${p.y.toFixed(2)}) rotate(${angle.toFixed(1)}) scale(${scaleAt(p.y).toFixed(3)})`);
     }
     const len = Math.hypot(dx, dy) || 1;
     pushTrail(p.x - (dx / len) * TAIL_OFFSET, p.y - (dy / len) * TAIL_OFFSET);
@@ -411,14 +422,6 @@ function flyToIndex() {
     sessionStorage.setItem('navigationType', 'planeLead');
     window.location.href = 'index.html';
   });
-}
-
-function testPlaneAnim() {
-  if (flightTimeline && !flightTimeline.paused()) {
-    flyToIndex();
-  } else {
-    startPlaneAnim();
-  }
 }
 
 // index.html 進場 —— 用「同一套」飛機 + 尾跡渲染接續飛行：飛機從畫面

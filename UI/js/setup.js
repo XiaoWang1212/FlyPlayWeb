@@ -153,10 +153,13 @@ function toggleDaysPicker() {
   if (pickerGroup.classList.contains("active")) {
     // 打開時：把目前顯示的值設為 active，然後滾過去
     const selectedValue = document.getElementById("selected-days").textContent;
+    const selectableItems = Array.from(pickerScroll.children).filter(
+      (i) => !i.classList.contains("disabled"),
+    );
+    // 尚未選過天數（仍是占位文字）時，預設停在第一個可選天數
     const targetItem =
-      Array.from(pickerScroll.children).find(
-        (i) => i.textContent === selectedValue,
-      ) || pickerScroll.children[0];
+      selectableItems.find((i) => i.textContent === selectedValue) ||
+      selectableItems[0];
 
     Array.from(pickerScroll.children).forEach((i) =>
       i.classList.remove("active"),
@@ -183,11 +186,12 @@ function toggleDaysPicker() {
 function generateDaysOptions(container) {
   container.innerHTML = "";
 
-  const anyDayItem = document.createElement("div");
-  anyDayItem.className = "picker-item";
-  anyDayItem.textContent = "任何天數";
-  anyDayItem.dataset.value = "0";
-  container.appendChild(anyDayItem);
+  // 「選擇天數」為占位選項：只當初始顯示文字，永遠不可被滾輪/點擊選中
+  const placeholderItem = document.createElement("div");
+  placeholderItem.className = "picker-item disabled";
+  placeholderItem.textContent = "選擇天數";
+  placeholderItem.dataset.value = "0";
+  container.appendChild(placeholderItem);
 
   for (let i = 1; i <= 7; i++) {
     const item = document.createElement("div");
@@ -205,7 +209,7 @@ function bindDaysPickerClick(pickerScroll) {
 
   pickerScroll.addEventListener("click", (e) => {
     const item = e.target.closest(".picker-item");
-    if (!item) return;
+    if (!item || item.classList.contains("disabled")) return;
 
     pickerScroll
       .querySelectorAll(".picker-item")
@@ -245,6 +249,9 @@ function updatePickerHighlight(pickerScroll) {
 
   items.forEach((item) => {
     item.classList.remove("active");
+
+    // 占位選項不參與高亮計算（永遠不可選中）
+    if (item.classList.contains("disabled")) return;
 
     const itemRect = item.getBoundingClientRect();
     const itemCenterY = itemRect.top + itemRect.height / 2;
