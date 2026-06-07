@@ -189,7 +189,7 @@ function buildChatInitialMessage(projectTitle) {
 	const summaryParts = [
 		`已載入「${title}」`,
 		destination ? `目的地是 ${destination}` : "",
-		daysText ? `共有 ${daysText}` : "",
+		daysText ? `共有 ${daysText} 天` : "",
 	].filter(Boolean);
 
 	return `${summaryParts.join("，")}。你可以直接告訴我想調整哪一天，或請我找景點、交通和餐廳建議。`;
