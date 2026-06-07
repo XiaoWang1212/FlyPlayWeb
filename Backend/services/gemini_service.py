@@ -3,6 +3,8 @@ import re
 import google.generativeai as genai
 from config import Config
 from datetime import datetime
+from services.googlemap_service import GoogleMapService
+from services.data_fix_service import DataFixService
 
 
 with open("test.json", "r", encoding="utf-8") as f:
@@ -22,6 +24,8 @@ class GeminiService:
             "gemini-2.5-flash",
             system_instruction=self.system_prompt,
         )
+        self.map_service = GoogleMapService()
+        self.data_fix_service = DataFixService()
 
         # 配置生成參數
         self.generation_config = {
@@ -30,6 +34,225 @@ class GeminiService:
             "top_k": 40,
             "max_output_tokens": 9999,  # revised
         }
+
+    def _extract_itinerary_spot_names(self, current_itinerary, ai_text=""):
+        """從目前行程中整理可查圖的景點名稱，優先取出現在回覆有提到的景點。"""
+        if not isinstance(current_itinerary, list) or not current_itinerary:
+            return []
+
+        names = []
+        for day in current_itinerary:
+            if not isinstance(day, dict):
+                continue
+            activities = day.get("activities") or day.get("location") or []
+            if not isinstance(activities, list):
+                continue
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                )
+                name = str(name).strip()
+                if name and name not in names:
+                    names.append(name)
+
+        if not names:
+            return []
+
+        message = str(ai_text or "")
+        mentioned = [name for name in names if name in message]
+        ordered = mentioned + [name for name in names if name not in mentioned]
+        return ordered[:8]
+
+    def _normalize_itinerary_days(self, source_data):
+        """把常見行程格式轉成統一的 days[].activities 結構。"""
+        if isinstance(source_data, dict):
+            if isinstance(source_data.get("days"), list):
+                raw_days = source_data.get("days")
+            elif isinstance(source_data.get("data"), list):
+                raw_days = source_data.get("data")
+            else:
+                raw_days = []
+        elif isinstance(source_data, list):
+            raw_days = source_data
+        else:
+            raw_days = []
+
+        normalized = []
+        for idx, day in enumerate(raw_days):
+            if not isinstance(day, dict):
+                continue
+
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                activities = []
+
+            normalized.append(
+                {
+                    "day": day.get("day") or idx + 1,
+                    "weekday": day.get("weekday") or "",
+                    "activities": activities,
+                }
+            )
+
+        return normalized
+
+    def _attach_photo_urls_to_itinerary(self, parsed_json):
+        """把行程中的每個景點補上 photo_url，保留原本結構。"""
+        if not isinstance(parsed_json, dict):
+            return parsed_json
+
+        itinerary_days = None
+        day_key = None
+
+        if isinstance(parsed_json.get("days"), list):
+            itinerary_days = parsed_json.get("days")
+            day_key = "days"
+        elif isinstance(parsed_json.get("data"), list):
+            itinerary_days = parsed_json.get("data")
+            day_key = "data"
+
+        if not isinstance(itinerary_days, list):
+            return parsed_json
+
+        normalized_days = []
+        for index, day in enumerate(itinerary_days):
+            if not isinstance(day, dict):
+                continue
+
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                activities = []
+
+            normalized_locations = []
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                place_name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                )
+                normalized_locations.append(
+                    {
+                        "time": activity.get("time", ""),
+                        "place_name": place_name,
+                        "description": activity.get("description", ""),
+                        "type": activity.get("type", ""),
+                        "cost": activity.get("cost", ""),
+                        "location": activity.get("location"),
+                        "photo_url": activity.get("photo_url", ""),
+                    }
+                )
+
+            normalized_days.append(
+                {
+                    "day": day.get("day") or index + 1,
+                    "location": normalized_locations,
+                }
+            )
+
+        enriched_days = self.data_fix_service.enrich_data_with_picture(normalized_days)
+
+        for index, day in enumerate(itinerary_days):
+            if not isinstance(day, dict) or index >= len(enriched_days):
+                continue
+
+            enriched_locations = enriched_days[index].get("location", [])
+            if not isinstance(enriched_locations, list):
+                continue
+
+            if isinstance(day.get("activities"), list):
+                target_key = "activities"
+            else:
+                target_key = "location" if isinstance(day.get("location"), list) else "locations"
+
+            day[target_key] = enriched_locations
+
+        parsed_json[day_key] = itinerary_days
+        return parsed_json
+
+    def _build_spot_image_cards(self, current_itinerary, ai_text=""):
+        """把已綁定的 photo_url 轉成聊天室可用的圖片卡片，並保留行程順序。"""
+        cards = []
+
+        if not isinstance(current_itinerary, list):
+            return cards
+
+        for day in current_itinerary:
+            if not isinstance(day, dict):
+                continue
+
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                continue
+
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+
+                spot_name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                ).strip()
+                photo_url = (activity.get("photo_url") or "").strip()
+                address = activity.get("address") or ""
+                place_id = activity.get("place_id") or ""
+
+                if photo_url:
+                    cards.append(
+                        {
+                            "name": spot_name,
+                            "photo_url": photo_url,
+                            "address": address,
+                            "place_id": place_id,
+                        }
+                    )
+                    continue
+
+                if not spot_name:
+                    continue
+
+                try:
+                    search_result = self.map_service.search_places(
+                        text_query=spot_name,
+                        language_code="zh-TW",
+                        max_results=1,
+                    )
+                    if not search_result.get("success"):
+                        continue
+
+                    places = search_result.get("places") or []
+                    if not places:
+                        continue
+
+                    place = places[0] if isinstance(places[0], dict) else {}
+                    photos = place.get("photos") or []
+                    first_photo = photos[0] if photos and isinstance(photos[0], dict) else {}
+                    fallback_photo_url = first_photo.get("photo_url")
+
+                    if not fallback_photo_url:
+                        continue
+
+                    cards.append(
+                        {
+                            "name": place.get("name") or spot_name,
+                            "photo_url": fallback_photo_url,
+                            "address": place.get("address") or address,
+                            "place_id": place.get("place_id") or place_id,
+                        }
+                    )
+                except Exception:
+                    continue
+
+        return cards
 
     def _clean_json_response(self, response_text):
         """清理和提取 JSON 內容"""
@@ -244,6 +467,7 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
+            parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
 
             return {
                 "success": True,
@@ -278,6 +502,8 @@ class GeminiService:
             else:
                 itinerary_text = str(source_data or raw_output or "")
 
+            normalized_days = self._normalize_itinerary_days(source_data)
+
             prompt = f"""請把以下旅遊行程內容整理成使用者容易閱讀的繁體中文摘要。
                         不要輸出 JSON，不要輸出 code block。
                         請用精簡列點式輸出，每一天只保留一個簡短標題，且每個景點/餐廳/住宿各自獨立一列。
@@ -293,11 +519,13 @@ class GeminiService:
                 prompt, generation_config=self.generation_config
             )
             readable_text = self._strip_markdown_text(response.text)
+            spot_images = self._build_spot_image_cards(normalized_days, readable_text)
 
             return {
                 "success": True,
                 "data": {
                     "response": readable_text,
+                    "spot_images": spot_images,
                 },
             }
         except Exception as e:
@@ -358,6 +586,7 @@ class GeminiService:
 
             response = chat.send_message(final_message)
             ai_content = self._strip_markdown_text(response.text)
+            spot_images = self._build_spot_image_cards(current_itinerary, ai_content)
             parsed_payload = None
             if self._is_itinerary_edit_request(message):
                 try:
@@ -369,6 +598,7 @@ class GeminiService:
                 'success': True,
                 'data': {
                     'response': ai_content,
+                    'spot_images': spot_images,
                     'parsed': parsed_payload,
                     'history': (conversation_history or []) + [
                         {"role": "user", "content": message},
@@ -732,6 +962,7 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
+            parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
             print(parsed_json)
             return {
                 "success": True,

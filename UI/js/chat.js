@@ -539,21 +539,178 @@ const CHAT_TYPEWRITER_SPEED = 30;
 const CHAT_TYPEWRITER_SPEED_SLOW = 45;
 
 // 逐字顯示訊息（打字機效果）
-async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED) {
+function appendSpotImageCards(parent, spotImages) {
+	if (!Array.isArray(spotImages) || spotImages.length === 0) return;
+
+	const gallery = document.createElement("div");
+	gallery.className = "chat-spot-gallery";
+
+	spotImages.forEach((spot) => {
+		if (!spot || !spot.photo_url) return;
+
+		const card = document.createElement("div");
+		card.className = "chat-spot-card";
+
+		const img = document.createElement("img");
+		img.className = "chat-spot-image";
+		img.src = spot.photo_url;
+		img.alt = spot.name || "景點圖片";
+		img.loading = "lazy";
+		img.referrerPolicy = "no-referrer";
+
+		const title = document.createElement("div");
+		title.className = "chat-spot-title";
+		title.textContent = spot.name || "景點";
+
+		card.appendChild(img);
+		card.appendChild(title);
+
+		if (spot.address) {
+			const address = document.createElement("div");
+			address.className = "chat-spot-address";
+			address.textContent = spot.address;
+			card.appendChild(address);
+		}
+
+		gallery.appendChild(card);
+	});
+
+	if (gallery.children.length > 0) {
+		parent.appendChild(gallery);
+	}
+}
+
+function createSpotCardElement(spot) {
+	const card = document.createElement("div");
+	card.className = "chat-spot-card";
+
+	const img = document.createElement("img");
+	img.className = "chat-spot-image";
+	img.src = spot.photo_url;
+	img.alt = spot.name || "景點圖片";
+	img.loading = "lazy";
+	img.referrerPolicy = "no-referrer";
+
+	const title = document.createElement("div");
+	title.className = "chat-spot-title";
+	title.textContent = spot.name || "景點";
+
+	card.appendChild(img);
+	card.appendChild(title);
+	if (spot.address) {
+		const address = document.createElement("div");
+		address.className = "chat-spot-address";
+		address.textContent = spot.address;
+		card.appendChild(address);
+	}
+
+	img.style.cursor = "pointer";
+	img.addEventListener("click", function (e) {
+		e.stopPropagation();
+		openImageModal(spot.photo_url, spot.name || "景點圖片");
+	});
+
+	return card;
+}
+
+function openImageModal(photoUrl, title) {
+	if (!photoUrl) return;
+	let modal = document.getElementById("imageModal");
+	if (!modal) {
+		modal = document.createElement("div");
+		modal.id = "imageModal";
+		modal.className = "image-modal";
+		modal.innerHTML = `
+			<div class="image-modal-backdrop"></div>
+			<div class="image-modal-content">
+				<button class="image-modal-close" aria-label="關閉">×</button>
+				<img class="image-modal-img" src="" alt="" />
+				<div class="image-modal-caption"></div>
+			</div>
+		`;
+		document.body.appendChild(modal);
+
+		// events
+		modal.querySelector('.image-modal-close').addEventListener('click', closeImageModal);
+		modal.querySelector('.image-modal-backdrop').addEventListener('click', closeImageModal);
+		document.addEventListener('keydown', function onEsc(e) {
+			if (e.key === 'Escape') closeImageModal();
+		});
+	}
+
+	const imgEl = modal.querySelector('.image-modal-img');
+	const capEl = modal.querySelector('.image-modal-caption');
+	imgEl.src = photoUrl;
+	imgEl.alt = title || '';
+	capEl.textContent = title || '';
+	modal.classList.add('open');
+}
+
+function closeImageModal() {
+	const modal = document.getElementById('imageModal');
+	if (!modal) return;
+	modal.classList.remove('open');
+	const imgEl = modal.querySelector('.image-modal-img');
+	if (imgEl) imgEl.src = '';
+}
+
+async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages = []) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
 	document.getElementById("chatMessages").appendChild(div);
 
 	if (!text) {
+		if (type === "bot") {
+			appendSpotImageCards(div, spotImages);
+		}
 		scrollToBottom();
 		return div;
 	}
 
-	const chunkSize = Math.max(1, Math.ceil(text.length / 400));
-	for (let index = 0; index < text.length; index += chunkSize) {
-		div.textContent = text.slice(0, index + chunkSize);
-		scrollToBottom();
-		await new Promise((resolve) => setTimeout(resolve, speed));
+	// Split by lines to interleave images after each finished line
+	const lines = String(text || "").split(/\r?\n/);
+	// Make a shallow copy of spotImages we can consume
+	const remainingImages = Array.isArray(spotImages) ? spotImages.slice() : [];
+
+	for (let li = 0; li < lines.length; li++) {
+		const lineText = lines[li];
+		const p = document.createElement("div");
+		p.className = "chat-msg-line";
+		div.appendChild(p);
+
+		// Type this line character-by-character
+		for (let ci = 0; ci <= lineText.length; ci++) {
+			p.textContent = lineText.slice(0, ci);
+			scrollToBottom();
+			// Small sleep between chars; if speed is small, still yield
+			// Convert speed to ms per character (approx)
+			const waitMs = Math.max(10, speed);
+			// Await only if more characters remain
+			if (ci < lineText.length) await new Promise((r) => setTimeout(r, waitMs));
+		}
+
+		// After each景點列結束，依順序插入下一張圖片
+		if (type === "bot" && remainingImages.length > 0 && lineText.trim().startsWith("•")) {
+			const spot = remainingImages.shift();
+			const card = createSpotCardElement(spot);
+			const galleryWrapper = document.createElement("div");
+			galleryWrapper.className = "chat-spot-gallery-inline";
+			galleryWrapper.appendChild(card);
+			div.appendChild(galleryWrapper);
+			scrollToBottom();
+		}
+
+		// Append a blank line between paragraphs visually
+		if (li !== lines.length - 1) {
+			const br = document.createElement("div");
+			br.style.height = "6px";
+			div.appendChild(br);
+		}
+	}
+
+	// If any images remain, append them as a gallery at the end
+	if (type === "bot" && remainingImages.length > 0) {
+		appendSpotImageCards(div, remainingImages);
 	}
 
 	return div;
@@ -561,8 +718,29 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED) {
 
 async function showPendingChatOutput(options = {}) {
 	const { ensureChatMode = true } = options;
-	const pendingChatOutput = localStorage.getItem("pendingChatOutput");
-	if (!pendingChatOutput) return false;
+	const pendingRaw = localStorage.getItem("pendingChatOutput");
+	if (!pendingRaw) return false;
+
+	let pendingPayload = null;
+	try {
+		pendingPayload = JSON.parse(pendingRaw);
+	} catch (_) {
+		pendingPayload = null;
+	}
+
+	const pendingChatOutput =
+		pendingPayload && typeof pendingPayload === "object"
+			? String(pendingPayload.response || "").trim()
+			: String(pendingRaw || "").trim();
+	const pendingSpotImages =
+		pendingPayload && typeof pendingPayload === "object" && Array.isArray(pendingPayload.spot_images)
+			? pendingPayload.spot_images
+			: [];
+
+	if (!pendingChatOutput) {
+		localStorage.removeItem("pendingChatOutput");
+		return false;
+	}
 
 	localStorage.removeItem("pendingChatOutput");
 
@@ -598,7 +776,12 @@ async function showPendingChatOutput(options = {}) {
 		syncSheetState("sheet-expanded");
 	}
 
-	await typeMessage(pendingChatOutput, "bot", CHAT_TYPEWRITER_SPEED_SLOW);
+	await typeMessage(
+		pendingChatOutput,
+		"bot",
+		CHAT_TYPEWRITER_SPEED_SLOW,
+		pendingSpotImages,
+	);
 	conversationHistory.push({
 		role: "assistant",
 		content: pendingChatOutput,
@@ -716,7 +899,7 @@ async function sendMessage() {
 			const aiText =
 				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
 				"（無回覆）";
-			await appendMsg(aiText, "bot");
+			await appendMsg(aiText, "bot", data.spot_images || []);
 			if (data && data.parsed && data.parsed.action === "update_day") {
 				const updated = applyChatItineraryUpdate(data.parsed);
 				if (!updated) {
@@ -739,9 +922,9 @@ async function sendMessage() {
 	}
 }
 
-async function appendMsg(text, type) {
+async function appendMsg(text, type, spotImages = []) {
 	if (type === "bot") {
-		return typeMessage(text, type, CHAT_TYPEWRITER_SPEED);
+		return typeMessage(text, type, CHAT_TYPEWRITER_SPEED, spotImages);
 	}
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;

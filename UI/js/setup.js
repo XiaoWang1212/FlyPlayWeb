@@ -99,10 +99,16 @@ async function buildReadableItinerary(token, rawOutput, parsedOutput) {
       throw new Error(result.message || "行程摘要生成失敗");
     }
 
-    return formatItineraryFallbackText(result.data?.response, null);
+    return {
+      response: formatItineraryFallbackText(result.data?.response, null),
+      spot_images: Array.isArray(result.data?.spot_images) ? result.data.spot_images : [],
+    };
   } catch (error) {
     console.warn("行程摘要生成失敗，改用原始內容：", error);
-    return formatItineraryFallbackText(rawOutput, parsedOutput);
+    return {
+      response: formatItineraryFallbackText(rawOutput, parsedOutput),
+      spot_images: [],
+    };
   }
 }
 
@@ -951,7 +957,7 @@ async function submitAIRecommendation() {
       result.data?.parsed,
     );
 
-    localStorage.setItem("pendingChatOutput", readableItinerary);
+    localStorage.setItem("pendingChatOutput", JSON.stringify(readableItinerary));
 
     console.log("✓ 準備跳轉至 index.html");
     flyToIndex();

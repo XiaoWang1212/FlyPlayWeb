@@ -180,7 +180,11 @@ class DataFixService:
                             
                             # 添加圖片
                             if place.get('photos'):
-                                modified_loc['photos'] = [place['photos'][0]]
+                                first_photo = place['photos'][0]
+                                modified_loc['photos'] = [first_photo]
+                                modified_loc['photo_url'] = first_photo.get('photo_url', '')
+                            else:
+                                modified_loc['photo_url'] = ''
 
                             # 添加相關信息
                             if place.get('rating'):
