@@ -276,6 +276,9 @@ class GeminiService:
         if raw_text.endswith("```"):
             raw_text = raw_text[:-3].strip()
 
+        # 移除 trailing commas（,後面只跟著空白/換行再接 } 或 ]）
+        raw_text = re.sub(r",\s*([}\]])", r"\1", raw_text)
+
         return raw_text
 
     def _parse_response_json(self, response):
@@ -707,16 +710,15 @@ class GeminiService:
                 "data": [
                     {{
                         "day": 1,
-                        "weekday": "星期幾 (例如：星期一)", 
+                        "weekday": "星期幾 (例如：星期一)",
                         "location": [
                             {{
                                 "time": "建議停留 X 小時",
-                                "location_name": "地點名稱",
+                                "location_name": "地點名稱"
                             }}
                         ]
                     }}
-                ],
-
+                ]
             }}
             只要輸出上面有給的內容就好。不要包含任何 markdown 標記。
             請根據行程緊湊度決定每日景點數，並嚴格遵守以下規則：
@@ -726,7 +728,6 @@ class GeminiService:
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
-            景點禁止出現大阪的新世界。
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             檢查每日景點的距離不要超過120公里。
