@@ -43,6 +43,9 @@ let sortable = new Sortable(timelineList, {
 	ghostClass: "sortable-ghost",
 	dragClass: "sortable-drag",
 	filter: "[data-day-title],.delete-btn,.add-item-btn",
+	// 避免 Sortable 對 filter 元素 preventDefault 吃掉 click（Chrome 下會導致新增行程按鈕沒反應）
+	// 加了這個 chrome 就不會有問題了誒
+	preventOnFilter: false,
 	scroll: true,
 	scrollSpeed: 10,
 	onEnd: function (evt) {
@@ -74,15 +77,13 @@ mapContainer.addEventListener("click", function (e) {
 // 全頁搜尋模式下，避免點地圖空白區就自動關閉搜尋面板。
 
 spotSearchInput.addEventListener("focus", function () {
-	spotSearchOverlay.classList.remove("results-collapsed");
-
-	if (
-		spotSearchState.isOpen &&
-		Array.isArray(spotSearchState.results) &&
-		spotSearchState.results.length > 0 &&
-		spotSearchResults.innerHTML === ""
-	) {
-		renderSpotSearchResults();
+	// 從「搜尋紀錄」收合狀態重新進入時，展開並清空關鍵字與結果，讓使用者直接重新搜尋。
+	if (spotSearchOverlay.classList.contains("results-collapsed")) {
+		spotSearchOverlay.classList.remove("results-collapsed");
+		spotSearchInput.value = "";
+		spotSearchState.results = [];
+		spotSearchState.selectedIndex = -1;
+		spotSearchResults.innerHTML = "";
 	}
 });
 

@@ -654,6 +654,8 @@ function onSpotSearchKeydown(e) {
   if (e.key === "Enter") {
     e.preventDefault();
     triggerSpotSearch(true);
+    // 送出搜尋後離開輸入狀態（收起鍵盤、失焦）。
+    spotSearchInput.blur();
     return;
   }
 
