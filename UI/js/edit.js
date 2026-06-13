@@ -170,6 +170,11 @@ function confirmDrag() {
 	sortable.option("disabled", true);
 	isDragChanged = false;
 
+	if (typeof closeSpotPreviewInfo === "function") closeSpotPreviewInfo();
+	if (typeof closeSpotSearchModal === "function" && spotSearchState?.isOpen) {
+		closeSpotSearchModal();
+	}
+
 	isEditMode = false;
 	timelineView.classList.remove("editing");
 	const confirmEditLabel = document.getElementById("editTextLabel");
