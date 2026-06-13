@@ -461,10 +461,86 @@ function buildActivityFromSpot(spot) {
   };
 }
 
+// 讓使用者選擇要把景點加入哪一天，回傳所選天索引；取消時回傳 null。
+// 沿用交通方式 modal（transit-overlay / transit-modal）樣式，依天數動態產生。
+function pickDayForSpot() {
+  return new Promise((resolve) => {
+    if (!Array.isArray(allDays) || !allDays.length) {
+      resolve(0);
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "transit-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "transit-modal";
+    modal.addEventListener("click", (e) => e.stopPropagation());
+
+    const dayItems = allDays
+      .map(
+        (day, index) => `
+        <div class="transit-mode-item" data-day-index="${index}">
+          <div class="tmode-label">第 ${day.day} 天 - ${escapeHtml(day.weekday || "")}</div>
+        </div>`,
+      )
+      .join("");
+
+    modal.innerHTML = `
+      <div class="transit-modal-header">
+        <span class="transit-modal-title">選擇要加入的天數</span>
+        <button type="button" class="transit-modal-close" aria-label="取消">✕</button>
+      </div>
+      ${dayItems}
+      <div style="height: 8px;"></div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    let settled = false;
+    const close = (value) => {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove("show");
+      setTimeout(() => overlay.remove(), 250);
+      resolve(value);
+    };
+
+    overlay.addEventListener("click", () => close(null)); // 點背景取消
+    modal
+      .querySelector(".transit-modal-close")
+      .addEventListener("click", () => close(null));
+    modal.querySelectorAll(".transit-mode-item").forEach((item) => {
+      item.addEventListener("click", () =>
+        close(Number(item.dataset.dayIndex)),
+      );
+    });
+
+    // 觸發進場動畫。
+    requestAnimationFrame(() => overlay.classList.add("show"));
+  });
+}
+
 // 把選中的景點加入行程。
 async function addSpotToItinerary(spot, evt) {
   if (evt) evt.stopPropagation();
   if (!spot) return;
+
+  // 直接從地圖點擊景點加入（搜尋視窗未開啟）時，先讓使用者選擇要加入哪一天，
+  // 切換到該天單日檢視並進入編輯模式（搜尋流程本來就在編輯模式），後續流程共用。
+  if (!spotSearchState.isOpen) {
+    const pickedDayIndex = await pickDayForSpot();
+    if (pickedDayIndex === null) return; // 取消選擇
+
+    if (currentDayIndex !== pickedDayIndex) {
+      const dayBtn = document.querySelector(
+        `#dayButtonContainer button[data-day-index="${pickedDayIndex}"]`,
+      );
+      if (dayBtn) switchDay(pickedDayIndex, dayBtn);
+    }
+    if (!isEditMode && typeof toggleEditMode === "function") toggleEditMode();
+  }
 
   const targetDays = getActiveDays();
   if (!Array.isArray(targetDays) || !targetDays.length) return;
