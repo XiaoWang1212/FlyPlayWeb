@@ -507,16 +507,25 @@ class GeminiService:
 
             normalized_days = self._normalize_itinerary_days(source_data)
 
-            prompt = f"""請把以下旅遊行程內容整理成使用者容易閱讀的繁體中文摘要。
-                        不要輸出 JSON，不要輸出 code block。
-                        請用精簡列點式輸出，每一天只保留一個簡短標題，且每個景點/餐廳/住宿各自獨立一列。
-                        不要使用「上午、下午、晚上」這種分段詞，也不要寫長篇敘述。
-                        每一列格式盡量固定為「• 地點名稱｜建議停留時間｜一句話簡述」，若有費用可附在最後。
-                        如果內容有日期、景點、交通、住宿、餐飲，請保留並整理順序。
+            prompt = f"""請把以下旅遊行程整理成繁體中文，直接輸出，不要有任何 JSON、code block 或多餘說明。
 
-                        行程內容：
-                        {itinerary_text}
-                        """
+每天格式：
+第 N 天（星期X）
+
+每個景點固定輸出三行，格式如下：
+• 景點名稱
+時間 · 費用（例：09:00 · ¥3,000，若免費寫「免費」，若無費用資訊則只寫時間）
+一句話描述景點特色
+
+規則：
+- 天與天之間空一行，景點與景點之間空一行
+- 不要輸出任何其他文字、標題或說明
+- 不要使用「上午、下午、晚上」等分段詞
+- 每個景點一定要輸出完整三行
+
+行程內容：
+{itinerary_text}
+"""
 
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config

@@ -856,25 +856,50 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 	// Make a shallow copy of spotImages we can consume
 	const remainingImages = Array.isArray(spotImages) ? spotImages.slice() : [];
 
+	// Track position relative to last • line: 0=none, 1=meta, 2=desc
+	let afterBullet = 0;
+	let dayCount = 0;
+
 	for (let li = 0; li < lines.length; li++) {
 		const lineText = lines[li];
+		const trimmed = lineText.trim();
+
 		const p = document.createElement("div");
-		p.className = "chat-msg-line";
+
+		if (trimmed === "") {
+			afterBullet = 0;
+			p.className = "chat-msg-line";
+		} else if (/^第\s*\d+\s*天/.test(trimmed)) {
+			afterBullet = 0;
+			dayCount++;
+			p.className = dayCount === 1
+				? "chat-msg-line chat-day-header chat-day-header--first"
+				: "chat-msg-line chat-day-header";
+		} else if (trimmed.startsWith("•")) {
+			afterBullet = 1;
+			p.className = "chat-msg-line chat-msg-line--name";
+		} else if (afterBullet === 1) {
+			p.className = "chat-msg-line chat-msg-line--meta";
+			afterBullet = 2;
+		} else if (afterBullet === 2) {
+			p.className = "chat-msg-line chat-msg-line--desc";
+			afterBullet = 3;
+		} else {
+			p.className = "chat-msg-line";
+		}
+
 		div.appendChild(p);
 
 		// Type this line character-by-character
 		for (let ci = 0; ci <= lineText.length; ci++) {
 			p.textContent = lineText.slice(0, ci);
 			scrollToBottom();
-			// Small sleep between chars; if speed is small, still yield
-			// Convert speed to ms per character (approx)
 			const waitMs = Math.max(10, speed);
-			// Await only if more characters remain
 			if (ci < lineText.length) await new Promise((r) => setTimeout(r, waitMs));
 		}
 
-		// After each景點列結束，依順序插入下一張圖片
-		if (type === "bot" && remainingImages.length > 0 && lineText.trim().startsWith("•")) {
+		// 描述行打完後才插入景點圖片
+		if (type === "bot" && remainingImages.length > 0 && afterBullet === 3) {
 			const spot = remainingImages.shift();
 			const card = createSpotCardElement(spot);
 			const galleryWrapper = document.createElement("div");
