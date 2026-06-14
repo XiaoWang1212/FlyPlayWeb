@@ -344,6 +344,18 @@
 	box-shadow: 0 7px 0 #520f5e, 0 10px 14px rgba(156, 39, 176, 0.65);
 }
 
+#dayButtonContainer button:nth-child(7) {
+	background: linear-gradient(to bottom, #5b8aff 0%, #2962ff 100%);
+	border-color: #1a47cc;
+	box-shadow: 0 7px 0 #0f33a8, 0 10px 14px rgba(41, 98, 255, 0.65);
+}
+
+#dayButtonContainer button:nth-child(8) {
+	background: linear-gradient(to bottom, #4dc86e 0%, #34a853 100%);
+	border-color: #267a3e;
+	box-shadow: 0 7px 0 #1a5c2d, 0 10px 14px rgba(52, 168, 83, 0.65);
+}
+
 #dayButtonContainer button.active {
 	transform: translateY(7px);
 }
@@ -376,6 +388,16 @@
 #dayButtonContainer button:nth-child(6).active {
 	box-shadow: 0 2px 8px rgba(156, 39, 176, 0.45);
 	border-color: #4a2858;
+}
+
+#dayButtonContainer button:nth-child(7).active {
+	box-shadow: 0 2px 8px rgba(41, 98, 255, 0.45);
+	border-color: #2a3a70;
+}
+
+#dayButtonContainer button:nth-child(8).active {
+	box-shadow: 0 2px 8px rgba(52, 168, 83, 0.45);
+	border-color: #2a4a32;
 }
 
 #dayButtonContainer button:active {

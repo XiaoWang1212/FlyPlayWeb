@@ -94,6 +94,7 @@ async function downloadPDF() {
 	document.body.appendChild(captureMsg);
 
 	const mapImages = [];
+	const transitInfos = [];
 	const mapEl = document.getElementById("map");
 	for (let i = 0; i < allDays.length; i++) {
 		captureMsg.textContent = `擷取地圖中 (${i + 1} / ${allDays.length})…`;
@@ -101,6 +102,20 @@ async function downloadPDF() {
 
 		// 先等 DirectionsService 回應並把路線畫上地圖（異步，需要固定等待）
 		await new Promise((resolve) => setTimeout(resolve, 2500));
+
+		// 讀取行程頁面已計算好的交通方式建議，供 PDF 使用
+		transitInfos.push(
+			Array.from(document.querySelectorAll("#timelineList .transit-block")).map((block) => {
+				const textEl = block.querySelector(".transit-text");
+				const iconEl = block.querySelector(".transit-mode-icon");
+				return {
+					text: textEl?.textContent?.trim() || "",
+					iconClass: iconEl
+						? Array.from(iconEl.classList).filter((c) => c !== "transit-mode-icon").join(" ")
+						: "fas fa-train",
+				};
+			}),
+		);
 
 		// 路線畫好後，再用 fitBounds 確保所有景點都在鏡頭內
 		const validLocs = (allDays[i].activities || []).filter(
@@ -160,8 +175,18 @@ async function downloadPDF() {
 
 	await new Promise((resolve) => setTimeout(resolve, 100));
 
-	// 從 selectedDestinations 組出行程名稱
-	const selectedDests = JSON.parse(localStorage.getItem("selectedDestinations") || "[]");
+	// 用已生成行程當時綁定的目的地組出行程名稱，避免使用者回到旅程規劃頁
+	// 重選了目的地卻沒有重新生成時，PDF 仍顯示尚未生成的新目的地
+	const currentProjectId =
+		sessionStorage.getItem("currentProjectId") ||
+		localStorage.getItem("currentProjectId") ||
+		"";
+	const projectDestsRaw = currentProjectId
+		? localStorage.getItem(`projectDestinations_${currentProjectId}`)
+		: null;
+	const selectedDests = JSON.parse(
+		projectDestsRaw || localStorage.getItem("selectedDestinations") || "[]",
+	);
 	let tripTitle;
 	if (selectedDests.length > 0) {
 		const countries = [...new Set(selectedDests.map((d) => d.country).filter(Boolean))];
@@ -211,14 +236,15 @@ async function downloadPDF() {
         .pdf-sidebar .day-date { font-size: 14px; opacity: 0.8; }
         .pdf-content { flex-grow: 1; padding: 45px 40px; }
         .pdf-day-title { font-size: 22px; font-weight: 700; border-bottom: 1px solid #E0D8C8; padding-bottom: 16px; margin-bottom: 18px; }
-        .pdf-item { display: flex; margin-bottom: 16px; }
-        .pdf-item-time { width: 60px; font-size: 14px; color: #888; font-style: italic; flex-shrink: 0; }
+        .pdf-item { margin-bottom: 28px; }
         .pdf-item-detail { flex-grow: 1; }
-        .pdf-item-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .pdf-item-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .pdf-item-name { display: flex; align-items: center; gap: 8px; }
+        .pdf-item-time { font-size: 11px; font-weight: normal; color: #666; background-color: #F0F0F0; padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
         .pdf-item-tag { font-size: 10px; background-color: #EAE3D1; color: #665A48; padding: 2px 8px; border-radius: 4px; }
         .pdf-item-desc { font-size: 13px; color: #666; line-height: 1.5; }
-        .pdf-transit { margin: 8px 0 8px 60px; padding-left: 16px; border-left: 1px dashed #CCC; font-size: 12px; color: #A09481; }
-        .pdf-transit-badge { background-color: #F4EFEB; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+        .pdf-transit { margin: 0 0 28px 0; padding-left: 16px; border-left: 1px dashed #CCC; font-size: 12px; color: #A09481; }
+        .pdf-transit-badge { background-color: #F4EFEB; padding: 5px 14px; border-radius: 20px; display: inline-block; }
       </style>
 
       <div class="pdf-cover">
@@ -245,21 +271,27 @@ async function downloadPDF() {
 				const isLast = actIndex === day.activities.length - 1;
 				activitiesHtml += `
           <div class="pdf-item">
-            <div class="pdf-item-time">${act.time || "未定"}</div>
             <div class="pdf-item-detail">
               <div class="pdf-item-title">
-                ${act.place_name}
-                ${act.cost ? `<span class="pdf-item-tag">${act.cost}</span>` : ""}
+                <span class="pdf-item-name">
+                  ${act.place_name}
+                  ${act.cost ? `<span class="pdf-item-tag">${act.cost}</span>` : ""}
+                </span>
+                ${act.time ? `<span class="pdf-item-time">${act.time}</span>` : ""}
               </div>
               <div class="pdf-item-desc">${act.description || ""}</div>
             </div>
           </div>
         `;
 				if (!isLast) {
+					const transitInfo = transitInfos[dayIndex]?.[actIndex];
+					const hasTransitInfo = transitInfo?.text && !transitInfo.text.includes("計算中");
+					const transitIcon = hasTransitInfo ? transitInfo.iconClass : "fas fa-train";
+					const transitLabel = hasTransitInfo ? transitInfo.text : "前往下一站";
 					activitiesHtml += `
             <div class="pdf-transit">
               <div class="pdf-transit-badge">
-                <i class="fas fa-train"></i> 前往下一站
+                <i class="${transitIcon}"></i> ${transitLabel}
               </div>
             </div>
           `;
@@ -268,7 +300,7 @@ async function downloadPDF() {
 		}
 
 		const mapImg = mapImages[dayIndex]
-			? `<div style="margin-top:25px;display:flex;justify-content:center;">
+			? `<div style="margin-top:100px;display:flex;justify-content:center;">
                <img src="${mapImages[dayIndex]}" style="width:360px;height:360px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
              </div>`
 			: "";
@@ -574,6 +606,10 @@ async function openProject(project) {
 			localStorage.setItem(
 				"currentItineraryId",
 				String(latestItinerary.itinerary_id),
+			);
+			localStorage.setItem(
+				"currentItineraryStartDate",
+				latestItinerary.start_date || "",
 			);
 		}
 

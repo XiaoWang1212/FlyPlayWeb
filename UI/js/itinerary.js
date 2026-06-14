@@ -1,5 +1,23 @@
 // ===== 行程資料載入與處理 =====
 
+// 根據建立行程時選擇的開始日期，計算「第 N 天」對應的星期幾
+function getWeekdayLabel(dayNumber) {
+	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
+	const startDate =
+		localStorage.getItem("currentItineraryStartDate") ||
+		tripSetup.startDate ||
+		"";
+
+	const parts = String(startDate).split("-").map(Number);
+	if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return "";
+
+	const date = new Date(parts[0], parts[1] - 1, parts[2]);
+	date.setDate(date.getDate() + (Number(dayNumber) - 1));
+
+	const weekdayLabels = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+	return weekdayLabels[date.getDay()];
+}
+
 // 第一階段：先加載坐標信息（供給 localStorage 的 generatedItinerary）
 async function loadCoordinatesFirst() {
 	try {

@@ -45,6 +45,9 @@ function loadSingleDayTimeline(day, dayIndex) {
 	oldAddBtns.forEach((el) => el.remove());
 
 	// 添加該天的日期標題
+	const weekdayLabel = getWeekdayLabel(day.day);
+	if (weekdayLabel) day.weekday = weekdayLabel;
+
 	const dayTitle = document.createElement("div");
 	dayTitle.setAttribute("data-day-title", "true");
 	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">${isEditMode ? '取消' : '編輯'}</span></span>`;
@@ -138,6 +141,9 @@ function loadAllTimelineActivities() {
 	oldAddBtns.forEach((el) => el.remove());
 
 	allDays.forEach((day, dayIndex) => {
+		const weekdayLabel = getWeekdayLabel(day.day);
+		if (weekdayLabel) day.weekday = weekdayLabel;
+
 		const dayTitle = document.createElement("div");
 		dayTitle.setAttribute("data-day-title", "true");
 		dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;

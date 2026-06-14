@@ -43,6 +43,7 @@ let sortable = new Sortable(timelineList, {
 	ghostClass: "sortable-ghost",
 	dragClass: "sortable-drag",
 	filter: "[data-day-title],.delete-btn,.add-item-btn",
+	preventOnFilter: false,
 	scroll: true,
 	scrollSpeed: 10,
 	onEnd: function (evt) {
