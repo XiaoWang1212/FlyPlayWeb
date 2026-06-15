@@ -89,6 +89,17 @@ spotSearchInput.addEventListener("focus", function () {
 
 spotSearchInput.addEventListener("keydown", onSpotSearchKeydown);
 
+// 從瀏覽器輸入歷史/自動填入點選一筆帶入時，自動搜尋並離開輸入狀態，免再按 Enter。
+// 帶入時 inputType 會是 insertReplacementText 或空（null），且非 IME 組字中；一般打字 inputType 為 insertText，不會觸發。
+spotSearchInput.addEventListener("input", function (e) {
+	const isPickedFromHistory =
+		e.inputType === "insertReplacementText" || !e.inputType;
+	if (isPickedFromHistory && !e.isComposing && spotSearchInput.value.trim()) {
+		triggerSpotSearch(true);
+		spotSearchInput.blur();
+	}
+});
+
 // 處理鍵盤彈出時的視窗大小變化
 window.visualViewport.addEventListener("resize", function () {
 	const inputBar = document.querySelector(".chat-input-bar");
