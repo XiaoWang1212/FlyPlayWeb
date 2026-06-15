@@ -664,19 +664,9 @@ async function handleItineraryEditFlowInput(text) {
 		return true;
 	}
 
-	if (currentFlow.stage === "pick_day") {
-		addBotMessage("請點選上方的天數卡片來選擇。");
-		return true;
-	}
-
-	if (currentFlow.stage === "pick_activity") {
-		addBotMessage("請點選上方的行程卡片來選擇。");
-		return true;
-	}
-
-	if (currentFlow.stage === "choose_mode") {
-		addBotMessage("請點選上方的卡片來選擇。");
-		return true;
+	if (currentFlow.stage === "pick_day" || currentFlow.stage === "pick_activity" || currentFlow.stage === "choose_mode") {
+		clearItineraryEditFlow();
+		return false;
 	}
 
 	if (currentFlow.stage === "ask_day_for_add") {
@@ -1103,7 +1093,7 @@ async function sendMessage() {
 			const aiText =
 				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
 				"（無回覆）";
-			await appendMsg(aiText, "bot", data.spot_images || []);
+			await appendMsg(aiText, "bot", []);
 			if (data && data.parsed && data.parsed.action === "update_day") {
 				const updated = applyChatItineraryUpdate(data.parsed);
 				if (!updated) {
