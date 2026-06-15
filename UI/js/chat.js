@@ -342,6 +342,32 @@ function buildChatTripContext() {
 	};
 }
 
+function openEditModeForDay(targetDay) {
+	const dayNumber = Number(targetDay || 0);
+
+	if (dayNumber > 0 && Array.isArray(allDays) && allDays.length >= dayNumber) {
+		currentDayIndex = dayNumber - 1;
+		if (typeof displayDay === "function") {
+			displayDay(currentDayIndex);
+		}
+	}
+
+	if (isChatMode && typeof toggleChatMode === "function") {
+		toggleChatMode();
+	}
+
+	if (!isEditMode && typeof toggleEditMode === "function") {
+		toggleEditMode();
+	}
+
+	if (typeof openSheet === "function") {
+		openSheet();
+	}
+	if (typeof syncSheetState === "function") {
+		syncSheetState("sheet-expanded");
+	}
+}
+
 function openEditModeWithSearchKeyword(keyword, targetDay) {
 	const searchKeyword = String(keyword || "").trim();
 	const dayNumber = Number(targetDay || 0);
@@ -376,6 +402,72 @@ function disablePickerContainer(el) {
 	el.querySelectorAll("button").forEach((btn) => {
 		btn.disabled = true;
 	});
+}
+
+async function showDayPickerForDeleteMessage() {
+	const days = getChatCurrentItinerary();
+	if (!days.length) {
+		await addBotMessage("目前沒有載入行程，請先確認行程已建立。");
+		clearItineraryEditFlow();
+		return;
+	}
+	const msgEl = await typeMessage("你想刪除第幾天的景點？", "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: "你想刪除第幾天的景點？" });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+	days.forEach((day) => {
+		const dayNum = Number(day.day);
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			clearItineraryEditFlow();
+			await addBotMessage(`好的，我幫你切換到第 ${dayNum} 天的編輯模式。找到想刪除的景點後，點右邊的垃圾桶，最後再按確認就完成了。`);
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeForDay(dayNum);
+		});
+		row.appendChild(btn);
+	});
+	msgEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function showDayPickerForAddMessage() {
+	const days = getChatCurrentItinerary();
+	if (!days.length) {
+		await addBotMessage("目前沒有載入行程，請先確認行程已建立。");
+		clearItineraryEditFlow();
+		return;
+	}
+	const msgEl = await typeMessage("你想在第幾天新增景點？", "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: "你想在第幾天新增景點？" });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+	days.forEach((day) => {
+		const dayNum = Number(day.day);
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			clearItineraryEditFlow();
+			await addBotMessage(`好的，我幫你打開第 ${dayNum} 天的新增介面，現在可以直接搜尋並加入景點。`);
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeWithSearchKeyword("", dayNum);
+		});
+		row.appendChild(btn);
+	});
+	msgEl.appendChild(row);
+	scrollToBottom();
 }
 
 async function showDayPickerMessage() {
@@ -598,7 +690,55 @@ async function handleModeCardSelected(mode, flow) {
 	}
 }
 
-function startItineraryEditFlow() {
+function appendActionPickerCards(parentEl) {
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+
+	const actions = [
+		{ label: "新增景點", value: "add" },
+		{ label: "修改行程", value: "update" },
+		{ label: "刪除景點", value: "delete" },
+	];
+
+	actions.forEach(({ label, value }) => {
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = label;
+		btn.addEventListener("click", () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			handleActionCardSelected(value, label);
+		});
+		row.appendChild(btn);
+	});
+
+	parentEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function handleActionCardSelected(action, label) {
+	appendMsg(label, "user");
+	pushConversationMessage("user", label);
+
+	const currentFlow = readItineraryEditFlow();
+
+	if (action === "add") {
+		writeItineraryEditFlow({ ...currentFlow, action: "add", stage: "ask_day_for_add" });
+		void showDayPickerForAddMessage();
+		return;
+	}
+
+	if (action === "delete") {
+		writeItineraryEditFlow({ ...currentFlow, action: "delete", stage: "ask_day_for_delete" });
+		void showDayPickerForDeleteMessage();
+		return;
+	}
+
+	writeItineraryEditFlow({ ...currentFlow, action: "update", stage: "pick_day" });
+	void showDayPickerMessage();
+}
+
+async function startItineraryEditFlow() {
 	hideChatSuggestions();
 	writeItineraryEditFlow({
 		stage: "choose_action",
@@ -606,7 +746,9 @@ function startItineraryEditFlow() {
 		targetDay: null,
 		targetItem: "",
 	});
-	addBotMessage("你想新增、修改、還是刪除行程？");
+	const msgEl = await typeMessage("你想新增、修改、還是刪除行程？", "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: "你想新增、修改、還是刪除行程？" });
+	appendActionPickerCards(msgEl);
 }
 
 async function handleItineraryEditFlowInput(text) {
@@ -632,62 +774,11 @@ async function handleItineraryEditFlowInput(text) {
 
 	addUserMessage(text);
 
-	if (currentFlow.stage === "choose_action") {
-		const action = extractFlowActionFromText(flowText);
-		if (!action) {
-			addBotMessage("請先告訴我你想新增、修改，還是刪除行程。也可以直接輸入「新增」、「修改」或「刪除」。");
-			return true;
-		}
-
-		if (action === "add") {
-			writeItineraryEditFlow({
-				...currentFlow,
-				action: "add",
-				stage: "ask_day_for_add",
-			});
-			addBotMessage("你想在第幾天新增景點？請直接告訴我，例如「第 2 天」。");
-			return true;
-		}
-
-		if (action === "delete") {
-			clearItineraryEditFlow();
-			addBotMessage("刪除行程的話，請先點要刪除的那一天，進入編輯模式後，找到想刪除的景點，點它右邊的垃圾桶，最後再按確認就完成了。");
-			return true;
-		}
-
-		writeItineraryEditFlow({
-			...currentFlow,
-			action: "update",
-			stage: "pick_day",
-		});
-		void showDayPickerMessage();
-		return true;
-	}
-
-	if (currentFlow.stage === "pick_day" || currentFlow.stage === "pick_activity" || currentFlow.stage === "choose_mode") {
+	if (currentFlow.stage === "choose_action" || currentFlow.stage === "ask_day_for_add" || currentFlow.stage === "ask_day_for_delete" || currentFlow.stage === "pick_day" || currentFlow.stage === "pick_activity" || currentFlow.stage === "choose_mode") {
 		clearItineraryEditFlow();
 		return false;
 	}
 
-	if (currentFlow.stage === "ask_day_for_add") {
-		const dayNumber = extractDayNumberFromText(flowText);
-		if (!dayNumber) {
-			addBotMessage("請告訴我第幾天，例如「第 2 天」。");
-			return true;
-		}
-
-		const totalDays = Array.isArray(allDays) ? allDays.length : 0;
-		if (totalDays > 0 && dayNumber > totalDays) {
-			addBotMessage(`你的行程只有 ${totalDays} 天，沒有第 ${dayNumber} 天，請重新輸入一次。`);
-			return true;
-		}
-
-		clearItineraryEditFlow();
-		await addBotMessage(`好的，我幫你打開第 ${dayNumber} 天的新增介面，現在可以直接搜尋並加入景點。`);
-		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		openEditModeWithSearchKeyword("", dayNumber);
-		return true;
-	}
 
 	if (currentFlow.stage === "manual_spot_name") {
 		const spotName = flowText.replace(/^[「"'【\[]|[」"'】\]]$/g, "").trim();

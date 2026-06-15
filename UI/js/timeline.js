@@ -50,8 +50,8 @@ function loadSingleDayTimeline(day, dayIndex) {
 	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">${isEditMode ? '取消' : '編輯'}</span></span>`;
 	timelineList.appendChild(dayTitle);
 
-	// 編輯模式下在活動上方插入新增按鈕
-	if (isEditMode) {
+	// 編輯模式下在活動上方插入新增按鈕（保護重複插入）
+	if (isEditMode && !timelineList.querySelector(".add-item-btn")) {
 		const addBtn = document.createElement("div");
 		addBtn.className = "add-item-btn";
 		addBtn.innerHTML = '<i class="fas fa-plus"></i> 新增行程';

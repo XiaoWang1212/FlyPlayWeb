@@ -87,6 +87,7 @@ function toggleEditMode(evt) {
 		if (editBtnGroup) {
 			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">完成</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">取消</span>';
 		}
+		timelineList.querySelectorAll(".add-item-btn").forEach((el) => el.remove());
 		const addBtn = document.createElement("div");
 		addBtn.className = "add-item-btn";
 		addBtn.innerHTML = '<i class="fas fa-plus"></i> 新增行程';
