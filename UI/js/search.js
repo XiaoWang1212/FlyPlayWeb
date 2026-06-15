@@ -527,13 +527,12 @@ async function addSpotToItinerary(spot, evt) {
   if (evt) evt.stopPropagation();
   if (!spot) return;
 
-  // 直接從地圖點擊景點加入（搜尋視窗未開啟）時，先讓使用者選擇要加入哪一天，
-  // 切換到該天單日檢視並進入編輯模式（搜尋流程本來就在編輯模式），後續流程共用。
+  // 直接從地圖點擊景點加入（搜尋視窗未開啟）時進入編輯模式（搜尋流程本來就在編輯模式）。
+  // 全部檢視時先讓使用者選擇要加入哪一天並切換過去；已在某一天則直接加入該天，後續流程共用。
   if (!spotSearchState.isOpen) {
-    const pickedDayIndex = await pickDayForSpot();
-    if (pickedDayIndex === null) return; // 取消選擇
-
-    if (currentDayIndex !== pickedDayIndex) {
+    if (currentDayIndex === -1) {
+      const pickedDayIndex = await pickDayForSpot();
+      if (pickedDayIndex === null) return; // 取消選擇
       const dayBtn = document.querySelector(
         `#dayButtonContainer button[data-day-index="${pickedDayIndex}"]`,
       );
