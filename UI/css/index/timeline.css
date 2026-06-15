@@ -2,11 +2,7 @@
 .timeline-item {
 	display: flex;
 	flex-direction: column;
-	margin-bottom: 20px;
 	position: relative;
-	transition: background 0.2s;
-	background: #fff;
-	border-radius: 8px;
 }
 
 .timeline-left {
@@ -75,7 +71,7 @@
 	flex-shrink: 0;
 	white-space: nowrap;
 	margin-left: 10px;
-	margin-top: 2px;
+	margin-top: -2px;
 }
 
 .day-header {
@@ -92,15 +88,20 @@
 
 .transit-block {
 	display: flex;
-	align-items: stretch;
+	align-items: center;
 	min-height: 40px;
+	background: #FAFAFA;
+	border-radius: 8px;
+	padding: 6px 12px;
+	margin-bottom: 12px;
 }
 
 .transit-line {
 	width: 60px;
-	margin-right: 15px;
+	margin-right: 10px;
 	display: flex;
 	justify-content: center;
+	align-self: stretch;
 	flex-shrink: 0;
 }
 
@@ -108,8 +109,7 @@
 	content: "";
 	width: 2px;
 	border-left: 2px dotted #ccc;
-	margin-top: 5px;
-	margin-bottom: 5px;
+	margin: 2px 0;
 }
 
 .transit-info-row {
@@ -345,15 +345,15 @@
 }
 
 #dayButtonContainer button:nth-child(7) {
-	background: linear-gradient(to bottom, #5b8aff 0%, #2962ff 100%);
-	border-color: #1a47cc;
-	box-shadow: 0 7px 0 #0f33a8, 0 10px 14px rgba(41, 98, 255, 0.65);
+	background: linear-gradient(to bottom, #9a9d9e 0%, #6c6f70 100%);
+	border-color: #4f5253;
+	box-shadow: 0 7px 0 #353738, 0 10px 14px rgba(108, 111, 112, 0.65);
 }
 
 #dayButtonContainer button:nth-child(8) {
-	background: linear-gradient(to bottom, #4dc86e 0%, #34a853 100%);
-	border-color: #267a3e;
-	box-shadow: 0 7px 0 #1a5c2d, 0 10px 14px rgba(52, 168, 83, 0.65);
+	background: linear-gradient(to bottom, #ff9999 0%, #ff6666 100%);
+	border-color: #cc4f4f;
+	box-shadow: 0 7px 0 #a83a3a, 0 10px 14px rgba(255, 102, 102, 0.65);
 }
 
 #dayButtonContainer button.active {
@@ -391,13 +391,13 @@
 }
 
 #dayButtonContainer button:nth-child(7).active {
-	box-shadow: 0 2px 8px rgba(41, 98, 255, 0.45);
-	border-color: #2a3a70;
+	box-shadow: 0 2px 8px rgba(108, 111, 112, 0.45);
+	border-color: #3a3c3d;
 }
 
 #dayButtonContainer button:nth-child(8).active {
-	box-shadow: 0 2px 8px rgba(52, 168, 83, 0.45);
-	border-color: #2a4a32;
+	box-shadow: 0 2px 8px rgba(255, 102, 102, 0.45);
+	border-color: #7a3a3a;
 }
 
 #dayButtonContainer button:active {
@@ -449,8 +449,11 @@
 
 .location-block {
 	display: flex;
-	padding-top: 10px;
+	padding: 12px;
+	margin-bottom: 12px;
+	background: #fff;
 	border-radius: 8px;
+	transition: background 0.2s;
 }
 
 .location-block:hover {

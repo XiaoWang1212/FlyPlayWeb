@@ -11,8 +11,10 @@ function getWeekdayLabel(dayNumber) {
 	const parts = String(startDate).split("-").map(Number);
 	if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return "";
 
+	// 第1天保留給搭機日，行程實際從開始日期的次日算起，
+	// 故第 N 天對應「開始日期 + N」天
 	const date = new Date(parts[0], parts[1] - 1, parts[2]);
-	date.setDate(date.getDate() + (Number(dayNumber) - 1));
+	date.setDate(date.getDate() + Number(dayNumber));
 
 	const weekdayLabels = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 	return weekdayLabels[date.getDay()];
