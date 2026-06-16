@@ -186,4 +186,7 @@ function confirmDrag() {
 	} else {
 		displayDay(currentDayIndex);
 	}
+
+	// 完成編輯行程時一併收起搜尋介面。
+	closeSpotSearchModal();
 }

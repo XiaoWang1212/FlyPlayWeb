@@ -63,9 +63,35 @@ textarea {
 }
 
 .container {
-  padding: 20px;
+  padding: 20px 20px 0;
   max-width: 600px;
   margin: 0 auto;
+  /* 固定整頁高度：標題區固定，只有 .form-scroll 內部捲動 */
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 可捲動的表單區域：標題/返回鍵不動，手風琴展開只在此捲動 */
+.form-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* 滾到底就停，去掉橡皮筋回彈 */
+  -webkit-overflow-scrolling: touch;
+  /* 底部留固定 AI 按鈕的空間 + iPhone 安全區 */
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 只有 AI 按鈕顯示時，底部內容才淡出 */
+.form-scroll:has(~ .ai-recommend-btn.show) {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 100px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 100px), transparent 100%);
+}
+
+.form-scroll::-webkit-scrollbar {
+  display: none; /* 隱藏滾動條，維持簡潔 */
 }
 
 /* ==================== 返回按鈕 ==================== */
@@ -137,6 +163,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0; /* 標籤不被右側擠壓，避免提示文字換行 */
 }
 
 .label-hint {
@@ -146,6 +173,7 @@ h1 {
   padding: 2px 6px;
   border-radius: 10px;
   line-height: 1;
+  white-space: nowrap; /* 提示文字維持單行 */
 }
 
 /* 展開時放大 label */
@@ -161,6 +189,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
+  flex: 1; /* 佔滿標籤外的剩餘空間，作為值的可用寬度上限 */
   min-width: 0;
 }
 
@@ -211,6 +240,8 @@ h1 {
   gap: 0px;
   position: relative;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .destination-btn #selected-destination,
@@ -218,8 +249,8 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-block;
-  max-width: 200px;
+  min-width: 0;
+  max-width: 100%;
   padding-right: 15px;
 }
 
@@ -467,7 +498,7 @@ textarea {
 /* ==================== AI 推薦行程按鈕 ==================== */
 .ai-recommend-btn {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%) translateY(calc(100% + 20px));
   width: calc(100% - 40px);
@@ -561,4 +592,56 @@ textarea {
 .missing-field-hint.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ==================== RWD：窄螢幕（如 iPhone SE / 小型手機） ==================== */
+@media (max-width: 380px) {
+  .container {
+    padding: 16px 16px 0;
+  }
+
+  .form-scroll {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+
+  h1 {
+    font-size: 26px;
+    margin: 0 0 22px 6px;
+  }
+
+  .form-group {
+    --form-padding: 16px 16px;
+    --form-text-size: 18px;
+  }
+
+  /* 展開時放大字級同步縮一點，避免溢出 */
+  .expandable-picker.active label,
+  .card-picker-group.active label {
+    font-size: 18px;
+  }
+
+  /* 已選文字在窄螢幕收窄，靠 ellipsis 截斷 */
+  .destination-btn #selected-destination,
+  .destination-btn #selected-departure {
+    max-width: 150px;
+  }
+
+  /* 卡片間距與內距收斂，維持點擊面積 */
+  .card-picker-grid {
+    gap: 8px;
+    padding: 0 16px 12px;
+  }
+
+  .picker-card {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .picker-card-icon {
+    font-size: 28px;
+  }
+
+  .picker-card-label {
+    font-size: 12px;
+  }
 }
