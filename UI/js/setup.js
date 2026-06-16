@@ -594,7 +594,15 @@ function shouldResetSetupSelectionOnEntry() {
 }
 
 function clearSetupSelectionState() {
+  // 保留「建立新行程」時剛存入的開始日期，避免被清空後
+  // 在 buildItineraryPayload 退回為今天的日期
+  const current = loadTripSetup();
+  const startDate = current?.startDate;
+
   localStorage.removeItem(STORAGE_KEY_TRIP_SETUP);
+  if (startDate) {
+    localStorage.setItem(STORAGE_KEY_TRIP_SETUP, JSON.stringify({ startDate }));
+  }
   localStorage.removeItem("selectedDestinations");
 }
 
@@ -882,6 +890,12 @@ function buildItineraryPayload() {
           : ["any"];
 
   const startDateDefault = new Date().toISOString().slice(0, 10);
+  const start_date = tripSetup.startDate || startDateDefault;
+
+  // 記錄此行程開始的日期（建立新行程時填寫的「開始日期」），
+  // 避免沿用上一次開啟其他專案時殘留在 currentItineraryStartDate
+  // 的舊日期，導致星期幾顯示錯誤
+  localStorage.setItem("currentItineraryStartDate", start_date);
 
   return {
     project_id: projectId,
@@ -894,7 +908,7 @@ function buildItineraryPayload() {
       tripSetup.morningDepartureLabel || tripSetup.morningDeparture || "任何時間",
     interests,
     pace: tripSetup.tripPace || "relaxed",
-    start_date: tripSetup.startDate || startDateDefault,
+    start_date,
   };
 }
 

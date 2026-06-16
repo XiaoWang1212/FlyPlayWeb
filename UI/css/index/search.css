@@ -85,6 +85,16 @@
 	background: transparent;
 }
 
+/* 從瀏覽器輸入歷史帶入時，移除 Chrome autofill 的淡藍底色 */
+.spot-search-input:-webkit-autofill,
+.spot-search-input:-webkit-autofill:hover,
+.spot-search-input:-webkit-autofill:focus {
+	-webkit-box-shadow: 0 0 0 1000px #fff inset;
+	box-shadow: 0 0 0 1000px #fff inset;
+	-webkit-text-fill-color: #111827;
+	transition: background-color 9999s ease-in-out 0s;
+}
+
 .spot-search-results {
 	overflow-y: auto;
 	padding: 0;

@@ -13,6 +13,8 @@
                 <img src="assets/icons/back-arrow.svg" alt="返回">
             </button>
             <h1>旅程規劃</h1>
+            <!-- 只有表單區域內部捲動，標題/返回鍵維持固定 -->
+            <div class="form-scroll">
             <div class="form-group">
                 <label>抵達機場</label>
                 <div class="select-wrapper">
@@ -96,6 +98,7 @@
                     </div>
                 </div>
             </div>
+            </div><!-- /.form-scroll -->
 
             <!-- AI 推薦行程按鈕（預設隱藏，選完旅遊類型才出現） -->
             <button id="ai-recommend-btn" class="ai-recommend-btn" onclick="submitAIRecommendation()">

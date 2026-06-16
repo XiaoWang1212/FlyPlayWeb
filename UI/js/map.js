@@ -95,7 +95,8 @@ function clearMapRoutes() {
 	currentMarkers.forEach((marker) => (marker.map = null));
 	currentMarkers = [];
 
-	clearCurrentPopup();
+	// 切換天數或離開編輯模式時，一併收掉景點預覽地標 marker。
+	closeSpotPreviewInfo();
 }
 
 function buildSpotFromPlaceResult(place, fallbackLocation) {
