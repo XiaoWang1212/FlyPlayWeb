@@ -74,7 +74,19 @@ class ChatController:
             )
         except Exception as e:
             return {'success': False, 'error': f'景點推薦失敗: {str(e)}'}
-    
+
+    def handle_suggest_spot_duration(self, place_name, place_type=None, address=None, rating=None):
+        """處理單一景點建議停留時間請求"""
+        try:
+            if not str(place_name or "").strip():
+                return {'success': False, 'error': '必須提供 placeName 參數'}
+
+            return self.chat_service.suggest_spot_duration(
+                place_name, place_type, address, rating
+            )
+        except Exception as e:
+            return {'success': False, 'error': f'停留時間建議失敗: {str(e)}'}
+
     # def handle_travel_tips(self, location, travel_time=None):
     #     """處理旅遊提示請求"""
     #     try:

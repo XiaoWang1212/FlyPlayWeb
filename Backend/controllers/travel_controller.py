@@ -78,7 +78,6 @@ class TravelController:
                     "itinerary_id": itinerary_id,
                     "raw_output": ai_result.get("data", {}).get("raw_output"),
                     "parsed": parsed,
-                    "token_usage": ai_result.get("data", {}).get("token_usage"),
                 },
             }
         return {"success": False, "error": "寫入失敗"}

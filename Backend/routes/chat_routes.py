@@ -162,6 +162,33 @@ def itinerary_suggestion():
     except Exception as e:
         return unified_response(500, f'服務器錯誤: {str(e)}')
 
+@chat_bp.route('/suggest-duration', methods=['POST'])
+@login_required
+def suggest_spot_duration():
+    try:
+        data = request.get_json()
+        if not data:
+            return unified_response(400, '請求體不能為空')
+
+        place_name = data.get('placeName') or data.get('place_name')
+        place_type = data.get('type')
+        address = data.get('address')
+        rating = data.get('rating')
+
+        if not place_name:
+            return unified_response(400, '必須提供 placeName 參數')
+
+        result = chat_controller.handle_suggest_spot_duration(
+            place_name, place_type, address, rating
+        )
+
+        if result['success']:
+            return unified_response(200, '停留時間建議成功', result['data'])
+        else:
+            return unified_response(500, result['error'])
+    except Exception as e:
+        return unified_response(500, f'服務器錯誤: {str(e)}')
+
 # @chat_bp.route('/tips', methods=['POST'])
 # def get_travel_tips():
 #     try:

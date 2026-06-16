@@ -288,18 +288,6 @@ class GeminiService:
         parsed_json = json.loads(cleaned_json)
         return raw_content, cleaned_json, parsed_json
 
-    def _extract_token_usage(self, response):
-        """提取 Gemini token 使用量；若無法取得則回傳 None。"""
-        usage_metadata = getattr(response, "usage_metadata", None)
-        if not usage_metadata:
-            return {
-                "total_tokens": None,
-            }
-
-        return {
-            "total_tokens": getattr(usage_metadata, "total_token_count", None),
-        }
-
     def _strip_markdown_text(self, text):
         """把常見 Markdown 標記移除，保留可直接閱讀的純文字。"""
         plain_lines = []
@@ -467,7 +455,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
             parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
@@ -477,7 +464,6 @@ class GeminiService:
                 "data": {
                     "raw_output": raw_content,
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:
@@ -677,7 +663,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
             raw_content, cleaned_json, parsed_json = self._parse_response_json(response)
 
             return {
@@ -685,11 +670,54 @@ class GeminiService:
                 "data": {
                     "raw_output": raw_content or cleaned_json,
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:
             return {"success": False, "error": f"景點推薦失敗: {str(e)}"}
+
+    def suggest_spot_duration(self, place_name, place_type=None, address=None, rating=None):
+        """針對單一景點建議停留時間，供手動加入行程的景點補上 time 欄位。"""
+        try:
+            type_text = place_type or "景點"
+            address_text = address or "未提供"
+            rating_text = str(rating) if rating is not None else "未提供"
+
+            prompt = f"""你是一個旅遊行程助理。請針對下面這個景點，估算遊客大概會停留多久時間。
+
+景點名稱：{place_name}
+景點類型：{type_text}
+地址：{address_text}
+評分：{rating_text}
+
+請只回傳純 JSON，不要輸出 Markdown 或多餘說明，結構如下：
+{{
+    "time": "建議停留 X 小時"
+}}
+
+規則：
+1. time 請用「建議停留 X 小時」這種自然語句，X 可以是小數（例如 1.5），不要使用 09:00 這類實際時刻。
+2. 請依景點類型與規模合理判斷，例如博物館、主題樂園停留較久，便利商店、車站、小型景點停留較短。
+3. 不要輸出除了 time 以外的欄位。
+"""
+
+            response = self.model.generate_content(
+                prompt, generation_config=self.generation_config
+            )
+            raw_content, cleaned_json, parsed_json = self._parse_response_json(response)
+
+            suggested_time = ""
+            if isinstance(parsed_json, dict):
+                suggested_time = str(parsed_json.get("time") or "").strip()
+
+            return {
+                "success": True,
+                "data": {
+                    "time": suggested_time,
+                    "raw_output": raw_content or cleaned_json,
+                },
+            }
+        except Exception as e:
+            return {"success": False, "error": f"停留時間建議失敗: {str(e)}"}
 
     def generate_itinerary(
         self, location, days, trip_pace, traveler_type, interests, start_date=None
@@ -742,11 +770,14 @@ class GeminiService:
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             絕對不可以推薦任何機場、國際機場、航廈、候機室、機場捷運站這類地點（例如：桃園國際機場、成田機場、羽田機場、關西國際機場等），機場是交通節點，不得列為觀光景點，即使行程起訖點在機場附近也不得列入。
+            所有景點都必須是位於「{location}」當地、實際存在於該城市或地區範圍內的真實景點，絕對不可以出現其他城市或國家的景點。
+            特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location}」當地真實對應、性質相近的景點。
             檢查每日景點的距離不要超過120公里。
             同一區的景點安排在同一天，不要同個區的景點去兩天。
             像是秋葉原電器街和秋葉原根本上是同個地方，就不要同一天安排一個叫秋葉原電器街、一個叫秋葉原的景點，請合併成同一個景點。
             車站這類的景點也是同樣的道理，如果有一個叫「東京車站」，另一個叫「東京車站八重洲口」，就不要同一天安排兩個，請合併成一個「東京車站」。
-            如果行程緊湊度為「輕鬆」，同一天不得同時安排兩個位於相同建築、相同園區或步行2分鐘內可達的景點（例如：有晴空塔就不能再加晴空塔城、有東京鐵塔就不能再加東京鐵塔內的展望台）。輕鬆行程的每個景點必須是彼此獨立、有一定距離的不同地點。
+            不論行程緊湊度為何，同一天都不得同時安排兩個位於相同建築、相同園區、或實際上是同一地點的景點（例如：有晴空塔就不能再加晴空塔城、有東京鐵塔就不能再加東京鐵塔內的展望台），這類景點請合併成一個。
+            如果行程緊湊度為「輕鬆」，景點之間還必須保持實際距離，不可以安排兩個步行2分鐘內就能互通的景點；輕鬆行程的每個景點必須是彼此獨立、有一定距離的不同地點。
             若單一景點（如主題樂園、大型遊樂園）建議停留時間達 5 小時以上，該天不得再安排任何其他景點，因為這類景點本身就包含全天的活動與餐飲。
 
             """
@@ -793,7 +824,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
 
@@ -802,7 +832,6 @@ class GeminiService:
                 "data": {
                     "raw_output": raw_content,
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:
@@ -963,6 +992,7 @@ class GeminiService:
             8. 每天 location 項目數量需與原始行程對應天數的地點數量一致。
             9. 不要推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類地點；若原始內容包含這類地點，請替換成相鄰且更適合旅遊的景點。
             不要推薦機場、航廈、候機室這類地點；機場只是交通節點，不應列為觀光景點，若原始內容包含機場，請替換成附近適合旅遊的景點。
+            若原始內容中出現不屬於「{location}」當地的景點（例如行程目的地不是台灣，卻出現九份、台北101、士林夜市這類台灣景點），請替換成「{location}」當地真實對應、性質相近的景點。
             10. 每一天的 location 裡面至少要有一個 type 為「美食」的項目；如果原始行程沒有美食，請補上一個合適的餐廳或在地美食。
             11. 如果原始行程沒有提供 time，請你依照景點類型、規模與行程節奏自行判斷建議停留時間，不要使用固定預設值。
             如果需要根據行程節奏估算整體安排，請使用同樣的緊湊度規則：
@@ -975,7 +1005,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
             parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
@@ -984,13 +1013,12 @@ class GeminiService:
                 "success": True,
                 "data": {
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:
             return {"success": False, "error": f"行程生成/修改失敗: {str(e)}"}
 
-    def refine_itinerary(self, itinerary, feedback):
+    def refine_itinerary(self, itinerary, feedback): #廢物
         """根據用戶反饋優化行程"""
         try:
             prompt = f"""根據以下反饋優化旅遊行程。
@@ -1004,7 +1032,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
 
             _, cleaned_json, parsed_json = self._parse_response_json(response)
 
@@ -1013,7 +1040,6 @@ class GeminiService:
                 "data": {
                     "raw_output": cleaned_json,
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:
@@ -1042,7 +1068,6 @@ class GeminiService:
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config
             )
-            token_usage = self._extract_token_usage(response)
 
             _, cleaned_json, parsed_json = self._parse_response_json(response)
 
@@ -1051,7 +1076,6 @@ class GeminiService:
                 "data": {
                     "raw_output": cleaned_json,
                     "parsed": parsed_json,
-                    "token_usage": token_usage,
                 },
             }
         except Exception as e:

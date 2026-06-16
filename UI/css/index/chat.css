@@ -19,13 +19,13 @@
 
 .chat-suggestions {
 	position: fixed;
-	left: 20px;
-	right: 20px;
+	left: 0;
+	right: 0;
 	bottom: calc(64px + var(--safe-bottom, 0px));
 	display: flex;
-	flex-wrap: wrap;
-	gap: 30px;
-	padding: 10px 0 6px;
+	flex-wrap: nowrap;
+	gap: 10px;
+	padding: 10px 20px 6px;
 	z-index: 650;
 	background: linear-gradient(180deg, rgba(249, 249, 249, 0), rgba(249, 249, 249, 0.92) 18%, rgba(249, 249, 249, 0.98));
 	backdrop-filter: blur(4px);
@@ -33,7 +33,14 @@
 	border-radius: 18px 18px 0 0;
 	pointer-events: auto;
 	align-items: center;
-	justify-content: center;
+	justify-content: safe center;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+}
+
+.chat-suggestions::-webkit-scrollbar {
+	display: none;
 }
 
 .map-container.sheet-collapsed .chat-suggestions {
@@ -51,7 +58,20 @@
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 	cursor: pointer;
 	white-space: nowrap;
+	flex-shrink: 0;
 	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+@media (max-width: 380px) {
+	.chat-suggestions {
+		gap: 8px;
+		padding: 8px 14px 6px;
+	}
+
+	.chat-suggestion-chip {
+		padding: 8px 12px;
+		font-size: 13px;
+	}
 }
 
 .chat-suggestion-chip:active,

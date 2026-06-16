@@ -187,12 +187,12 @@ function buildChatInitialMessage(projectTitle) {
 	const destination = tripContext.destination || "";
 	const daysText = tripContext.days || (tripDays > 0 ? `${tripDays} 天` : "");
 	const summaryParts = [
-		`已載入「${title}」`,
+		`已載入「${title}行程」`,
 		destination ? `目的地是 ${destination}` : "",
-		daysText ? `共有 ${daysText} ` : "",
+		daysText ? `共有 ${daysText} 天 ` : "",
 	].filter(Boolean);
 
-	return `${summaryParts.join("，")}。你可以直接告訴我想調整哪一天，或請我找景點、交通和餐廳建議。`;
+	return `${summaryParts.join("，")}。點擊下方建議問題，或直接輸入你想對行程做的修改，我都會盡力協助你！`;
 }
 
 function queueChatInitialMessage(message) {

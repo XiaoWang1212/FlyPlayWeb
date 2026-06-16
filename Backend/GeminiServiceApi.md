@@ -22,7 +22,7 @@
 
 ## 2. 共用處理邏輯
 
-服務內有三個共用 helper：
+服務內有兩個共用 helper：
 
 - `_clean_json_response(response_text)`
 	- 移除 Gemini 可能回傳的 Markdown code block 標記。
@@ -31,9 +31,6 @@
 	- 取得 `response.text`。
 	- 清理後再用 `json.loads()` 解析。
 	- 回傳 `raw_content`、`cleaned_json`、`parsed_json`。
-- `_extract_token_usage(response)`
-	- 從 `response.usage_metadata` 擷取 token 使用量。
-	- 目前回傳欄位只有 `total_tokens`，若無法取得則回傳 `null`。
 
 ---
 
@@ -68,9 +65,6 @@
 					"places": ["..."]
 				}
 			]
-		},
-		"token_usage": {
-			"total_tokens": 1234
 		}
 	}
 }
@@ -182,7 +176,6 @@
 
 - `raw_output`：清理後的 JSON 字串
 - `parsed`：解析後的 JSON 物件
-- `token_usage`：token 使用量
 
 特性：
 

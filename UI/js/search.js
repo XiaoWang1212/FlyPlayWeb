@@ -461,6 +461,48 @@ function buildActivityFromSpot(spot) {
   };
 }
 
+// 詢問 AI 單一景點的建議停留時間，回填到該筆 activity 並更新畫面。
+async function applySuggestedSpotDuration(activity) {
+  if (!activity) return;
+
+  const storedToken = localStorage.getItem("userToken");
+  const headers = storedToken
+    ? {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${storedToken}`,
+      }
+    : { "Content-Type": "application/json" };
+
+  try {
+    const response = await fetch(`${API_BASE}/api/chat/suggest-duration`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        placeName: activity.place_name,
+        type: activity.type,
+        address: activity.address,
+      }),
+    });
+
+    const payload = await response.json();
+    const suggestedTime = payload?.data?.time;
+    if (!response.ok || !suggestedTime) return;
+
+    // 等待期間若使用者已手動改過時間，就不要覆蓋。
+    if (activity.time !== "待安排") return;
+
+    activity.time = suggestedTime;
+
+    const badgeSelector = `.timeline-item[data-activity-id="${CSS.escape(
+      activity.activityId,
+    )}"] .time-badge`;
+    const badge = document.querySelector(badgeSelector);
+    if (badge) badge.textContent = suggestedTime;
+  } catch (error) {
+    // 建議停留時間取得失敗時，維持「待安排」即可。
+  }
+}
+
 // 把選中的景點加入行程。
 async function addSpotToItinerary(spot, evt) {
   if (evt) evt.stopPropagation();
@@ -495,6 +537,8 @@ async function addSpotToItinerary(spot, evt) {
 
   openSheet();
   closeSpotSearchModal();
+
+  applySuggestedSpotDuration(newActivity);
 }
 
 // 優先使用當前日期的最後一個活動位置，若無則從所有日期的最後活動往前找
