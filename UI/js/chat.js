@@ -680,7 +680,7 @@ async function handleModeCardSelected(mode, flow) {
 		removeChatLoadingSpinner(loadingEl);
 		clearItineraryEditFlow();
 		await addBotMessage(
-			`我幫你推薦了「${suggestedSpot}」，已經幫你打開編輯頁面並預填搜尋框。你只要按加入行程就可以完成修改。`,
+			`我幫你推薦了「${suggestedSpot}」，已經幫你打開編輯頁面並預填搜尋框。記得也要把原本的「${flow.targetItem}」刪掉喔！`,
 		);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
 		openEditModeWithSearchKeyword(suggestedSpot, flow.targetDay);
