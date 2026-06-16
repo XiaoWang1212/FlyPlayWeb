@@ -100,7 +100,7 @@ async function downloadPDF() {
 		captureMsg.textContent = `擷取地圖中 (${i + 1} / ${allDays.length})…`;
 		displayDay(i);
 
-		// 先等 DirectionsService 回應並把路線畫上地圖（異步，需要固定等待）
+		// 先等路線運算（Route.computeRoutes）回應並把路線畫上地圖（異步，需要固定等待）
 		await new Promise((resolve) => setTimeout(resolve, 2500));
 
 		// 讀取行程頁面已計算好的交通方式建議，供 PDF 使用

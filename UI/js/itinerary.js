@@ -160,7 +160,10 @@ async function getDetailedItineraryFromDb(itineraryId) {
 		if (
 			detailed &&
 			typeof detailed === "object" &&
-			Object.keys(detailed).length > 0
+			(
+				(Array.isArray(detailed.parsed?.days) && detailed.parsed.days.length > 0) ||
+				(Array.isArray(detailed.days) && detailed.days.length > 0)
+			)
 		) {
 			return detailed;
 		}
@@ -270,6 +273,22 @@ async function enrichWithPictureInfo(detailedData) {
 			return false;
 		}
 
+		// 若 allDays 內所有景點都已有圖片與有效座標，跳過 API 呼叫
+		if (Array.isArray(allDays) && allDays.length > 0) {
+			const allEnriched = allDays.every((day) =>
+				(day.activities || []).every((act) => {
+					const hasPhoto = !!(act.photo_url || "").trim();
+					const loc = act.location;
+					const hasLoc = loc && loc.lat != null && loc.lat !== 0 && loc.lng != null && loc.lng !== 0;
+					return hasPhoto && hasLoc;
+				})
+			);
+			if (allEnriched) {
+				console.log("所有景點已有圖片與座標，跳過 enrichWithPictureInfo");
+				return true;
+			}
+		}
+
 		// 以目前 allDays 的座標回填到 detailed days，避免補圖後丟失地圖座標
 		const daysWithLocation = daysSource.map((day, dayIndex) => {
 			const currentDay = allDays.find(
@@ -299,6 +318,13 @@ async function enrichWithPictureInfo(detailedData) {
 			return { ...day, activities: normalizedList };
 		});
 
+		// 讀 _build_spot_image_cards 存的快取（nearby search 結果）
+		let spotImagesCache = [];
+		try {
+			const raw = localStorage.getItem("spotImagesCache");
+			if (raw) spotImagesCache = JSON.parse(raw);
+		} catch (_) {}
+
 		// 先POST保存到後端
 		const response = await fetch(`${API_BASE}/api/itinerary`, {
 			method: "POST",
@@ -308,6 +334,7 @@ async function enrichWithPictureInfo(detailedData) {
 			body: JSON.stringify({
 				days: daysWithLocation,
 				itinerary_id: itineraryId,
+				spot_images_cache: spotImagesCache,
 			}),
 		});
 		if (!response.ok) {
@@ -320,6 +347,7 @@ async function enrichWithPictureInfo(detailedData) {
 		}
 
 		console.log("✓ 圖片信息已補充");
+		localStorage.removeItem("spotImagesCache");
 
 		// 轉換為 allDays 格式並更新畫面
 		allDays = convertToAllDaysFormat(result.data.days);

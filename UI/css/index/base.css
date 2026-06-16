@@ -4,6 +4,25 @@
 	--safe-bottom: env(safe-area-inset-bottom);
 	--header-height: 50px;
 	--sidebar-width: 320px;
+
+	/* 核心配色 */
+	--color-primary: #ffe966;           /* 主按鈕、高亮元素 (黃色) */
+	--color-primary-content: #8a4700;   /* 主按鈕上的文字 (深褐橙) */
+
+	--color-secondary: #0b559e;         /* Header、導航列、重要標題 (深藍) */
+	--color-secondary-content: #f1f8ff; /* Header 上的文字 (極淺藍) */
+
+	--color-accent: #aadbf2;            /* 次要按鈕、裝飾區塊背景 (淺藍) */
+	--color-accent-content: #005786;    /* 次要按鈕上的文字 (深藍) */
+
+	/* 背景色處理 */
+	--bg-base: #ffffff;                 /* 卡片、內容區塊的最底層背景 */
+	--bg-overlay: #aadbf24d;            /* 頁面大背景 (在白色底層上疊加 30% accent) */
+
+	/* 文字顏色 */
+	--text-main: #0b559e;               /* 主要文字 (使用 Secondary 深藍色取代純黑) */
+	--text-sub: #5c7c91;                /* 次要文字/描述 */
+	--input-bg: #f8fdff;                /* 輸入框背景 */
 }
 
 * {

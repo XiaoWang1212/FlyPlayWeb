@@ -177,12 +177,27 @@ class GeminiService:
         parsed_json[day_key] = itinerary_days
         return parsed_json
 
-    def _build_spot_image_cards(self, current_itinerary, ai_text=""):
+    def _build_spot_image_cards(self, current_itinerary, ai_text="", latlng_itinerary=None):
         """把已綁定的 photo_url 轉成聊天室可用的圖片卡片，並保留行程順序。"""
         cards = []
 
         if not isinstance(current_itinerary, list):
             return cards
+
+        latlng_map = {}
+        if isinstance(latlng_itinerary, list):
+            for day in latlng_itinerary:
+                if not isinstance(day, dict):
+                    continue
+                for loc in (day.get("locations") or []):
+                    if not isinstance(loc, dict):
+                        continue
+                    name = (loc.get("location_name") or loc.get("place_name") or "").strip()
+                    location = loc.get("location") or {}
+                    lat = location.get("latitude") or location.get("lat")
+                    lng = location.get("longitude") or location.get("lng")
+                    if name and lat not in (None, 0) and lng not in (None, 0):
+                        latlng_map[name] = {"lat": lat, "lng": lng}
 
         for day in current_itinerary:
             if not isinstance(day, dict):
@@ -207,25 +222,43 @@ class GeminiService:
                 place_id = activity.get("place_id") or ""
 
                 if photo_url:
-                    cards.append(
-                        {
-                            "name": spot_name,
-                            "photo_url": photo_url,
-                            "address": address,
-                            "place_id": place_id,
-                        }
-                    )
+                    act_location = latlng_map.get(spot_name)
+                    if act_location:
+                        activity["location"] = act_location
+                    card = {
+                        "name": spot_name,
+                        "photo_url": photo_url,
+                        "address": address,
+                        "place_id": place_id,
+                    }
+                    if act_location:
+                        card["location"] = act_location
+                    cards.append(card)
                     continue
 
                 if not spot_name:
                     continue
 
                 try:
-                    search_result = self.map_service.search_places(
-                        text_query=spot_name,
-                        language_code="zh-TW",
-                        max_results=1,
-                    )
+                    existing_location = latlng_map.get(spot_name)
+                    has_valid_location = existing_location is not None
+                    if has_valid_location:
+                        search_result = self.map_service.search_places_nearby(
+                            text_query=spot_name,
+                            location={
+                                "latitude": existing_location["lat"],
+                                "longitude": existing_location["lng"],
+                            },
+                            radius=500,
+                            language_code="zh-TW",
+                            max_results=1,
+                        )
+                    else:
+                        search_result = self.map_service.search_places(
+                            text_query=spot_name,
+                            language_code="zh-TW",
+                            max_results=1,
+                        )
                     if not search_result.get("success"):
                         continue
 
@@ -241,14 +274,28 @@ class GeminiService:
                     if not fallback_photo_url:
                         continue
 
-                    cards.append(
-                        {
-                            "name": place.get("name") or spot_name,
-                            "photo_url": fallback_photo_url,
-                            "address": place.get("address") or address,
-                            "place_id": place.get("place_id") or place_id,
-                        }
-                    )
+                    activity["photo_url"] = fallback_photo_url
+                    if place.get("address"):
+                        activity["address"] = place["address"]
+                    if place.get("place_id"):
+                        activity["place_id"] = place["place_id"]
+
+                    # Save found coordinates back to activity if we didn't already have them
+                    found_location = place.get("location") or {}
+                    if not has_valid_location and found_location.get("latitude") is not None and found_location.get("longitude") is not None:
+                        existing_location = {"lat": found_location["latitude"], "lng": found_location["longitude"]}
+                        activity["location"] = existing_location
+                        has_valid_location = True
+
+                    card = {
+                        "name": place.get("name") or spot_name,
+                        "photo_url": fallback_photo_url,
+                        "address": place.get("address") or address,
+                        "place_id": place.get("place_id") or place_id,
+                    }
+                    if has_valid_location and isinstance(existing_location, dict):
+                        card["location"] = existing_location
+                    cards.append(card)
                 except Exception:
                     continue
 
@@ -470,7 +517,6 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
-            parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
 
             return {
                 "success": True,
@@ -483,7 +529,7 @@ class GeminiService:
         except Exception as e:
             return {"success": False, "error": f"行程生成失敗: {str(e)}"}
 
-    def format_itinerary_for_display(self, raw_output=None, parsed=None):
+    def format_itinerary_for_display(self, raw_output=None, parsed=None, latlng_itinerary=None):
         """把 AI 行程 JSON 轉成適合直接顯示給使用者的可讀文字。"""
         try:
             source_data = parsed
@@ -522,7 +568,7 @@ class GeminiService:
                 prompt, generation_config=self.generation_config
             )
             readable_text = self._strip_markdown_text(response.text)
-            spot_images = self._build_spot_image_cards(normalized_days, readable_text)
+            spot_images = self._build_spot_image_cards(normalized_days, readable_text, latlng_itinerary=latlng_itinerary)
 
             return {
                 "success": True,
@@ -541,6 +587,7 @@ class GeminiService:
         trip_context=None,
         current_itinerary=None,
         current_day_index=-1,
+        latlng_itinerary=None,
     ):
         """與 AI 進行對話"""
         try:
@@ -589,7 +636,7 @@ class GeminiService:
 
             response = chat.send_message(final_message)
             ai_content = self._strip_markdown_text(response.text)
-            spot_images = self._build_spot_image_cards(current_itinerary, ai_content)
+            spot_images = self._build_spot_image_cards(current_itinerary, ai_content, latlng_itinerary=latlng_itinerary)
             parsed_payload = None
             if self._is_itinerary_edit_request(message):
                 try:
@@ -963,7 +1010,6 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
-            parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
             print(parsed_json)
             return {
                 "success": True,
