@@ -38,10 +38,12 @@ html {
 
 .container {
     padding: 20px;
+    /* 底部多留 iPhone 安全區，按鈕不貼到 home indicator */
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     max-width: 600px;
     margin: 0 auto;
     height: 100vh;
-    height: 100dvh;  
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -347,4 +349,49 @@ h1 {
 .no-selection {
     color: #999;
     font-size: 13px;
+}
+
+/* ==================== RWD：窄螢幕（如 iPhone SE / 小型手機） ==================== */
+@media (max-width: 380px) {
+    .container {
+        padding: 16px;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    h1 {
+        font-size: 22px;
+    }
+
+    .search-box input {
+        padding: 11px 14px;
+    }
+
+    /* 卡片格間距收斂，維持點擊面積 */
+    .destination-list {
+        gap: 8px;
+    }
+
+    .destination-item {
+        padding: 10px;
+        min-height: 56px;
+    }
+
+    .destination-item .city-name {
+        font-size: 13px;
+    }
+
+    .destination-item .country-name {
+        font-size: 11px;
+    }
+
+    .confirm-btn {
+        padding: 14px;
+    }
+}
+
+/* ==================== RWD：超窄螢幕改兩欄，避免卡片過擠 ==================== */
+@media (max-width: 320px) {
+    .destination-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
