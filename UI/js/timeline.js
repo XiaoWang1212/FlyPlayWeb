@@ -46,11 +46,12 @@ function loadSingleDayTimeline(day, dayIndex) {
 
 	// 添加該天的日期標題
 	const weekdayLabel = getWeekdayLabel(day.day);
-	if (weekdayLabel) day.weekday = weekdayLabel;
+	day.weekday = weekdayLabel;
 
 	const dayTitle = document.createElement("div");
 	dayTitle.setAttribute("data-day-title", "true");
-	dayTitle.innerHTML = `<span>第 ${day.day} 天 - ${day.weekday}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">${isEditMode ? '取消' : '編輯'}</span></span>`;
+	const dayHeadText = weekdayLabel ? `第 ${day.day} 天 - ${weekdayLabel}` : `第 ${day.day} 天`;
+	dayTitle.innerHTML = `<span>${dayHeadText}</span><span class="edit-btn-group">${isEditMode ? '<span class="edit-text-btn" onclick="confirmDrag()">完成</span>' : ''}<span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">${isEditMode ? '取消' : '編輯'}</span></span>`;
 	timelineList.appendChild(dayTitle);
 
 	// 編輯模式下在活動上方插入新增按鈕
@@ -142,11 +143,11 @@ function loadAllTimelineActivities() {
 
 	allDays.forEach((day, dayIndex) => {
 		const weekdayLabel = getWeekdayLabel(day.day);
-		if (weekdayLabel) day.weekday = weekdayLabel;
+		day.weekday = weekdayLabel;
 
 		const dayTitle = document.createElement("div");
 		dayTitle.setAttribute("data-day-title", "true");
-		dayTitle.textContent = `第 ${day.day} 天 - ${day.weekday}`;
+		dayTitle.textContent = weekdayLabel ? `第 ${day.day} 天 - ${weekdayLabel}` : `第 ${day.day} 天`;
 		timelineList.appendChild(dayTitle);
 
 		console.log(`正在載入第 ${day.day} 天的活動：`, day.activities);

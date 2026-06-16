@@ -872,6 +872,18 @@ function buildItineraryPayload() {
     localStorage.setItem(`projectDestinations_${projectId}`, JSON.stringify(destinations));
   }
 
+  const startDateDefault = new Date().toISOString().slice(0, 10);
+  const start_date = tripSetup.startDate || startDateDefault;
+
+  // 將開始日期也依專案 id 存一份，避免 DB start_date 為 null（舊行程）時
+  // openProject 無法正確還原星期幾
+  if (projectId) {
+    localStorage.setItem(`projectStartDate_${projectId}`, start_date);
+  }
+
+  // 記錄此行程開始的日期，避免沿用殘留的舊日期導致星期幾顯示錯誤
+  localStorage.setItem("currentItineraryStartDate", start_date);
+
   const departure_airport =
     tripSetup.departure || tripSetup.departureLabel || "未填";
   const companion =
@@ -887,14 +899,6 @@ function buildItineraryPayload() {
         : tripSetup.travelType
           ? [tripSetup.travelType]
           : ["any"];
-
-  const startDateDefault = new Date().toISOString().slice(0, 10);
-  const start_date = tripSetup.startDate || startDateDefault;
-
-  // 記錄此行程開始的日期（建立新行程時填寫的「開始日期」），
-  // 避免沿用上一次開啟其他專案時殘留在 currentItineraryStartDate
-  // 的舊日期，導致星期幾顯示錯誤
-  localStorage.setItem("currentItineraryStartDate", start_date);
 
   return {
     project_id: projectId,

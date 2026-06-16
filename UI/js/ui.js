@@ -607,10 +607,19 @@ async function openProject(project) {
 				"currentItineraryId",
 				String(latestItinerary.itinerary_id),
 			);
-			localStorage.setItem(
-				"currentItineraryStartDate",
-				latestItinerary.start_date || "",
-			);
+			// 優先用 DB 的 start_date；若 DB 為 null（舊行程），
+			// 補抓生成時存入的 projectStartDate_${projectId} 本地快取
+			const resolvedStartDate =
+				latestItinerary.start_date ||
+				localStorage.getItem(`projectStartDate_${project.project_id}`) ||
+				"";
+			localStorage.setItem("currentItineraryStartDate", resolvedStartDate);
+			// 每次從 DB 取到有效日期時，也存入 projectStartDate 快取，
+			// 確保下次切換行程時 getWeekdayLabel 能直接由專案 id 取到
+			if (resolvedStartDate) {
+				localStorage.setItem(`projectStartDate_${project.project_id}`, resolvedStartDate);
+				saveTripSetupToStorage({ startDate: resolvedStartDate });
+			}
 		}
 
 		// 強制重新載入資料庫資料
