@@ -517,7 +517,6 @@ class GeminiService:
             token_usage = self._extract_token_usage(response)
 
             raw_content, _, parsed_json = self._parse_response_json(response)
-            parsed_json = self._attach_photo_urls_to_itinerary(parsed_json)
 
             return {
                 "success": True,

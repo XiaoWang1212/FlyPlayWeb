@@ -218,8 +218,8 @@ header {
 	left: 0;
 	width: 100%;
 	background: white;
-	border-top-left-radius: 20px;
-	border-top-right-radius: 20px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
 	box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 	transition: height 0.3s ease-in-out;
 	height: 200px;
@@ -243,10 +243,12 @@ header {
 }
 
 .sheet-handle-bar {
+	position: relative;
 	width: 100%;
-	padding: 15px 0 5px 0;
+	padding: 12px 0;
 	display: flex;
 	justify-content: center;
+	align-items: center;
 	cursor: pointer;
 	touch-action: none;
 }

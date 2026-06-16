@@ -306,21 +306,26 @@ function displayDay(dayIndex) {
 	// 先更新該天時間線，避免路線失敗時仍顯示全部內容
 	loadSingleDayTimeline(day, dayIndex);
 
-	renderDayRoute(
-		routeActivities,
-		dayIndex,
-		mapRouteSession,
-		{
-			strokeColor: getColorByDay(dayIndex),
-			strokeWeight: 7,
-			strokeOpacity: 0.9,
-		},
-		() => {
-			setTimeout(() => {
-				map.panBy(0, 180);
-			}, 150);
-		},
-	);
+	// 聚焦到該天行程的中心點，而不是用相對位移（避免每次切換都往下偏移）
+	if (routeActivities.length > 0) {
+		const dayTotal = routeActivities.reduce(
+			(acc, a) => ({
+				lat: acc.lat + a.location.lat,
+				lng: acc.lng + a.location.lng,
+			}),
+			{ lat: 0, lng: 0 },
+		);
+		const dayAvgLat = dayTotal.lat / routeActivities.length;
+		const dayAvgLng = dayTotal.lng / routeActivities.length;
+		map.panTo({ lat: dayAvgLat , lng: dayAvgLng });
+		map.setZoom(13);
+	}
+
+	renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
+		strokeColor: getColorByDay(dayIndex),
+		strokeWeight: 7,
+		strokeOpacity: 0.9,
+	});
 }
 
 async function initMap() {

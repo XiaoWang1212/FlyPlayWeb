@@ -201,14 +201,14 @@ function resetChatConversation() {
 	}
 	const chatSuggestions = document.getElementById("chatSuggestions");
 	if (chatSuggestions) {
-		chatSuggestions.style.display = "flex";
+		chatSuggestions.classList.remove("suggestions-hidden");
 	}
 }
 
 function showChatSuggestions() {
 	const chatSuggestions = document.getElementById("chatSuggestions");
 	if (!chatSuggestions) return;
-	chatSuggestions.style.display = "flex";
+	chatSuggestions.classList.remove("suggestions-hidden");
 	hasHiddenChatSuggestions = false;
 }
 
@@ -689,12 +689,14 @@ function closeImageModal() {
 async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages = []) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
+	if (type === "bot") div.classList.add("is-typing");
 	document.getElementById("chatMessages").appendChild(div);
 
 	if (!text) {
 		if (type === "bot") {
 			appendSpotImageCards(div, spotImages);
 		}
+		div.classList.remove("is-typing");
 		scrollToBottom();
 		return div;
 	}
@@ -745,6 +747,7 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 		appendSpotImageCards(div, remainingImages);
 	}
 
+	div.classList.remove("is-typing");
 	return div;
 }
 
@@ -844,7 +847,7 @@ function hideChatSuggestions() {
 	if (!chatSuggestions) return;
 
 	hasHiddenChatSuggestions = true;
-	chatSuggestions.style.display = "none";
+	chatSuggestions.classList.add("suggestions-hidden");
 }
 
 // 切換聊天模式
