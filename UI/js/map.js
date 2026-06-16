@@ -88,8 +88,8 @@ function closeCurrentPopup() {
 }
 
 function clearMapRoutes() {
-	mapRouteSession++; // 讓所有進行中的 DirectionsService callback 自行失效
-	currentRenderers.forEach((renderer) => renderer.setMap(null));
+	mapRouteSession++; // 讓所有進行中的路線運算自行失效
+	currentRenderers.forEach((polyline) => polyline.setMap(null));
 	currentRenderers = [];
 
 	currentMarkers.forEach((marker) => (marker.map = null));
@@ -97,6 +97,75 @@ function clearMapRoutes() {
 
 	// 切換天數或離開編輯模式時，一併收掉景點預覽地標 marker。
 	closeSpotPreviewInfo();
+}
+
+// 透過新版 google.maps.routes.Route 計算並繪製單天路線（取代已棄用的 DirectionsService/Renderer）
+async function renderDayRoute(
+	routeActivities,
+	dayIndex,
+	sessionAtDispatch,
+	polylineStyle,
+	onSuccess,
+) {
+	const origin = getWaypointForRoute(routeActivities[0]);
+	const destination = getWaypointForRoute(
+		routeActivities[routeActivities.length - 1],
+	);
+
+	if (!origin || !destination) {
+		addCustomMarkers(routeActivities, dayIndex);
+		return;
+	}
+
+	const intermediates = routeActivities
+		.slice(1, -1)
+		.map((act) => getWaypointForRoute(act));
+
+	try {
+		const { Route } = await google.maps.importLibrary("routes");
+		const { routes } = await Route.computeRoutes({
+			origin,
+			destination,
+			intermediates,
+			travelMode: "WALKING",
+			fields: ["path"],
+		});
+
+		if (sessionAtDispatch !== mapRouteSession) return; // 已被新的 displayDay/clearMapRoutes 取消
+
+		if (!routes || routes.length === 0) {
+			console.error(`路線規劃失敗 (Day ${dayIndex + 1})：找不到路線`, {
+				origin,
+				destination,
+				intermediates,
+				activities: routeActivities.map((a) => ({
+					name: a.place_name,
+					location: a.location,
+					place_id: a.place_id,
+				})),
+			});
+			addCustomMarkers(routeActivities, dayIndex);
+			return;
+		}
+
+		const polylines = routes[0].createPolylines();
+		polylines.forEach((polyline) => {
+			polyline.setOptions(polylineStyle);
+			polyline.setMap(map);
+			currentRenderers.push(polyline);
+		});
+		addCustomMarkers(routeActivities, dayIndex);
+		if (onSuccess) onSuccess();
+	} catch (error) {
+		if (sessionAtDispatch !== mapRouteSession) return;
+		console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
+			error,
+			origin,
+			destination,
+			intermediates,
+		});
+		addCustomMarkers(routeActivities, dayIndex);
+	}
 }
 
 function buildSpotFromPlaceResult(place, fallbackLocation) {
@@ -184,8 +253,6 @@ async function handleMapPlaceClick(event) {
 function displayAllDays() {
 	clearMapRoutes(); // 先清除舊路線
 
-	const { DirectionsService, DirectionsRenderer } = google.maps;
-
 	getActiveDays().forEach((day, dayIndex) => {
 		if (!day || !day.activities) {
 			console.warn(`[ALL] 第 ${dayIndex + 1} 天資料異常`, day);
@@ -210,59 +277,14 @@ function displayAllDays() {
 			return;
 		}
 
-		const directionsService = new DirectionsService();
-		const directionsRenderer = new DirectionsRenderer({
-			map: map,
-			suppressMarkers: true,
-			preserveViewport: true,
-			polylineOptions: {
-				strokeColor: getColorByDay(dayIndex),
-				strokeWeight: 7,
-				strokeOpacity: 0.6,
-			},
-		});
-		currentRenderers.push(directionsRenderer);
-
-		const origin = getLocationForDirections(routeActivities[0]);
-		const destination = getLocationForDirections(
-			routeActivities[routeActivities.length - 1],
-		);
-		const waypoints = routeActivities.slice(1, -1).map((act) => ({
-			location: getLocationForDirections(act),
-			stopover: true,
-		}));
 		map.panTo({ lat: avgLat - 0.07, lng: avgLng });
 		map.setZoom(11.5);
-		const sessionAtDispatch = mapRouteSession;
-		directionsService.route(
-			{
-				origin: origin,
-				destination: destination,
-				waypoints: waypoints,
-				optimizeWaypoints: false,
-				travelMode: google.maps.TravelMode.WALKING,
-			},
-			(result, status) => {
-				if (sessionAtDispatch !== mapRouteSession) return; // 已被新的 displayDay/clearMapRoutes 取消
-				if (status === "OK") {
-					directionsRenderer.setDirections(result);
-					addCustomMarkers(routeActivities, dayIndex);
-				} else {
-					console.error(`[ALL] 路線規劃失敗 (Day ${dayIndex + 1})`, {
-						status: status,
-						origin: origin,
-						destination: destination,
-						waypoints: waypoints,
-						activities: routeActivities.map((a) => ({
-							name: a.place_name,
-							location: a.location,
-							place_id: a.place_id,
-						})),
-					});
-					addCustomMarkers(routeActivities, dayIndex);
-				}
-			},
-		);
+
+		renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
+			strokeColor: getColorByDay(dayIndex),
+			strokeWeight: 7,
+			strokeOpacity: 0.6,
+		});
 	});
 
 	loadAllTimelineActivities();
@@ -278,72 +300,25 @@ function displayDay(dayIndex) {
 		return;
 	}
 
-	const { DirectionsService, DirectionsRenderer } = google.maps;
-
-	const directionsService = new DirectionsService();
-	const directionsRenderer = new DirectionsRenderer({
-		map: map,
-		suppressMarkers: true,
-		polylineOptions: {
-			strokeColor: getColorByDay(dayIndex),
-			strokeWeight: 7,
-			strokeOpacity: 0.9,
-		},
-	});
-
-	currentRenderers.push(directionsRenderer);
-
 	const activities = day.activities;
 	const routeActivities = activities.filter((a) => isValidRouteLocation(a));
 
 	// 先更新該天時間線，避免路線失敗時仍顯示全部內容
 	loadSingleDayTimeline(day, dayIndex);
 
-	const origin = getLocationForDirections(routeActivities[0]);
-	const destination = getLocationForDirections(
-		routeActivities[routeActivities.length - 1],
-	);
-	if (!origin || !destination) {
-		addCustomMarkers(routeActivities, dayIndex);
-		return;
-	}
-
-	const waypoints = routeActivities.slice(1, -1).map((act) => ({
-		location: getLocationForDirections(act),
-		stopover: true,
-	}));
-
-	const sessionAtDispatch = mapRouteSession;
-	directionsService.route(
+	renderDayRoute(
+		routeActivities,
+		dayIndex,
+		mapRouteSession,
 		{
-			origin: origin,
-			destination: destination,
-			waypoints: waypoints,
-			optimizeWaypoints: false,
-			travelMode: google.maps.TravelMode.WALKING,
+			strokeColor: getColorByDay(dayIndex),
+			strokeWeight: 7,
+			strokeOpacity: 0.9,
 		},
-		(result, status) => {
-			if (sessionAtDispatch !== mapRouteSession) return; // 已被新的 displayDay/clearMapRoutes 取消
-			if (status === "OK") {
-				directionsRenderer.setDirections(result);
-				addCustomMarkers(routeActivities, dayIndex);
-				setTimeout(() => {
-					map.panBy(0, 180);
-				}, 150);
-			} else {
-				console.error(`路線規劃失敗 (Day ${dayIndex + 1})`, {
-					status: status,
-					origin: origin,
-					destination: destination,
-					waypoints: waypoints,
-					activities: routeActivities.map((a) => ({
-						name: a.place_name,
-						location: a.location,
-						place_id: a.place_id,
-					})),
-				});
-				addCustomMarkers(routeActivities, dayIndex);
-			}
+		() => {
+			setTimeout(() => {
+				map.panBy(0, 180);
+			}, 150);
 		},
 	);
 }
