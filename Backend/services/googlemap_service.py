@@ -325,23 +325,56 @@ class GoogleMapService:
         if cached:
             return cached
         try:
-            url = f"https://maps.googleapis.com/maps/api/directions/json"
-            params = {
-                'origin': origin,
-                'destination': destination,
-                'mode': mode,
-                'key': self.api_key,
-                'language': 'zh-TW'
+            travel_mode_map = {'driving': 'DRIVE', 'transit': 'TRANSIT', 'walking': 'WALK'}
+            travel_mode = travel_mode_map.get(mode.lower(), 'DRIVE')
+
+            url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': self.api_key,
+                'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters'
             }
-            response = requests.get(url, params=params, timeout=10)
+            payload = {
+                'origin': {'address': origin},
+                'destination': {'address': destination},
+                'travelMode': travel_mode,
+                'languageCode': 'zh-TW',
+                'units': 'METRIC'
+            }
+            if travel_mode == 'TRANSIT':
+                payload['departureTime'] = (
+                    datetime.now(timezone.utc)
+                    .replace(hour=9, minute=0, second=0)
+                    .isoformat()
+                )
+
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response.raise_for_status()
             data = response.json()
-            if data.get('status') != 'OK':
-                return {'success': False, 'error': data.get('error_message', '查詢失敗')}
-            leg = data['routes'][0]['legs'][0]
+
+            if not data.get('routes'):
+                return {'success': False, 'error': '無法找到路線'}
+
+            route = data['routes'][0]
+            duration_seconds = int(route.get('duration', '0s').replace('s', ''))
+            if duration_seconds < 3600:
+                duration_text = f"{duration_seconds // 60} 分鐘"
+            else:
+                hours = duration_seconds // 3600
+                minutes = (duration_seconds % 3600) // 60
+                duration_text = f"{hours} 小時 {minutes} 分鐘"
+
+            distance_meters = route.get('distanceMeters', 0)
+            distance_text = (
+                f"{distance_meters} 公尺"
+                if distance_meters < 1000
+                else f"{distance_meters / 1000:.1f} 公里"
+            )
+
             result = {
                 'success': True,
-                'distance': leg['distance']['text'],
-                'duration': leg['duration']['text'],
+                'distance': distance_text,
+                'duration': duration_text,
                 'mode': mode
             }
             self.place_cache.set(cache_key, result)
@@ -581,36 +614,67 @@ class GoogleMapService:
         if cached:
             return cached
         try:
-            url = f"https://maps.googleapis.com/maps/api/directions/json"
-            params = {
-                'origin': origin,
-                'destination': destination,
-                'mode': mode,
-                'key': self.api_key,
-                'language': 'zh-TW'
+            travel_mode_map = {'driving': 'DRIVE', 'transit': 'TRANSIT', 'walking': 'WALK'}
+            travel_mode = travel_mode_map.get(mode.lower(), 'DRIVE')
+
+            url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': self.api_key,
+                'X-Goog-FieldMask': (
+                    'routes.legs.steps.transitDetails,'
+                    'routes.legs.steps.navigationInstruction,'
+                    'routes.legs.steps.distanceMeters,'
+                    'routes.legs.steps.staticDuration,'
+                    'routes.legs.steps.travelMode'
+                )
             }
-            response = requests.get(url, params=params, timeout=10)
+            payload = {
+                'origin': {'address': origin},
+                'destination': {'address': destination},
+                'travelMode': travel_mode,
+                'languageCode': 'zh-TW',
+                'units': 'METRIC'
+            }
+            if travel_mode == 'TRANSIT':
+                payload['departureTime'] = (
+                    datetime.now(timezone.utc)
+                    .replace(hour=9, minute=0, second=0)
+                    .isoformat()
+                )
+
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response.raise_for_status()
             data = response.json()
-            if data.get('status') != 'OK':
-                return {'success': False, 'error': data.get('error_message', '查詢失敗')}
+
+            if not data.get('routes'):
+                return {'success': False, 'error': '查詢失敗'}
+
             steps = []
-            for step in data['routes'][0]['legs'][0]['steps']:
-                if mode == 'transit' and 'transit_details' in step:
-                    transit = step['transit_details']
+            for step in data['routes'][0].get('legs', [{}])[0].get('steps', []):
+                step_mode = step.get('travelMode', '')
+                instruction = step.get('navigationInstruction', {}).get('instructions', '')
+                if step_mode == 'TRANSIT' and step.get('transitDetails'):
+                    transit = step['transitDetails']
+                    stop_details = transit.get('stopDetails', {})
+                    transit_line = transit.get('transitLine', {})
                     steps.append({
-                        'instruction': step['html_instructions'],
-                        'vehicle': transit['line']['vehicle']['type'],
-                        'line_name': transit['line']['name'],
-                        'departure_stop': transit['departure_stop']['name'],
-                        'arrival_stop': transit['arrival_stop']['name'],
-                        'num_stops': transit['num_stops']
+                        'instruction': instruction,
+                        'vehicle': transit_line.get('vehicle', {}).get('type', ''),
+                        'line_name': transit_line.get('name', ''),
+                        'departure_stop': stop_details.get('departureStop', {}).get('name', ''),
+                        'arrival_stop': stop_details.get('arrivalStop', {}).get('name', ''),
+                        'num_stops': transit.get('stopCount', 0)
                     })
                 else:
+                    distance_m = step.get('distanceMeters', 0)
+                    duration_s = int(step.get('staticDuration', '0s').replace('s', ''))
                     steps.append({
-                        'instruction': step['html_instructions'],
-                        'distance': step['distance']['text'],
-                        'duration': step['duration']['text']
+                        'instruction': instruction,
+                        'distance': f"{distance_m} 公尺" if distance_m < 1000 else f"{distance_m / 1000:.1f} 公里",
+                        'duration': f"{duration_s // 60} 分鐘"
                     })
+
             result = {
                 'success': True,
                 'steps': steps
