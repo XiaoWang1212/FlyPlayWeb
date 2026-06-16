@@ -25,16 +25,18 @@ def send_message():
         trip_context = data.get('tripContext', {})
         current_itinerary = data.get('currentItinerary', [])
         current_day_index = data.get('currentDayIndex', -1)
-        
+        itinerary_id = data.get('itineraryId')
+
         if not message:
             return unified_response(400, '必須提供 message 參數')
-        
+
         result = chat_controller.handle_chat_message(
             message,
             conversation_history,
             trip_context,
             current_itinerary,
             current_day_index,
+            itinerary_id=itinerary_id,
         )
         
         if result['success']:

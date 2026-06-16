@@ -33,6 +33,38 @@ function getChatCurrentItinerary() {
 	return [];
 }
 
+function _mergeSpotPhotosToLocalItinerary(spotImages) {
+	if (!Array.isArray(spotImages) || spotImages.length === 0) return;
+
+	const photoMap = {};
+	for (const img of spotImages) {
+		const name = (img.name || "").trim();
+		const url = (img.photo_url || "").trim();
+		if (name && url) photoMap[name] = img;
+	}
+
+	// 更新 allDays (in-memory)
+	if (Array.isArray(allDays)) {
+		for (const day of allDays) {
+			for (const act of (day.activities || [])) {
+				const name = (act.place_name || act.location_name || act.name || "").trim();
+				if (name && photoMap[name] && !act.photo_url) {
+					act.photo_url = photoMap[name].photo_url;
+					if (photoMap[name].address) act.address = photoMap[name].address;
+					if (photoMap[name].place_id) act.place_id = photoMap[name].place_id;
+					if (photoMap[name].location) {
+						const loc = photoMap[name].location;
+						const curLoc = act.location;
+						const hasValidLoc = curLoc && curLoc.lat != null && curLoc.lat !== 0 && curLoc.lng != null && curLoc.lng !== 0;
+						if (!hasValidLoc) act.location = loc;
+					}
+				}
+			}
+		}
+	}
+
+}
+
 function serializeChatItinerary(days) {
 	return {
 		data: (days || []).map((day) => ({
@@ -878,6 +910,7 @@ async function sendMessage() {
 	scrollToBottom();
 
 	try {
+		const itineraryId = localStorage.getItem("currentItineraryId") || null;
 		const resp = await fetch(API_BASE + "/api/chat/message", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -887,6 +920,7 @@ async function sendMessage() {
 				tripContext,
 				currentItinerary,
 				currentDayIndex,
+				itineraryId,
 			}),
 		});
 
@@ -900,6 +934,11 @@ async function sendMessage() {
 				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
 				"（無回覆）";
 			await appendMsg(aiText, "bot", data.spot_images || []);
+
+			if (Array.isArray(data.spot_images) && data.spot_images.length > 0) {
+				_mergeSpotPhotosToLocalItinerary(data.spot_images);
+			}
+
 			if (data && data.parsed && data.parsed.action === "update_day") {
 				const updated = applyChatItineraryUpdate(data.parsed);
 				if (!updated) {
