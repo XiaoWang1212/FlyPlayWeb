@@ -117,8 +117,17 @@ class TravelController:
         )
         return res
 
-    def format_itinerary_for_display(self, raw_output=None, parsed=None):
-        return self.gemini_service.format_itinerary_for_display(raw_output, parsed)
+    def format_itinerary_for_display(self, raw_output=None, parsed=None, itinerary_id=None):
+        latlng_itinerary = None
+        if itinerary_id:
+            try:
+                row = self.travel_service.get_itinerary(int(itinerary_id))
+                if row:
+                    latlng_itinerary = row.get("data_latlng")
+            except Exception:
+                pass
+
+        return self.gemini_service.format_itinerary_for_display(raw_output, parsed, latlng_itinerary=latlng_itinerary)
 
     def delete_project(self, project_id):
         data = self.travel_service.delete_project(project_id)

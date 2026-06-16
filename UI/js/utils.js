@@ -99,15 +99,15 @@ function isValidRouteLocation(activity) {
   return true;
 }
 
-// Helper: 取得 Directions API 需要的地點格式
-function getLocationForDirections(activity) {
+// Helper: 取得 Routes API（google.maps.routes.Route）需要的地點格式
+function getWaypointForRoute(activity) {
   if (
     activity &&
     activity.place_id &&
     typeof activity.place_id === "string" &&
     activity.place_id.length > 0
   ) {
-    return { placeId: activity.place_id };
+    return new google.maps.places.Place({ id: activity.place_id });
   }
   if (
     activity &&

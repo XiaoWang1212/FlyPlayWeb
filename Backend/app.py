@@ -216,11 +216,6 @@ def create_app():
                         travel_service.update_itinerary_ai_data(
                             int(itinerary_id),
                             detailed_itinerary=result["data"],
-                            # data_latlng=(
-                            #     existing_itinerary
-                            #     if existing_itinerary is not None
-                            #     else None
-                            # ),
                         )
                     except Exception as save_err:
                         print(f"儲存 detailed_itinerary 失敗: {save_err}")
@@ -270,7 +265,14 @@ def create_app():
 
             itinerary_id = request_data.get("itinerary_id")
 
-            modified_days = data_fix_service.enrich_data_with_picture(days)
+            # 從前端帶來的 spot_images_cache（_build_spot_image_cards 的 nearby search 結果）建快取
+            spot_images_map = {}
+            for img in (request_data.get("spot_images_cache") or []):
+                name = (img.get("name") or "").strip()
+                if name and img.get("photo_url"):
+                    spot_images_map[name] = img
+
+            modified_days = data_fix_service.enrich_data_with_picture(days, spot_images_map=spot_images_map)
 
             if itinerary_id:
                 try:

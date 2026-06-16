@@ -1,6 +1,8 @@
 #from services.openai_service import GeminiService
 from services.gemini_service import GeminiService
+from services.travel_service import TravelService
 import asyncio
+import json
 import nest_asyncio
 
 # 允許在已有事件迴圈的環境中重用迴圈
@@ -9,6 +11,7 @@ nest_asyncio.apply()
 class ChatController:
     def __init__(self):
         self.chat_service = GeminiService()
+        self.travel_service = TravelService()
 
     def handle_chat_message(
         self,
@@ -17,6 +20,7 @@ class ChatController:
         trip_context=None,
         current_itinerary=None,
         current_day_index=-1,
+        itinerary_id=None,
     ):
         """處理用戶聊天消息"""
         try:
@@ -26,15 +30,66 @@ class ChatController:
                     'error': '必須提供聊天內容',
                 }
 
-            return self.chat_service.chat_with_ai(
+            latlng_itinerary = None
+            if itinerary_id:
+                try:
+                    row = self.travel_service.get_itinerary(int(itinerary_id))
+                    if row:
+                        latlng_itinerary = row.get('data_latlng')
+                except Exception:
+                    pass
+
+            result = self.chat_service.chat_with_ai(
                 message,
                 conversation_history,
                 trip_context,
                 current_itinerary,
                 current_day_index,
+                latlng_itinerary=latlng_itinerary,
             )
+
+            if result.get('success') and itinerary_id and isinstance(current_itinerary, list):
+                try:
+                    self._persist_found_photos(int(itinerary_id), current_itinerary)
+                except Exception:
+                    pass
+
+            return result
         except Exception as e:
             return {'success': False, 'error': f'聊天處理失敗: {str(e)}'}
+
+    def _persist_found_photos(self, itinerary_id, current_itinerary):
+        photo_map = {}
+        for day in current_itinerary:
+            for act in (day.get('activities') or day.get('location') or []):
+                name = (act.get('place_name') or act.get('location_name') or act.get('name') or '').strip()
+                url = (act.get('photo_url') or '').strip()
+                if name and url:
+                    photo_map[name] = url
+        if not photo_map:
+            return
+
+        row = self.travel_service.get_itinerary(itinerary_id)
+        if not row:
+            return
+        detailed = row.get('detailed_itinerary')
+        if isinstance(detailed, str):
+            detailed = json.loads(detailed)
+        if not isinstance(detailed, dict):
+            return
+
+        parsed = detailed.get('parsed') or {}
+        days = parsed.get('days') or parsed.get('data') or []
+        updated = False
+        for day in days:
+            for loc in (day.get('location') or day.get('activities') or []):
+                name = (loc.get('place_name') or loc.get('location_name') or '').strip()
+                if name in photo_map and not loc.get('photo_url'):
+                    loc['photo_url'] = photo_map[name]
+                    updated = True
+
+        if updated:
+            self.travel_service.update_itinerary_ai_data(itinerary_id, detailed_itinerary=detailed)
     
     def handle_travel_recommendation(self, location, days, transportation, preferences):
         """處理旅遊推薦請求"""

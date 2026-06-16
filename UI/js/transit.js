@@ -42,6 +42,7 @@ function openTransitModal(block) {
                 const walkMinutes = parseInt(walkDur, 10);
                 if (walkMinutes <= 5) {
                   el.innerHTML = `<span class="tno-route">建議步行</span>`;
+                  document.getElementById('tm_TRANSIT')?.classList.add('disabled');
                   return;
                 }
               } catch (e) {}
@@ -177,7 +178,8 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
           if (hourMatch) hours = parseInt(hourMatch[1], 10);
           if (minMatch) minutes = parseInt(minMatch[1], 10);
           
-          durationMinutes = hours > 0 || minutes > 0 ? hours * 60 + minutes : 999;
+          // 用「有沒有抓到時間數字」判斷解析成功與否，避免真實的 0 分被誤判成解析失敗
+          durationMinutes = (hourMatch || minMatch) ? hours * 60 + minutes : 999;
         }
 
         modeDurations[modeKey] = durationMinutes;
@@ -200,7 +202,6 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
   await Promise.all(promises);
   
   if (block && autoSelectFastest) {
-    // 如果走路 <= 15 分鐘，優先走路
     if (modeDurations['WALKING'] !== undefined && modeDurations['WALKING'] <= 15) {
       block.dataset.bestMode = 'WALKING';
     } else {
@@ -309,6 +310,7 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
     const walkMinutes = parseInt(walkingText, 10);
     if (walkMinutes <= 5) {
       transitEl.innerHTML = `<span class="tno-route">建議步行</span>`;
+      document.getElementById('tm_TRANSIT')?.classList.add('disabled');
     }
   }
 }
