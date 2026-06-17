@@ -853,12 +853,36 @@ class GeminiService:
                 else "行程緊湊度：輕鬆，每日可用觀光時間為 6 小時，請安排景點使每日建議停留時間總和不超過 6 小時（含景點間移動時間），景點數不得超過 3 個。"
             )
 
-            prompt = f"""請為以下旅客創建完整的{days}天{location}行程。
+            locations = [loc.strip() for loc in location.replace(",", "、").split("、") if loc.strip()]
+            location_str = "、".join(locations)
+            if len(locations) > 1:
+                days_per_location = max(1, days // len(locations))
+                allocation_lines = []
+                day_cursor = 1
+                for i, loc in enumerate(locations):
+                    end_day = day_cursor + days_per_location - 1 if i < len(locations) - 1 else days
+                    if day_cursor == end_day:
+                        allocation_lines.append(f"- 第{day_cursor}天：{loc}")
+                    else:
+                        allocation_lines.append(f"- 第{day_cursor}～{end_day}天：{loc}")
+                    day_cursor = end_day + 1
+                allocation_plan = "\n            ".join(allocation_lines)
+                location_coverage_rule = (
+                    f"【絕對必要條件】此行程涵蓋以下 {len(locations)} 個城市，每個城市都必須出現在行程中，不得遺漏任何一個：{location_str}。\n"
+                    f"            請嚴格按照以下天數分配（可小幅調整，但每個城市至少要有1天）：\n"
+                    f"            {allocation_plan}\n"
+                    f"            同一天的所有景點必須位於同一個城市，不可混搭不同城市的景點。\n"
+                    f"            若你生成的行程未包含上述所有城市，請視為錯誤並重新生成。\n"
+                )
+            else:
+                location_coverage_rule = ""
+
+            prompt = f"""請為以下旅客創建完整的{days}天{location_str}行程。
             旅客類型: {traveler_type}
             行程緊湊度: {pace_label}
             興趣: {interests_str}
             {date_info}
-            
+            {location_coverage_rule}
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "data": [
@@ -886,8 +910,8 @@ class GeminiService:
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             絕對不可以推薦任何機場、國際機場、航廈、候機室、機場捷運站這類地點（例如：桃園國際機場、成田機場、羽田機場、關西國際機場等），機場是交通節點，不得列為觀光景點，即使行程起訖點在機場附近也不得列入。
-            所有景點都必須是位於「{location}」當地、實際存在於該城市或地區範圍內的真實景點，絕對不可以出現其他城市或國家的景點。
-            特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location}」當地真實對應、性質相近的景點。
+            所有景點都必須是位於「{location_str}」當地、實際存在於這些城市或地區範圍內的真實景點，絕對不可以出現行程清單以外的城市或國家的景點。
+            特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location_str}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location_str}」當地真實對應、性質相近的景點。
             檢查每日景點的距離不要超過120公里。
             同一區的景點安排在同一天，不要同個區的景點去兩天。
             像是秋葉原電器街和秋葉原根本上是同個地方，就不要同一天安排一個叫秋葉原電器街、一個叫秋葉原的景點，請合併成同一個景點。

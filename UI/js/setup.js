@@ -854,7 +854,9 @@ function buildItineraryPayload() {
   const destinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
-  const destination = destinations?.[0]?.city || destinations?.[0]?.name || "";
+  const destination = destinations.length > 0
+    ? destinations.map((d) => d.city || d.name).filter(Boolean).join("、")
+    : "";
 
   const days = Number(tripSetup.daysValue || 0);
   const selectedTravelTypes = Array.isArray(tripSetup.travelTypes)
