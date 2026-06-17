@@ -152,17 +152,17 @@ class DataFixService:
             'data': output_data
         }
     
-    def enrich_data_with_picture(self, days):
+    def enrich_data_with_picture(self, days, spot_images_map=None):
         """增強詳細行程格式 (location 字段) 的圖片信息"""
         modified_days = []
-        
+
         for day in days:
             modified_day = {
                 'day': day.get('day'),
                 'weekday': day.get('weekday', ''),
                 'location': []
             }
-            
+
             # 修改每個地點
             locations = day.get('location', [])
             for loc in locations:
@@ -174,7 +174,36 @@ class DataFixService:
                     'cost': loc.get('cost', ''),
                     'location': loc.get('location', {'lat': 0, 'lng': 0})
                 }
-                
+
+                # 優先套用 _build_spot_image_cards 已搜尋的快取資料
+                if spot_images_map:
+                    cached = spot_images_map.get(modified_loc['place_name'])
+                    if cached and cached.get('photo_url'):
+                        modified_loc['photo_url'] = cached['photo_url']
+                        # 保留原有 photos 陣列，或從 photo_url 補一個最小結構供 timeline 使用
+                        modified_loc['photos'] = loc.get('photos') or [{'photo_url': cached['photo_url']}]
+                        if cached.get('location'):
+                            modified_loc['location'] = cached['location']
+                        if cached.get('address'):
+                            modified_loc['address'] = cached['address']
+                        if cached.get('place_id'):
+                            modified_loc['place_id'] = cached['place_id']
+                        modified_day['location'].append(modified_loc)
+                        continue
+
+                # 已有圖片直接沿用，不再重複搜尋
+                existing_photo_url = str(loc.get('photo_url') or '').strip()
+                if existing_photo_url:
+                    modified_loc['photo_url'] = existing_photo_url
+                    if loc.get('photos'):
+                        modified_loc['photos'] = loc['photos']
+                    if loc.get('rating'):
+                        modified_loc['rating'] = loc['rating']
+                    if loc.get('address'):
+                        modified_loc['address'] = loc['address']
+                    modified_day['location'].append(modified_loc)
+                    continue
+
                 # 使用 search_places 獲取圖片
                 place_name = modified_loc['place_name']
                 existing_location = modified_loc.get('location')

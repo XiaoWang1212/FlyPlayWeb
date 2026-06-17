@@ -129,6 +129,7 @@ def summarize_itinerary():
     result = travel_ctrl.format_itinerary_for_display(
         raw_output=payload.get("raw_output"),
         parsed=payload.get("parsed"),
+        itinerary_id=payload.get("itinerary_id"),
     )
     if not result["success"]:
         return unified_response(500, result.get("error"))

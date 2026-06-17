@@ -33,6 +33,38 @@ function getChatCurrentItinerary() {
 	return [];
 }
 
+function _mergeSpotPhotosToLocalItinerary(spotImages) {
+	if (!Array.isArray(spotImages) || spotImages.length === 0) return;
+
+	const photoMap = {};
+	for (const img of spotImages) {
+		const name = (img.name || "").trim();
+		const url = (img.photo_url || "").trim();
+		if (name && url) photoMap[name] = img;
+	}
+
+	// 更新 allDays (in-memory)
+	if (Array.isArray(allDays)) {
+		for (const day of allDays) {
+			for (const act of (day.activities || [])) {
+				const name = (act.place_name || act.location_name || act.name || "").trim();
+				if (name && photoMap[name] && !act.photo_url) {
+					act.photo_url = photoMap[name].photo_url;
+					if (photoMap[name].address) act.address = photoMap[name].address;
+					if (photoMap[name].place_id) act.place_id = photoMap[name].place_id;
+					if (photoMap[name].location) {
+						const loc = photoMap[name].location;
+						const curLoc = act.location;
+						const hasValidLoc = curLoc && curLoc.lat != null && curLoc.lat !== 0 && curLoc.lng != null && curLoc.lng !== 0;
+						if (!hasValidLoc) act.location = loc;
+					}
+				}
+			}
+		}
+	}
+
+}
+
 function serializeChatItinerary(days) {
 	return {
 		data: (days || []).map((day) => ({
@@ -169,14 +201,14 @@ function resetChatConversation() {
 	}
 	const chatSuggestions = document.getElementById("chatSuggestions");
 	if (chatSuggestions) {
-		chatSuggestions.style.display = "flex";
+		chatSuggestions.classList.remove("suggestions-hidden");
 	}
 }
 
 function showChatSuggestions() {
 	const chatSuggestions = document.getElementById("chatSuggestions");
 	if (!chatSuggestions) return;
-	chatSuggestions.style.display = "flex";
+	chatSuggestions.classList.remove("suggestions-hidden");
 	hasHiddenChatSuggestions = false;
 }
 
@@ -922,12 +954,14 @@ function closeImageModal() {
 async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages = []) {
 	const div = document.createElement("div");
 	div.className = `chat-msg ${type}`;
+	if (type === "bot") div.classList.add("is-typing");
 	document.getElementById("chatMessages").appendChild(div);
 
 	if (!text) {
 		if (type === "bot") {
 			appendSpotImageCards(div, spotImages);
 		}
+		div.classList.remove("is-typing");
 		scrollToBottom();
 		return div;
 	}
@@ -1003,6 +1037,7 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 		appendSpotImageCards(div, remainingImages);
 	}
 
+	div.classList.remove("is-typing");
 	return div;
 }
 
@@ -1163,6 +1198,7 @@ async function sendMessage() {
 	scrollToBottom();
 
 	try {
+		const itineraryId = localStorage.getItem("currentItineraryId") || null;
 		const resp = await fetch(API_BASE + "/api/chat/message", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -1172,6 +1208,7 @@ async function sendMessage() {
 				tripContext,
 				currentItinerary,
 				currentDayIndex,
+				itineraryId,
 			}),
 		});
 

@@ -78,7 +78,7 @@ function formatItineraryFallbackText(rawOutput, parsedOutput) {
     .trim();
 }
 
-async function buildReadableItinerary(token, rawOutput, parsedOutput) {
+async function buildReadableItinerary(token, rawOutput, parsedOutput, itineraryId = null) {
   try {
     const res = await fetch(`${API_BASE}/api/travel/itinerary/summary`, {
       method: "POST",
@@ -89,6 +89,7 @@ async function buildReadableItinerary(token, rawOutput, parsedOutput) {
       body: JSON.stringify({
         raw_output: rawOutput,
         parsed: parsedOutput,
+        itinerary_id: itineraryId,
       }),
     });
 
@@ -965,13 +966,34 @@ async function submitAIRecommendation() {
 
     localStorage.setItem("generatedItinerary", JSON.stringify(result.data));
 
+    const itineraryId = result.data?.itinerary_id || result.data?.id || null;
+
+    if (itineraryId) {
+      try {
+        await fetch(`${API_BASE}/data/latlng`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ itinerary_id: itineraryId }),
+        });
+      } catch (latlngErr) {
+        console.warn("data/latlng 補齊失敗，繼續生成摘要：", latlngErr);
+      }
+    }
+
     const readableItinerary = await buildReadableItinerary(
       token,
       result.data?.raw_output,
       result.data?.parsed,
+      itineraryId,
     );
 
     localStorage.setItem("pendingChatOutput", JSON.stringify(readableItinerary));
+    if (Array.isArray(readableItinerary.spot_images) && readableItinerary.spot_images.length > 0) {
+      localStorage.setItem("spotImagesCache", JSON.stringify(readableItinerary.spot_images));
+    }
 
     console.log("✓ 準備跳轉至 index.html");
     flyToIndex();
