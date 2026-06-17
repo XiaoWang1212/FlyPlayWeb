@@ -450,6 +450,25 @@ class GeminiService:
             keyword in text for keyword in ["修改", "更改", "調整", "改成", "替換"]
         )
 
+    def _is_nearby_attraction_request(self, message):
+        keywords = ["附近熱門景點", "附近景點", "附近熱門", "周邊景點", "附近美食推薦", "附近美食", "附近餐廳"]
+        return any(kw in str(message or "") for kw in keywords)
+
+    def _extract_target_day_from_message(self, message):
+        text = str(message or "")
+        match = re.search(r'第\s*([0-9一二三四五六七八九十]+)\s*天', text)
+        if match:
+            day_str = match.group(1)
+            chinese_map = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+                           '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
+            if day_str in chinese_map:
+                return chinese_map[day_str]
+            try:
+                return int(day_str)
+            except ValueError:
+                pass
+        return None
+
     def _build_itinerary_context_text(self, current_itinerary, current_day_index=-1):
         if not isinstance(current_itinerary, list) or not current_itinerary:
             return ""
@@ -594,7 +613,48 @@ class GeminiService:
                 current_itinerary, current_day_index
             )
             final_message = str(message).strip()
-            if self._is_itinerary_edit_request(final_message) and itinerary_context_text:
+            is_nearby_request = False
+            if self._is_nearby_attraction_request(final_message):
+                target_day = self._extract_target_day_from_message(final_message)
+                is_food_request = any(kw in final_message for kw in ["美食", "餐廳"])
+                category_hint = "美食餐廳" if is_food_request else "熱門景點"
+                if target_day and itinerary_context_text:
+                    is_nearby_request = True
+                    final_message = (
+                        f"你是一個旅遊行程助理。請根據第 {target_day} 天的行程所在城市／區域，"
+                        f"推薦一些該地區值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
+                        f"旅遊資訊：\n{trip_context_text or '無'}\n\n"
+                        f"現有行程：\n{itinerary_context_text}\n\n"
+                        "請只回傳純 JSON，不要輸出 Markdown 或多餘說明，格式如下：\n"
+                        "{\n"
+                        f'  "action": "nearby_attractions",\n'
+                        f'  "target_day": {target_day},\n'
+                        f'  "summary": "以下為第 {target_day} 天推薦的其他{category_hint}",\n'
+                        '  "attractions": [\n'
+                        '    {\n'
+                        '      "name": "景點名稱",\n'
+                        '      "type": "景點類型（景點／美食／購物／文化）",\n'
+                        '      "description": "一句話簡介",\n'
+                        '      "estimated_time": "建議停留 X 小時（固定以「建議停留」開頭）"\n'
+                        '    }\n'
+                        '  ]\n'
+                        "}\n\n"
+                        "規則：\n"
+                        f"1. 推薦 4~6 個{category_hint}\n"
+                        f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
+                        f"3. 絕對不得推薦已出現在第 {target_day} 天行程中的地點\n"
+                        "4. 不得推薦機場、航廈等交通節點\n"
+                        "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
+                        f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式"
+                    )
+                elif trip_context_text:
+                    final_message = (
+                        "已知旅遊資訊：\n"
+                        f"{trip_context_text}\n\n"
+                        f"使用者問題：{final_message}\n\n"
+                        "請直接根據已知資訊給出具體建議，不得反問使用者任何問題。"
+                    )
+            elif self._is_itinerary_edit_request(final_message) and itinerary_context_text:
                 final_message = (
                     "你是一個旅遊行程編輯器。使用者要透過聊天修改某一天的行程。\n"
                     "請只修改使用者指定的那一天，不要改其他天。\n"
@@ -610,7 +670,7 @@ class GeminiService:
                     "{\n"
                     '  "action": "update_day",\n'
                     '  "target_day": 2,\n'
-                    '  "summary": "已將第 2 天下午改為...",\n'
+                    '  "summary": "（只說本次新增／修改／刪除了什麼，例如：已新增「福岡城跡」在大濠公園之後。不要列出整天行程）",\n'
                     '  "updated_day": {\n'
                     '    "day": 2,\n'
                     '    "weekday": "星期五",\n'
@@ -619,6 +679,7 @@ class GeminiService:
                     "    ]\n"
                     "  }\n"
                     "}\n"
+                    "summary 規則：只描述本次操作（新增了什麼／刪除了什麼／把什麼改成什麼），一句話即可，絕對不可重新列出所有景點。\n"
                     "如果無法完成修改，請回傳 {\"action\": \"need_clarification\", \"question\": \"...\"}。"
                 )
             elif trip_context_text:
@@ -633,7 +694,14 @@ class GeminiService:
             ai_content = self._strip_markdown_text(response.text)
             spot_images = self._build_spot_image_cards(current_itinerary, ai_content, latlng_itinerary=latlng_itinerary)
             parsed_payload = None
-            if self._is_itinerary_edit_request(message):
+            if is_nearby_request:
+                try:
+                    _, _, parsed_payload = self._parse_response_json(response)
+                    if isinstance(parsed_payload, dict):
+                        ai_content = parsed_payload.get("summary", ai_content)
+                except Exception:
+                    parsed_payload = None
+            elif self._is_itinerary_edit_request(message):
                 try:
                     _, _, parsed_payload = self._parse_response_json(response)
                 except Exception:

@@ -514,6 +514,141 @@ async function showDayPickerMessage() {
 	appendDayPickerCards(msgEl, days);
 }
 
+async function showDayPickerForNearbyAttractions(isFood) {
+	const days = getChatCurrentItinerary();
+	if (!days.length) {
+		await addBotMessage("目前沒有載入行程，請先確認行程已建立。");
+		return;
+	}
+	const label = isFood ? "附近美食" : "附近熱門景點";
+	const prompt = `你想查第幾天行程的${label}推薦？`;
+	const msgEl = await typeMessage(prompt, "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: prompt });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+	days.forEach((day) => {
+		const dayNum = Number(day.day);
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			await fetchNearbyAttractions(dayNum, isFood);
+		});
+		row.appendChild(btn);
+	});
+	msgEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function fetchNearbyAttractions(dayNum, isFood) {
+	const tripContext = buildChatTripContext();
+	const currentItinerary = getChatCurrentItinerary();
+	const itineraryId = localStorage.getItem("currentItineraryId") || null;
+	const keyword = isFood ? "附近美食推薦" : "附近熱門景點";
+	const message = `${keyword} 第${dayNum}天`;
+
+	const loadingId = "loading-" + Date.now();
+	document.getElementById("chatMessages").insertAdjacentHTML(
+		"beforeend",
+		`<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
+	);
+	scrollToBottom();
+
+	try {
+		const resp = await fetch(API_BASE + "/api/chat/message", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				message,
+				conversationHistory,
+				tripContext,
+				currentItinerary,
+				currentDayIndex: dayNum - 1,
+				itineraryId,
+			}),
+		});
+
+		const result = await resp.json();
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+
+		if (result && (result.code === 200 || result.success === true)) {
+			const data = result.data || result;
+			const parsed = data.parsed;
+
+			if (parsed && parsed.action === "nearby_attractions" && Array.isArray(parsed.attractions)) {
+				const summary = parsed.summary || `以下是第 ${dayNum} 天所在區域的推薦：`;
+				const msgEl = await typeMessage(summary, "bot", CHAT_TYPEWRITER_SPEED);
+				conversationHistory.push({ role: "assistant", content: summary });
+				appendNearbyAttractionCards(msgEl, parsed.attractions);
+			} else {
+				const aiText = (parsed?.question) || data.response || `抱歉，無法取得第 ${dayNum} 天的推薦，請再試一次。`;
+				await appendMsg(aiText, "bot");
+				conversationHistory.push({ role: "assistant", content: aiText });
+			}
+		} else {
+			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
+		}
+	} catch (err) {
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+		await appendMsg("網路錯誤，請稍後再試", "bot");
+	}
+}
+
+function appendNearbyAttractionCards(parentEl, attractions) {
+	if (!Array.isArray(attractions) || attractions.length === 0) return;
+
+	const container = document.createElement("div");
+	container.className = "chat-nearby-list";
+
+	attractions.forEach((spot) => {
+		const card = document.createElement("div");
+		card.className = "chat-nearby-card";
+
+		const header = document.createElement("div");
+		header.className = "chat-nearby-header";
+
+		const name = document.createElement("span");
+		name.className = "chat-nearby-name";
+		name.textContent = spot.name || "景點";
+		header.appendChild(name);
+
+		if (spot.type) {
+			const badge = document.createElement("span");
+			badge.className = "chat-nearby-badge";
+			badge.textContent = spot.type;
+			header.appendChild(badge);
+		}
+		card.appendChild(header);
+
+		if (spot.description) {
+			const desc = document.createElement("div");
+			desc.className = "chat-nearby-desc";
+			desc.textContent = spot.description;
+			card.appendChild(desc);
+		}
+
+		if (spot.estimated_time) {
+			const time = document.createElement("div");
+			time.className = "chat-nearby-time";
+			const rawTime = String(spot.estimated_time);
+			time.textContent = rawTime.startsWith("建議停留") ? rawTime : `建議停留 ${rawTime}`;
+			card.appendChild(time);
+		}
+
+		container.appendChild(card);
+	});
+
+	parentEl.appendChild(container);
+	scrollToBottom();
+}
+
 function appendDayPickerCards(parentEl, days) {
 	const row = document.createElement("div");
 	row.className = "chat-picker-row";
@@ -789,6 +924,16 @@ async function handleItineraryEditFlowInput(text) {
 		if (/調整行程/.test(String(text || ""))) {
 			addUserMessage(text);
 			startItineraryEditFlow();
+			return true;
+		}
+		if (/附近熱門景點|附近景點|附近熱門|周邊景點/.test(String(text || ""))) {
+			addUserMessage(text);
+			await showDayPickerForNearbyAttractions(false);
+			return true;
+		}
+		if (/附近美食推薦|附近美食|附近餐廳/.test(String(text || ""))) {
+			addUserMessage(text);
+			await showDayPickerForNearbyAttractions(true);
 			return true;
 		}
 		return false;
@@ -1218,11 +1363,12 @@ async function sendMessage() {
 
 		if (result && (result.code === 200 || result.success === true)) {
 			const data = result.data || result;
-			const aiText =
-				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
-				"（無回覆）";
+			const isUpdateDay = data?.parsed?.action === "update_day";
+			const aiText = isUpdateDay
+				? (data.parsed?.summary || "行程已更新。")
+				: ((data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output)) || "（無回覆）");
 			await appendMsg(aiText, "bot", []);
-			if (data && data.parsed && data.parsed.action === "update_day") {
+			if (isUpdateDay) {
 				const updated = applyChatItineraryUpdate(data.parsed);
 				if (!updated) {
 					await appendMsg("系統已回傳修改結果，但無法套用到目前行程。", "bot");
