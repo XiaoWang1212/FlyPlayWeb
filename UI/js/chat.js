@@ -988,23 +988,30 @@ function appendSpotImageCards(parent, spotImages) {
 	gallery.className = "chat-spot-gallery";
 
 	spotImages.forEach((spot) => {
-		if (!spot || !spot.photo_url) return;
+		if (!spot || !spot.name) return;
 
 		const card = document.createElement("div");
 		card.className = "chat-spot-card";
 
-		const img = document.createElement("img");
-		img.className = "chat-spot-image";
-		img.src = spot.photo_url;
-		img.alt = spot.name || "景點圖片";
-		img.loading = "lazy";
-		img.referrerPolicy = "no-referrer";
+		let imageEl;
+		if (spot.photo_url) {
+			imageEl = document.createElement("img");
+			imageEl.className = "chat-spot-image";
+			imageEl.src = spot.photo_url;
+			imageEl.alt = spot.name || "景點圖片";
+			imageEl.loading = "lazy";
+			imageEl.referrerPolicy = "no-referrer";
+		} else {
+			imageEl = document.createElement("div");
+			imageEl.className = "chat-spot-image chat-spot-no-photo";
+			imageEl.textContent = "📷";
+		}
 
 		const title = document.createElement("div");
 		title.className = "chat-spot-title";
 		title.textContent = spot.name || "景點";
 
-		card.appendChild(img);
+		card.appendChild(imageEl);
 		card.appendChild(title);
 
 		if (spot.address) {

@@ -260,10 +260,12 @@ class GeminiService:
                             max_results=1,
                         )
                     if not search_result.get("success"):
+                        cards.append({"name": spot_name, "photo_url": "", "address": address, "place_id": place_id})
                         continue
 
                     places = search_result.get("places") or []
                     if not places:
+                        cards.append({"name": spot_name, "photo_url": "", "address": address, "place_id": place_id})
                         continue
 
                     place = places[0] if isinstance(places[0], dict) else {}
@@ -271,10 +273,7 @@ class GeminiService:
                     first_photo = photos[0] if photos and isinstance(photos[0], dict) else {}
                     fallback_photo_url = first_photo.get("photo_url")
 
-                    if not fallback_photo_url:
-                        continue
-
-                    activity["photo_url"] = fallback_photo_url
+                    activity["photo_url"] = fallback_photo_url or ""
                     if place.get("address"):
                         activity["address"] = place["address"]
                     if place.get("place_id"):
@@ -289,7 +288,7 @@ class GeminiService:
 
                     card = {
                         "name": place.get("name") or spot_name,
-                        "photo_url": fallback_photo_url,
+                        "photo_url": fallback_photo_url or "",
                         "address": place.get("address") or address,
                         "place_id": place.get("place_id") or place_id,
                     }
@@ -642,10 +641,11 @@ class GeminiService:
                         "規則：\n"
                         f"1. 推薦 4~6 個{category_hint}\n"
                         f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
-                        f"3. 絕對不得推薦已出現在第 {target_day} 天行程中的地點\n"
+                        f"3. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
                         "4. 不得推薦機場、航廈等交通節點\n"
                         "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
-                        f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式"
+                        f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
+                        "7. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱"
                     )
                 elif trip_context_text:
                     final_message = (
@@ -907,6 +907,7 @@ class GeminiService:
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+            所有地點名稱必須是 Google Maps 上可以直接搜尋到的具體地點，例如「錦市場」、「上通商店街」、「天文館むじゃき」，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」、「燒肉」），美食景點請一律使用具體的餐廳或市場名稱。
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             絕對不可以推薦任何機場、國際機場、航廈、候機室、機場捷運站這類地點（例如：桃園國際機場、成田機場、羽田機場、關西國際機場等），機場是交通節點，不得列為觀光景點，即使行程起訖點在機場附近也不得列入。
@@ -1083,8 +1084,10 @@ class GeminiService:
                 except Exception:
                     normalized_existing = None
 
+            if not normalized_existing:
+                return {"success": False, "error": "無法解析現有行程資料，無法生成詳細行程"}
             existing_itinerary_str = json.dumps(
-                normalized_existing if normalized_existing else test_data,
+                normalized_existing,
                 ensure_ascii=False,
                 indent=2,
             )
@@ -1119,7 +1122,7 @@ class GeminiService:
             }}
 
             規則要求：
-            1. place_name 只可包含地點名稱，不要包含任何描述。
+            1. place_name 只可包含地點名稱，不要包含任何描述。place_name 必須是 Google Maps 可直接搜尋到的具體地點，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱。
             2. description 簡短描述活動內容，控制在一句話以內。
             3. type 必須是以下之一：景點、美食、交通、住宿。
             4. cost 必須遵守以下格式：
