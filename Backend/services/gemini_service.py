@@ -1016,6 +1016,11 @@ class GeminiService:
                 else "出發日期: 未指定 (請假設從星期一開始)"
             )
             pace_label = "緊湊" if str(trip_pace).strip() in {"packed", "緊湊"} else "輕鬆"
+            pace_rule = (
+                "行程緊湊度：緊湊，每日可用觀光時間為 10 小時，請安排景點使每日建議停留時間總和接近 10 小時（含景點間移動時間），景點數不得超過 5 個。"
+                if pace_label == "緊湊"
+                else "行程緊湊度：輕鬆，每日可用觀光時間為 6 小時，請安排景點使每日建議停留時間總和不超過 6 小時（含景點間移動時間），景點數不得超過 3 個。"
+            )
 
             # 將 existing_itinerary 正規化為 Gemini 可讀的結構
             normalized_existing = None
