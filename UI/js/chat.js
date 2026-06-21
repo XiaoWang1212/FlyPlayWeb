@@ -430,17 +430,6 @@ function disablePickerContainer(el) {
 	});
 }
 
-async function runFlowStep(fn) {
-	hideChatSuggestions();
-	setChatInputDisabled(true);
-	try {
-		await fn();
-	} finally {
-		setChatInputDisabled(false);
-		showChatSuggestions();
-	}
-}
-
 async function showDayPickerForDeleteMessage() {
 	const days = getChatCurrentItinerary();
 	if (!days.length) {
@@ -458,17 +447,15 @@ async function showDayPickerForDeleteMessage() {
 		const btn = document.createElement("button");
 		btn.className = "chat-picker-chip";
 		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
-		btn.addEventListener("click", () => {
+		btn.addEventListener("click", async () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(async () => {
-				appendMsg(`第 ${dayNum} 天`, "user");
-				pushConversationMessage("user", `第 ${dayNum} 天`);
-				clearItineraryEditFlow();
-				await addBotMessage(`好的，我幫你切換到第 ${dayNum} 天的編輯模式。找到想刪除的景點後，點右邊的垃圾桶，最後再按確認就完成了。`);
-				await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-				openEditModeForDay(dayNum);
-			});
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			clearItineraryEditFlow();
+			await addBotMessage(`好的，我幫你切換到第 ${dayNum} 天的編輯模式。找到想刪除的景點後，點右邊的垃圾桶，最後再按確認就完成了。`);
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeForDay(dayNum);
 		});
 		row.appendChild(btn);
 	});
@@ -493,17 +480,15 @@ async function showDayPickerForAddMessage() {
 		const btn = document.createElement("button");
 		btn.className = "chat-picker-chip";
 		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
-		btn.addEventListener("click", () => {
+		btn.addEventListener("click", async () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(async () => {
-				appendMsg(`第 ${dayNum} 天`, "user");
-				pushConversationMessage("user", `第 ${dayNum} 天`);
-				clearItineraryEditFlow();
-				await addBotMessage(`好的，我幫你打開第 ${dayNum} 天的新增介面，現在可以直接搜尋並加入景點。`);
-				await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-				openEditModeWithSearchKeyword("", dayNum);
-			});
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			clearItineraryEditFlow();
+			await addBotMessage(`好的，我幫你打開第 ${dayNum} 天的新增介面，現在可以直接搜尋並加入景點。`);
+			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+			openEditModeWithSearchKeyword("", dayNum);
 		});
 		row.appendChild(btn);
 	});
@@ -541,10 +526,12 @@ async function showDayPickerForNearbyAttractions(isFood) {
 		const btn = document.createElement("button");
 		btn.className = "chat-picker-chip";
 		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
-		btn.addEventListener("click", () => {
+		btn.addEventListener("click", async () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(() => fetchNearbyAttractions(dayNum, isFood));
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+			await fetchNearbyAttractions(dayNum, isFood);
 		});
 		row.appendChild(btn);
 	});
@@ -668,7 +655,7 @@ function appendDayPickerCards(parentEl, days) {
 		btn.addEventListener("click", () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(() => handleDayCardSelected(dayNum, day));
+			handleDayCardSelected(dayNum, day);
 		});
 		row.appendChild(btn);
 	});
@@ -733,7 +720,7 @@ function appendActivityPickerCards(parentEl, activities, dayNumber) {
 		card.addEventListener("click", () => {
 			disablePickerContainer(list);
 			card.classList.add("selected");
-			void runFlowStep(() => handleActivityCardSelected(dayNumber, name));
+			handleActivityCardSelected(dayNumber, name);
 		});
 
 		list.appendChild(card);
@@ -785,7 +772,7 @@ function appendModePickerCards(parentEl, flow) {
 		btn.addEventListener("click", () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(() => handleModeCardSelected(mode, flow));
+			void handleModeCardSelected(mode, flow);
 		});
 		row.appendChild(btn);
 	});
@@ -881,7 +868,7 @@ function appendActionPickerCards(parentEl) {
 		btn.addEventListener("click", () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
-			void runFlowStep(() => handleActionCardSelected(value, label));
+			handleActionCardSelected(value, label);
 		});
 		row.appendChild(btn);
 	});
@@ -956,22 +943,23 @@ async function handleItineraryEditFlowInput(text) {
 		return true;
 	}
 
+	addUserMessage(text);
+
 	if (currentFlow.stage === "choose_action" || currentFlow.stage === "ask_day_for_add" || currentFlow.stage === "ask_day_for_delete" || currentFlow.stage === "pick_day" || currentFlow.stage === "pick_activity" || currentFlow.stage === "choose_mode") {
 		clearItineraryEditFlow();
 		return false;
 	}
 
+
 	if (currentFlow.stage === "manual_spot_name") {
 		const spotName = flowText.replace(/^[「"'【\[]|[」"'】\]]$/g, "").trim();
 		if (!spotName) {
-			addUserMessage(text);
 			addBotMessage("請輸入你想加入的景點名稱。");
 			return true;
 		}
 
 		const targetDay = currentFlow.targetDay;
 		clearItineraryEditFlow();
-		addUserMessage(text);
 		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
 		await openEditModeWithSearchKeyword(spotName, targetDay);
@@ -984,7 +972,7 @@ async function handleItineraryEditFlowInput(text) {
 
 
 const CHAT_TYPEWRITER_SPEED = 30;
-const CHAT_TYPEWRITER_SPEED_SLOW = 30;
+const CHAT_TYPEWRITER_SPEED_SLOW = 45;
 
 // 逐字顯示訊息（打字機效果）
 function appendSpotImageCards(parent, spotImages) {
@@ -1290,15 +1278,7 @@ function showChatWelcomeMessage() {
 }
 
 function hideChatSuggestions() {
-	const chatSuggestions = document.getElementById("chatSuggestions");
-	if (chatSuggestions) chatSuggestions.classList.add("suggestions-hidden");
-}
-
-function setChatInputDisabled(disabled) {
-	const input = document.getElementById("chatInput");
-	const sendBtn = document.querySelector(".chat-send-btn");
-	if (input) input.disabled = disabled;
-	if (sendBtn) sendBtn.disabled = disabled;
+	// 保持 suggestions 常駐，不隱藏
 }
 
 // 切換聊天模式
@@ -1337,23 +1317,12 @@ async function toggleChatMode() {
 	}
 }
 
-let _isSending = false;
-
 // 發送訊息
-async function sendMessage(textOverride) {
-	if (_isSending) return;
+async function sendMessage() {
 	const input = document.getElementById("chatInput");
-	const text = (textOverride || input.value || "").trim();
+	const text = input.value.trim();
 	if (!text) return;
-	_isSending = true;
 	input.value = "";
-	hideChatSuggestions();
-	setChatInputDisabled(true);
-	_userScrolledUp = false;
-	const _msgContainer = document.getElementById("chatMessages");
-	if (_msgContainer) _msgContainer.scrollTop = _msgContainer.scrollHeight;
-
-	try {
 
 	if (await handleItineraryEditFlowInput(text)) {
 		return;
@@ -1415,15 +1384,10 @@ async function sendMessage(textOverride) {
 		} else {
 			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
 		}
-		} catch (err) {
-			const loader = document.getElementById(loadingId);
-			if (loader) loader.remove();
-			await appendMsg("網路錯誤，請稍後再試", "bot");
-		}
-	} finally {
-		_isSending = false;
-		setChatInputDisabled(false);
-		showChatSuggestions();
+	} catch (err) {
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+		await appendMsg("網路錯誤，請稍後再試", "bot");
 	}
 }
 
@@ -1445,7 +1409,8 @@ async function appendMsg(text, type, spotImages = []) {
 }
 
 function sendSuggestedQuestion(question, buttonElement) {
-	if (!question) return;
+	const input = document.getElementById("chatInput");
+	if (!input || !question) return;
 
 	if (buttonElement && buttonElement.classList) {
 		buttonElement.classList.add("is-pressed");
@@ -1454,16 +1419,15 @@ function sendSuggestedQuestion(question, buttonElement) {
 		}, 140);
 	}
 
-	void sendMessage(question);
+	input.value = question;
+	input.focus();
+	if (typeof input.setSelectionRange === "function") {
+		input.setSelectionRange(question.length, question.length);
+	}
 }
-
-let _userScrolledUp = false;
 
 function scrollToBottom() {
 	const container = document.getElementById("chatMessages");
-	if (!container) return;
-	const dist = container.scrollHeight - container.scrollTop - container.clientHeight;
-	if (_userScrolledUp) return;
 	container.scrollTop = container.scrollHeight;
 }
 
@@ -1476,22 +1440,6 @@ document.addEventListener("DOMContentLoaded", () => {
 				void sendMessage();
 			}
 		});
-	}
-
-	const chatMessages = document.getElementById("chatMessages");
-	if (chatMessages) {
-		let _touchStartY = 0;
-		chatMessages.addEventListener("touchstart", (e) => {
-			_touchStartY = e.touches[0].clientY;
-		}, { passive: true });
-		chatMessages.addEventListener("touchmove", (e) => {
-			if (e.touches[0].clientY > _touchStartY) _userScrolledUp = true;
-		}, { passive: true });
-
-		chatMessages.addEventListener("scroll", () => {
-			const distanceFromBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight;
-			if (distanceFromBottom <= 30) _userScrolledUp = false;
-		}, { passive: true });
 	}
 
 	void showPendingChatOutput();
