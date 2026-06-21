@@ -97,10 +97,11 @@ class DataFixService:
         for day in days:
             day_result = {
                 "day": day.get("day"),
+                "weekday": day.get("weekday", ""),
                 "locations": []
             }
 
-            for loc in day.get('location', []):  
+            for loc in day.get('location', []):
                 location_name = loc.get('location_name', '')
 
                 nearby_result = self.google_map_service.search_places_nearby(
@@ -130,6 +131,7 @@ class DataFixService:
 
                     day_result["locations"].append({
                         "location_name": location_name,
+                        "time": loc.get("time", ""),
                         "place_id": place.get('place_id'),
                         "location": location
                     })

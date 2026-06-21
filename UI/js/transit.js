@@ -132,19 +132,12 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
   // 記錄各模式的耗時（分鐘），用於判斷最快模式
   const modeDurations = {};
 
-  // 使用 Promise.all 確保所有 fetch 都完成
   const promises = ['DRIVING', 'TRANSIT', 'WALKING'].map(async (modeKey) => {
     try {
       const isTransit = modeKey === 'TRANSIT';
       const endpoint = isTransit ? 'estimate_transit' : 'route_details';
-      
-      const bodyPayload = {
-        origin: origin,
-        destination: destination,
-      };
-      if (!isTransit) {
-        bodyPayload.mode = modeKey.toLowerCase();
-      }
+      const bodyPayload = { origin, destination };
+      if (!isTransit) bodyPayload.mode = modeKey.toLowerCase();
 
       const response = await fetch(`${API_BASE}/api/maps/${endpoint}`, {
         method: 'POST',
@@ -174,22 +167,14 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
           let hours = 0, minutes = 0;
           const hourMatch = durationText.match(/(\d+)\s*小時/);
           const minMatch = durationText.match(/(\d+)\s*分/);
-          
           if (hourMatch) hours = parseInt(hourMatch[1], 10);
           if (minMatch) minutes = parseInt(minMatch[1], 10);
-          
-          // 用「有沒有抓到時間數字」判斷解析成功與否，避免真實的 0 分被誤判成解析失敗
           durationMinutes = (hourMatch || minMatch) ? hours * 60 + minutes : 999;
         }
 
         modeDurations[modeKey] = durationMinutes;
-
-        // 只保存到 block，不直接更新 DOM
         if (block) {
-          block.dataset['cached_' + modeKey] = JSON.stringify({
-            dur: durationText,
-            dist: distanceText
-          });
+          block.dataset['cached_' + modeKey] = JSON.stringify({ dur: durationText, dist: distanceText });
         }
       } else {
         throw new Error(data.error || '計算失敗');
@@ -200,7 +185,7 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
   });
 
   await Promise.all(promises);
-  
+
   if (block && autoSelectFastest) {
     if (modeDurations['WALKING'] !== undefined && modeDurations['WALKING'] <= 15) {
       block.dataset.bestMode = 'WALKING';
@@ -244,7 +229,6 @@ function _updateBlockDisplay(block) {
 }
 
 async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
-  // 用於在 modal 中即時計算（沒有預先計算結果時）
   const origin = { latitude: oLat, longitude: oLng };
   const destination = { latitude: dLat, longitude: dLng };
 
@@ -255,14 +239,8 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
     try {
       const isTransit = modeKey === 'TRANSIT';
       const endpoint = isTransit ? 'estimate_transit' : 'route_details';
-      
-      const bodyPayload = {
-        origin: origin,
-        destination: destination,
-      };
-      if (!isTransit) {
-        bodyPayload.mode = modeKey.toLowerCase();
-      }
+      const bodyPayload = { origin, destination };
+      if (!isTransit) bodyPayload.mode = modeKey.toLowerCase();
 
       const response = await fetch(`${API_BASE}/api/maps/${endpoint}`, {
         method: 'POST',
@@ -273,14 +251,11 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
         body: JSON.stringify(bodyPayload)
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
       if (data.success) {
         let durationText, distanceText;
-
         if (isTransit) {
           durationText = `${data.duration_minutes} 分`;
           distanceText = `(估算)`;
@@ -288,7 +263,6 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
           durationText = data.duration;
           distanceText = data.distance;
         }
-
         el.innerHTML = `<span class="ttime">${durationText}</span> <span class="tdist">${distanceText}</span>`;
       } else {
         throw new Error(data.error || '計算失敗');

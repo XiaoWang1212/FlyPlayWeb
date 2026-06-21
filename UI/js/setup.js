@@ -968,9 +968,11 @@ async function submitAIRecommendation() {
 
     const itineraryId = result.data?.itinerary_id || result.data?.id || null;
 
+    // Step 1: 地理編碼（含距離過濾）
+    let latlngData = null;
     if (itineraryId) {
       try {
-        await fetch(`${API_BASE}/data/latlng`, {
+        const latlngRes = await fetch(`${API_BASE}/data/latlng`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -978,23 +980,116 @@ async function submitAIRecommendation() {
           },
           body: JSON.stringify({ itinerary_id: itineraryId }),
         });
+        if (latlngRes.ok) {
+          const latlngJson = await latlngRes.json();
+          if (latlngJson?.success) {
+            latlngData = latlngJson;
+            localStorage.setItem("data_latlng", JSON.stringify(latlngJson));
+          }
+        }
       } catch (latlngErr) {
-        console.warn("data/latlng 補齊失敗，繼續生成摘要：", latlngErr);
+        console.warn("data/latlng 補齊失敗：", latlngErr);
       }
     }
 
+    // Step 2a: Gemini 補充 description / type / cost
+    let detailedDays = null;
+    if (latlngData?.data) {
+      try {
+        const detailRes = await fetch(`${API_BASE}/api/itinerary/detail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data_latlng: latlngData,
+            trip_setup: payload,
+            itinerary_id: itineraryId,
+          }),
+        });
+        if (detailRes.ok) {
+          const detailResult = await detailRes.json();
+          if (detailResult.code === 200 && Array.isArray(detailResult.data?.parsed?.days)) {
+            const geminiDays = detailResult.data.parsed.days;
+            // latlngData 是地點唯一來源，Gemini 只補 description/type/cost/time
+            // 按 place_name 對名字回填；對不到的地點描述留空
+            detailedDays = latlngData.data.map((latlngDay, dayIdx) => {
+              const geminiLocs = geminiDays[dayIdx]?.location || [];
+              const geminiByName = {};
+              geminiLocs.forEach((l) => {
+                if (l.place_name) geminiByName[l.place_name.trim()] = l;
+              });
+              return {
+                day: latlngDay.day,
+                weekday: latlngDay.weekday || `第${latlngDay.day}天`,
+                location: (latlngDay.locations || []).map((loc) => {
+                  const g = geminiByName[loc.location_name?.trim()] || {};
+                  return {
+                    place_name: loc.location_name,
+                    time: g.time || loc.time || "",
+                    description: g.description || "",
+                    type: g.type || "",
+                    cost: g.cost || "",
+                    location: {
+                      lat: loc.location?.latitude || 0,
+                      lng: loc.location?.longitude || 0,
+                    },
+                    place_id: loc.place_id || "",
+                  };
+                }),
+              };
+            });
+          }
+        }
+      } catch (detailErr) {
+        console.warn("Gemini detail 補充失敗：", detailErr);
+      }
+    }
+
+    // Step 2b: 補圖（唯一一次），以帶有 description 的 days 為輸入，結果存入 DB 的 detailed_itinerary
+    let enrichedDays = null;
+    const daysForEnrich = detailedDays || (latlngData?.data || []).map((dayData) => ({
+      day: dayData.day,
+      weekday: dayData.weekday || `第${dayData.day}天`,
+      location: (dayData.locations || []).map((loc) => ({
+        place_name: loc.location_name,
+        time: loc.time || "",
+        description: "",
+        type: "",
+        cost: "",
+        location: {
+          lat: loc.location?.latitude || 0,
+          lng: loc.location?.longitude || 0,
+        },
+        place_id: loc.place_id || "",
+      })),
+    }));
+    if (daysForEnrich.length > 0) {
+      try {
+        const enrichRes = await fetch(`${API_BASE}/api/itinerary`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ days: daysForEnrich, itinerary_id: itineraryId }),
+        });
+        if (enrichRes.ok) {
+          const enrichResult = await enrichRes.json();
+          if (enrichResult.code === 200 && Array.isArray(enrichResult.data?.days)) {
+            enrichedDays = enrichResult.data.days;
+          }
+        }
+      } catch (enrichErr) {
+        console.warn("補圖失敗：", enrichErr);
+      }
+    }
+
+    // Step 3: 聊天室摘要（用補圖後資料，確保與 allDays 一致）
+    const chatParsed = enrichedDays ? { days: enrichedDays } : result.data?.parsed;
     const readableItinerary = await buildReadableItinerary(
       token,
-      result.data?.raw_output,
-      result.data?.parsed,
+      enrichedDays ? null : result.data?.raw_output,
+      chatParsed,
       itineraryId,
     );
 
     localStorage.setItem("pendingChatOutput", JSON.stringify(readableItinerary));
-    if (Array.isArray(readableItinerary.spot_images) && readableItinerary.spot_images.length > 0) {
-      localStorage.setItem("spotImagesCache", JSON.stringify(readableItinerary.spot_images));
-    }
-
     console.log("✓ 準備跳轉至 index.html");
     flyToIndex();
   } catch (err) {

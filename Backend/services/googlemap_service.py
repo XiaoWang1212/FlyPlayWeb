@@ -344,8 +344,8 @@ class GoogleMapService:
             if travel_mode == 'TRANSIT':
                 payload['departureTime'] = (
                     datetime.now(timezone.utc)
-                    .replace(hour=9, minute=0, second=0)
-                    .isoformat()
+                    .replace(hour=9, minute=0, second=0, microsecond=0)
+                    .strftime('%Y-%m-%dT%H:%M:%SZ')
                 )
 
             response = requests.post(url, json=payload, headers=headers, timeout=10)
@@ -495,11 +495,10 @@ class GoogleMapService:
                 payload['computeAlternativeRoutes'] = True
 
             if travel_mode == 'TRANSIT':
-                # payload['departureTime'] = datetime.now(timezone.utc).isoformat()
                 payload['departureTime'] = (
                     datetime.now(timezone.utc)
-                    .replace(hour=9, minute=0, second=0)
-                    .isoformat()
+                    .replace(hour=9, minute=0, second=0, microsecond=0)
+                    .strftime('%Y-%m-%dT%H:%M:%SZ')
                 )
             response = requests.post(
                 url,
@@ -639,8 +638,8 @@ class GoogleMapService:
             if travel_mode == 'TRANSIT':
                 payload['departureTime'] = (
                     datetime.now(timezone.utc)
-                    .replace(hour=9, minute=0, second=0)
-                    .isoformat()
+                    .replace(hour=9, minute=0, second=0, microsecond=0)
+                    .strftime('%Y-%m-%dT%H:%M:%SZ')
                 )
 
             response = requests.post(url, json=payload, headers=headers, timeout=10)

@@ -1,4 +1,4 @@
-// ===== 行程資料載入與處理 =====
+﻿// ===== 行程資料載入與處理 =====
 
 // 根據建立行程時選擇的開始日期，計算「第 N 天」對應的星期幾
 function getWeekdayLabel(dayNumber) {
@@ -62,7 +62,7 @@ async function loadCoordinatesFirst() {
 								lng: loc.location?.longitude || 0,
 							},
 							place_id: loc.place_id || "",
-							time: "",
+							time: loc.time || "",
 							description: "",
 							type: "",
 							cost: "",
@@ -102,7 +102,7 @@ async function loadCoordinatesFirst() {
 		allDays = result.data.map((dayData) => {
 			return {
 				day: dayData.day,
-				weekday: dayData.day ? `第${dayData.day}天` : "未知",
+				weekday: dayData.weekday || `第${dayData.day}天`,
 				activities: dayData.locations.map((loc) => ({
 					place_name: loc.location_name,
 					location: {
@@ -110,7 +110,7 @@ async function loadCoordinatesFirst() {
 						lng: loc.location.longitude || 0,
 					},
 					place_id: loc.place_id || "",
-					time: "",
+					time: loc.time || "",
 					description: "",
 					type: "",
 					cost: "",
@@ -177,70 +177,54 @@ async function getDetailedItineraryFromDb(itineraryId) {
 
 async function generateDetailedItinerary() {
 	try {
-		console.log("第二步：調用 Gemini 補充詳細信息");
-
-		const dataLatLng = localStorage.getItem("data_latlng");
-		if (!dataLatLng) {
-			console.warn("找不到坐標數據");
-			return false;
-		}
-		const tripSetup =
-			localStorage.getItem("tripSetup") ||
-			localStorage.getItem("trip_setup");
 		const generatedItinerary = localStorage.getItem("generatedItinerary");
-		const itineraryInfo = generatedItinerary
-			? JSON.parse(generatedItinerary)
-			: null;
+		const itineraryInfo = generatedItinerary ? JSON.parse(generatedItinerary) : null;
 		const itineraryId =
 			itineraryInfo?.itinerary_id ||
 			itineraryInfo?.id ||
 			Number(localStorage.getItem("currentItineraryId")) ||
 			null;
 
-		// 先查 DB：若已有 detailed_itinerary，就不要重送 /api/itinerary/detail
 		const dbDetailed = await getDetailedItineraryFromDb(itineraryId);
-		if (dbDetailed) {
-			console.log("✓ DB 已有 detailed_itinerary，跳過重新生成");
-			localStorage.setItem(
-				"detailed_itinerary",
-				JSON.stringify(dbDetailed),
-			);
-			return dbDetailed;
+		if (!dbDetailed) {
+			console.warn("⚠️ DB 無 detailed_itinerary");
+			return false;
 		}
 
-		// 合併坐標數據和旅行配置
-		const payload = {
-			data_latlng: JSON.parse(dataLatLng),
-			trip_setup: tripSetup ? JSON.parse(tripSetup) : {},
-			itinerary_id: itineraryId,
-		};
+		console.log("✓ DB detailed_itinerary 載入成功");
+		localStorage.setItem("detailed_itinerary", JSON.stringify(dbDetailed));
 
-		// 調用後端端點來生成詳細行程
-		const response = await fetch(`${API_BASE}/api/itinerary/detail`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
+		const daysSource = dbDetailed?.parsed?.days || dbDetailed?.days || [];
+		if (!Array.isArray(daysSource) || !daysSource.length) return false;
+
+		// 將 allDays 座標合併進 detailed 資料
+		const mergedDays = daysSource.map((day, dayIndex) => {
+			const currentDay = allDays.find(
+				(d, idx) => Number(d?.day) === Number(day?.day) || idx === dayIndex,
+			);
+			const currentActivities = Array.isArray(currentDay?.activities)
+				? currentDay.activities
+				: [];
+
+			const list = day.location || day.activities || [];
+			const normalizedList = list.map((item, itemIndex) => {
+				let matched = currentActivities.find((a) => a?.place_name === item?.place_name);
+				if (!matched) matched = currentActivities[itemIndex];
+				return { ...item, location: item.location || matched?.location || null };
+			});
+
+			return Array.isArray(day.location)
+				? { ...day, location: normalizedList }
+				: { ...day, activities: normalizedList };
 		});
 
-		if (!response.ok) {
-			throw new Error(`API 呼叫失敗 ${response.status}`);
-		}
-
-		const result = await response.json();
-
-		if (result.code !== 200) {
-			throw new Error(result.error || "生成詳細行程失敗");
-		}
-
-		console.log("✓ 詳細行程已生成");
-
-		localStorage.setItem("detailed_itinerary", JSON.stringify(result.data));
-
-		return result.data;
+		allDays = convertToAllDaysFormat(mergedDays);
+		createDayButtons();
+		if (currentDayIndex === -1) displayAllDays();
+		else displayDay(currentDayIndex);
+		return true;
 	} catch (error) {
-		console.error("生成詳細行程失敗：", error);
+		console.error("載入詳細行程失敗：", error);
 		return false;
 	}
 }
@@ -379,6 +363,7 @@ function convertToAllDaysFormat(days) {
 			type: item.type || "景點",
 			cost: item.cost || "未知",
 			location: item.location || null,
+			photo_url: item.photo_url || (Array.isArray(item.photos) && item.photos[0]?.photo_url) || "",
 			photos: item.photos,
 			rating: item.rating,
 			address: item.address,
