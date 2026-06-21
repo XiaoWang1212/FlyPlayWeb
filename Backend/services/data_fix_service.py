@@ -97,13 +97,14 @@ class DataFixService:
         for day in days:
             day_result = {
                 "day": day.get("day"),
+                "weekday": day.get("weekday", ""),
                 "locations": []
             }
 
             # 每天重置中心點，避免跨城市時距離過濾把其他城市的景點全部排除
             day_center = None
 
-            for loc in day.get('location', []):
+            for loc in day.get('location', []):  
                 location_name = loc.get('location_name', '')
 
                 if day_center:
@@ -144,6 +145,7 @@ class DataFixService:
 
                     day_result["locations"].append({
                         "location_name": location_name,
+                        "time": loc.get("time", ""),
                         "place_id": place.get('place_id'),
                         "location": location
                     })

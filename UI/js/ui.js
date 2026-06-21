@@ -619,11 +619,8 @@ async function openProject(project) {
 		createDayButtons();
 		displayAllDays();
 
-		// 嘗試補全詳細行程與圖片資訊，讓 openProject 也能顯示照片
-		const detailedData = await generateDetailedItinerary();
-		if (detailedData) {
-			await enrichWithPictureInfo(detailedData);
-		}
+		// 從 DB 載入 detailed_itinerary 並更新 allDays（補圖已在 setup 階段完成）
+		await generateDetailedItinerary();
 
 		if (typeof resetChatConversation === "function") {
 			resetChatConversation();

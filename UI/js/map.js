@@ -1,5 +1,9 @@
 // ===== 地圖功能 =====
 
+// Google Maps script 載入 promise（在 fetch API key 後 resolve）
+let _googleMapsResolve;
+const googleMapsReady = new Promise((resolve) => { _googleMapsResolve = resolve; });
+
 async function addCustomMarkers(activities, dayIndex) {
 	const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 	const color = getColorByDay(dayIndex);
@@ -306,19 +310,11 @@ function displayDay(dayIndex) {
 	// 先更新該天時間線，避免路線失敗時仍顯示全部內容
 	loadSingleDayTimeline(day, dayIndex);
 
-	// 聚焦到該天行程的中心點，而不是用相對位移（避免每次切換都往下偏移）
+	// 根據該天所有景點的座標範圍自動決定縮放層級
 	if (routeActivities.length > 0) {
-		const dayTotal = routeActivities.reduce(
-			(acc, a) => ({
-				lat: acc.lat + a.location.lat,
-				lng: acc.lng + a.location.lng,
-			}),
-			{ lat: 0, lng: 0 },
-		);
-		const dayAvgLat = dayTotal.lat / routeActivities.length;
-		const dayAvgLng = dayTotal.lng / routeActivities.length;
-		map.panTo({ lat: dayAvgLat , lng: dayAvgLng });
-		map.setZoom(13);
+		const bounds = new google.maps.LatLngBounds();
+		routeActivities.forEach((a) => bounds.extend(a.location));
+		map.fitBounds(bounds, { top: 60, right: 40, bottom: 320, left: 40 });
 	}
 
 	renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
@@ -387,6 +383,7 @@ async function initMap() {
 		avgLat = pointCount > 0 ? totalLat / pointCount : 35.6762;
 		avgLng = pointCount > 0 ? totalLng / pointCount : 139.6503;
 
+		await googleMapsReady;
 		const { Map } = await google.maps.importLibrary("maps");
 		map = new Map(document.getElementById("map"), {
 			zoom: 10,
@@ -430,8 +427,11 @@ fetch(`${API_BASE}/api/google-key`)
 		const script = document.createElement("script");
 		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places&loading=async`;
 		script.async = true;
+		script.onload = () => _googleMapsResolve();
+		script.onerror = () => _googleMapsResolve(); // 失敗也 resolve，讓 initMap 裡的錯誤正常拋出
 		document.head.appendChild(script);
-	});
+	})
+	.catch(() => _googleMapsResolve());
 
 // 跳轉到對應景點並開啟簡介
 function focusMarker(id) {

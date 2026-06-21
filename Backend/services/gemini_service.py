@@ -914,6 +914,7 @@ class GeminiService:
             - 輕鬆：每日可用觀光時間 6 小時，景點建議停留時間總和不超過 6 小時，景點數不超過 3 個
             - 緊湊：每日可用觀光時間 10 小時，景點建議停留時間總和接近 10 小時，景點數不超過 5 個
             若單一景點建議停留時間已達 5 小時以上，該天不得再安排其他景點。
+            如果當天只有一個行程請補上一個美食。
             {pace_rule}
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
@@ -1015,11 +1016,6 @@ class GeminiService:
                 else "出發日期: 未指定 (請假設從星期一開始)"
             )
             pace_label = "緊湊" if str(trip_pace).strip() in {"packed", "緊湊"} else "輕鬆"
-            pace_rule = (
-                "行程緊湊度：緊湊，每日可用觀光時間為 10 小時，請安排景點使每日建議停留時間總和接近 10 小時（含景點間移動時間），景點數不得超過 5 個。"
-                if pace_label == "緊湊"
-                else "行程緊湊度：輕鬆，每日可用觀光時間為 6 小時，請安排景點使每日建議停留時間總和不超過 6 小時（含景點間移動時間），景點數不得超過 3 個。"
-            )
 
             # 將 existing_itinerary 正規化為 Gemini 可讀的結構
             normalized_existing = None
@@ -1103,35 +1099,35 @@ class GeminiService:
                 ensure_ascii=False,
                 indent=2,
             )
-            prompt = f"""請根據以下現有行程進行補充相關資訊，請勿更改任何行程內容。
-            原始行程：
-            {existing_itinerary_str}
+            prompt = f"""以下是已確定的旅遊行程地點清單，請為每個地點補充 description、type、cost、time 四個欄位，其他任何內容都不得更改。
 
-            修改要求：
-            旅客類型: {traveler_type}
-            行程緊湊度: {pace_label}
-            興趣: {interests_str}
-            {date_info}
+原始行程：
+{existing_itinerary_str}
 
-            請保留現有行程的日期和基本結構。
-            確保修改後的行程仍然保持以下 JSON 結構：
-            {{
-                "days": [
-                    {{
-                        "day": 1,
-                        "weekday": "星期幾 (例如：星期一)", 
-                        "location": [
-                            {{
-                                "time": "建議停留 X 小時",
-                                "place_name": "地點名稱",
-                                "description": "活動簡述",
-                                "type": "景點/美食/交通/住宿",
-                                "cost": "預估費用 (例如：JPY 3,000 或 JPY 1,000 - 2,500 或 免費)"
-                            }}
-                        ]
-                    }}
-                ]
-            }}
+旅客資訊（供你判斷描述風格與費用預估）：
+旅客類型: {traveler_type}
+行程緊湊度: {pace_label}
+興趣: {interests_str}
+{date_info}
+
+輸出格式（純 JSON，不含任何 markdown）：
+{{
+    "days": [
+        {{
+            "day": 1,
+            "weekday": "與原始行程相同",
+            "location": [
+                {{
+                    "place_name": "與原始行程完全相同的名稱",
+                    "time": "建議停留 X 小時",
+                    "description": "一句話描述景點特色",
+                    "type": "景點／美食／交通／住宿",
+                    "cost": "預估費用"
+                }}
+            ]
+        }}
+    ]
+}}
 
             規則要求：
             1. place_name 只可包含地點名稱，不要包含任何描述。place_name 必須是 Google Maps 可直接搜尋到的具體地點，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱。

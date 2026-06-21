@@ -171,10 +171,11 @@ def create_app():
                 data = request_data
 
             # 從 trip_setup 中提取配置信息
-            location = data.get("location") or (
-                data.get("destinations", [{}])[0].get("city")
-                if data.get("destinations")
-                else "東京"
+            location = (
+                data.get("location")
+                or data.get("destination")
+                or (data.get("destinations", [{}])[0].get("city") if data.get("destinations") else None)
+                or "東京"
             )
             days = int(data.get("daysValue") or data.get("days", 3))
             trip_pace = (
@@ -188,12 +189,12 @@ def create_app():
                 data.get("companionLabel") or data.get("companion") or "個人"
             )
 
-            if "travelTypeLabels" in data and isinstance(
-                data["travelTypeLabels"], list
-            ):
+            if "travelTypeLabels" in data and isinstance(data["travelTypeLabels"], list):
                 interests = data["travelTypeLabels"]
             elif "travelTypeLabel" in data and data["travelTypeLabel"]:
                 interests = [data["travelTypeLabel"]]
+            elif "interests" in data and isinstance(data["interests"], list):
+                interests = data["interests"]
             else:
                 interests = []
 

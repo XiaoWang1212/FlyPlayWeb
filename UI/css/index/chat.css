@@ -73,14 +73,26 @@
 	left: 0;
 	right: 0;
 	bottom: calc(64px + var(--safe-bottom, 0px));
-	flex-wrap: wrap;
-	gap: 30px;
-	padding: 10px 0 6px;
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 10px;
+	padding: 10px 20px 6px;
 	z-index: 650;
 	border-radius: 18px 18px 0 0;
 	pointer-events: auto;
 	align-items: center;
-	justify-content: center;
+	justify-content: safe center;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+}
+
+.chat-suggestions::-webkit-scrollbar {
+	display: none;
+}
+
+.map-container.sheet-collapsed .chat-suggestions {
+	display: none;
 }
 
 .map-container.sheet-expanded .chat-suggestions {

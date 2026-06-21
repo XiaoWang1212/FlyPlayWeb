@@ -126,13 +126,8 @@ window.onload = async function () {
 		await initMap();
 
 		if (coordinatesLoaded) {
-			const detailedData = await generateDetailedItinerary();
-			if (detailedData) {
-				console.log("✓ detailed_itinerary 生成完成");
-				await enrichWithPictureInfo(detailedData);
-			} else {
-				console.warn("⚠️ detailed_itinerary 生成失敗或未執行");
-			}
+			const ok = await generateDetailedItinerary();
+			if (!ok) console.warn("⚠️ detailed_itinerary 載入失敗");
 		} else {
 			console.warn("⚠️ 座標資料未載入，跳過 detailed_itinerary 生成");
 		}
