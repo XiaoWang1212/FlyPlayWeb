@@ -797,7 +797,7 @@ class GeminiService:
             address_text = address or "未提供"
             rating_text = str(rating) if rating is not None else "未提供"
 
-            prompt = f"""你是一個旅遊行程助理。請針對下面這個景點，估算遊客大概會停留多久時間。
+            prompt = f"""你是一個旅遊行程助理。請針對下面這個景點，估算遊客大概會停留多久時間，以及預估費用。
 
 景點名稱：{place_name}
 景點類型：{type_text}
@@ -806,14 +806,22 @@ class GeminiService:
 
 請只回傳純 JSON，不要輸出 Markdown 或多餘說明，結構如下：
 {{
-    "time": "建議停留 X 小時"
+    "time": "建議停留 X 小時",
+    "cost": "預估費用"
 }}
 
 規則：
 1. time 請用「建議停留 X 小時」這種自然語句，X 可以是小數（例如 1.5），不要使用 09:00 這類實際時刻。
 2. 如果建議停留時間 < 1小時，請直接寫「建議停留 30 分鐘」或「建議停留 15 分鐘」這種說法，不要寫「建議停留 0.5 小時」。
 3. 請依景點類型與規模合理判斷，例如博物館、主題樂園停留較久，便利商店、車站、小型景點停留較短。
-4. 不要輸出除了 time 以外的欄位。
+4. cost 必須遵守以下格式：
+   - 單一價格：幣別 + 空白 + 千分位數字（例：JPY 3,000）
+   - 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值（例：JPY 1,000 - 2,500）
+   - 免費：免費
+   - 不確定時：約 JPY 2,000
+   - 禁止輸出沒有幣別或沒有千分位的格式。
+5. 請根據地址判斷幣別，例如日本用 JPY、台灣用 TWD、韓國用 KRW。
+6. 不要輸出除了 time、cost 以外的欄位。
 """
 
             response = self.model.generate_content(
@@ -822,13 +830,16 @@ class GeminiService:
             raw_content, cleaned_json, parsed_json = self._parse_response_json(response)
 
             suggested_time = ""
+            suggested_cost = ""
             if isinstance(parsed_json, dict):
                 suggested_time = str(parsed_json.get("time") or "").strip()
+                suggested_cost = str(parsed_json.get("cost") or "").strip()
 
             return {
                 "success": True,
                 "data": {
                     "time": suggested_time,
+                    "cost": suggested_cost,
                     "raw_output": raw_content or cleaned_json,
                 },
             }
@@ -911,6 +922,7 @@ class GeminiService:
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             絕對不可以推薦任何機場、國際機場、航廈、候機室、機場捷運站這類地點（例如：桃園國際機場、成田機場、羽田機場、關西國際機場等），機場是交通節點，不得列為觀光景點，即使行程起訖點在機場附近也不得列入。
+            此行程的第 1 天是抵達後的第一個遊玩天，最後一天（第 {days} 天）是離開前的最後一個遊玩天，抵達日與離開日各自是額外的一天不在行程內。因此最後一天不需要刻意安排在機場附近或靠近交通樞紐的景點，請依照旅遊體驗最佳化來安排。
             所有景點都必須是位於「{location_str}」當地、實際存在於這些城市或地區範圍內的真實景點，絕對不可以出現行程清單以外的城市或國家的景點。
             特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location_str}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location_str}」當地真實對應、性質相近的景點。
             檢查每日景點的距離不要超過120公里。

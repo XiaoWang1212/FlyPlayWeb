@@ -400,7 +400,7 @@ function openEditModeForDay(targetDay) {
 	}
 }
 
-function openEditModeWithSearchKeyword(keyword, targetDay) {
+async function openEditModeWithSearchKeyword(keyword, targetDay) {
 	const searchKeyword = String(keyword || "").trim();
 	const dayNumber = Number(targetDay || 0);
 
@@ -412,19 +412,13 @@ function openEditModeWithSearchKeyword(keyword, targetDay) {
 	}
 
 	if (isChatMode && typeof toggleChatMode === "function") {
-		toggleChatMode();
+		await toggleChatMode();
 	}
 
 	if (!isEditMode && typeof toggleEditMode === "function") {
 		toggleEditMode();
 	}
 
-	if (typeof openSheet === "function") {
-		openSheet();
-	}
-	if (typeof syncSheetState === "function") {
-		syncSheetState("sheet-expanded");
-	}
 	if (typeof openSpotSearchModal === "function") {
 		openSpotSearchModal(searchKeyword);
 	}
@@ -807,7 +801,7 @@ async function handleModeCardSelected(mode, flow) {
 
 	if (mode === "manual") {
 		writeItineraryEditFlow({ ...flow, stage: "manual_spot_name" });
-		addBotMessage("請直接輸入你想加入的景點名稱，我會幫你打開編輯頁面並預填搜尋框。");
+		await addBotMessage("請直接輸入你想加入的景點名稱，我會幫你打開編輯頁面並預填搜尋框。");
 		return;
 	}
 
@@ -850,7 +844,7 @@ async function handleModeCardSelected(mode, flow) {
 			`我幫你推薦了「${suggestedSpot}」，已經幫你打開編輯頁面並預填搜尋框。記得也要把原本的「${flow.targetItem}」刪掉喔！`,
 		);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		openEditModeWithSearchKeyword(suggestedSpot, flow.targetDay);
+		await openEditModeWithSearchKeyword(suggestedSpot, flow.targetDay);
 	} catch (error) {
 		removeChatLoadingSpinner(loadingEl);
 		addBotMessage(`AI 推薦時發生問題：${error.message || error}。你也可以改用自己知道的景點名稱。`);
@@ -968,7 +962,7 @@ async function handleItineraryEditFlowInput(text) {
 		clearItineraryEditFlow();
 		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		openEditModeWithSearchKeyword(spotName, targetDay);
+		await openEditModeWithSearchKeyword(spotName, targetDay);
 		return true;
 	}
 
@@ -1136,7 +1130,7 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 		if (trimmed === "") {
 			afterBullet = 0;
 			p.className = "chat-msg-line";
-		} else if (/^第\s*\d+\s*天/.test(trimmed)) {
+		} else if (/^第\s*\d+\s*天[\s（(]*(星期[一二三四五六日])?[\s）)]*$/.test(trimmed)) {
 			afterBullet = 0;
 			dayCount++;
 			p.className = dayCount === 1
