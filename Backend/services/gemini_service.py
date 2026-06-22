@@ -260,10 +260,12 @@ class GeminiService:
                             max_results=1,
                         )
                     if not search_result.get("success"):
+                        cards.append({"name": spot_name, "photo_url": "", "address": address, "place_id": place_id})
                         continue
 
                     places = search_result.get("places") or []
                     if not places:
+                        cards.append({"name": spot_name, "photo_url": "", "address": address, "place_id": place_id})
                         continue
 
                     place = places[0] if isinstance(places[0], dict) else {}
@@ -271,10 +273,7 @@ class GeminiService:
                     first_photo = photos[0] if photos and isinstance(photos[0], dict) else {}
                     fallback_photo_url = first_photo.get("photo_url")
 
-                    if not fallback_photo_url:
-                        continue
-
-                    activity["photo_url"] = fallback_photo_url
+                    activity["photo_url"] = fallback_photo_url or ""
                     if place.get("address"):
                         activity["address"] = place["address"]
                     if place.get("place_id"):
@@ -289,7 +288,7 @@ class GeminiService:
 
                     card = {
                         "name": place.get("name") or spot_name,
-                        "photo_url": fallback_photo_url,
+                        "photo_url": fallback_photo_url or "",
                         "address": place.get("address") or address,
                         "place_id": place.get("place_id") or place_id,
                     }
@@ -450,6 +449,25 @@ class GeminiService:
             keyword in text for keyword in ["修改", "更改", "調整", "改成", "替換"]
         )
 
+    def _is_nearby_attraction_request(self, message):
+        keywords = ["附近熱門景點", "附近景點", "附近熱門", "周邊景點", "附近美食推薦", "附近美食", "附近餐廳"]
+        return any(kw in str(message or "") for kw in keywords)
+
+    def _extract_target_day_from_message(self, message):
+        text = str(message or "")
+        match = re.search(r'第\s*([0-9一二三四五六七八九十]+)\s*天', text)
+        if match:
+            day_str = match.group(1)
+            chinese_map = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+                           '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
+            if day_str in chinese_map:
+                return chinese_map[day_str]
+            try:
+                return int(day_str)
+            except ValueError:
+                pass
+        return None
+
     def _build_itinerary_context_text(self, current_itinerary, current_day_index=-1):
         if not isinstance(current_itinerary, list) or not current_itinerary:
             return ""
@@ -594,7 +612,49 @@ class GeminiService:
                 current_itinerary, current_day_index
             )
             final_message = str(message).strip()
-            if self._is_itinerary_edit_request(final_message) and itinerary_context_text:
+            is_nearby_request = False
+            if self._is_nearby_attraction_request(final_message):
+                target_day = self._extract_target_day_from_message(final_message)
+                is_food_request = any(kw in final_message for kw in ["美食", "餐廳"])
+                category_hint = "美食餐廳" if is_food_request else "熱門景點"
+                if target_day and itinerary_context_text:
+                    is_nearby_request = True
+                    final_message = (
+                        f"你是一個旅遊行程助理。請根據第 {target_day} 天的行程所在城市／區域，"
+                        f"推薦一些該地區值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
+                        f"旅遊資訊：\n{trip_context_text or '無'}\n\n"
+                        f"現有行程：\n{itinerary_context_text}\n\n"
+                        "請只回傳純 JSON，不要輸出 Markdown 或多餘說明，格式如下：\n"
+                        "{\n"
+                        f'  "action": "nearby_attractions",\n'
+                        f'  "target_day": {target_day},\n'
+                        f'  "summary": "以下為第 {target_day} 天推薦的其他{category_hint}",\n'
+                        '  "attractions": [\n'
+                        '    {\n'
+                        '      "name": "景點名稱",\n'
+                        '      "type": "景點類型（景點／美食／購物／文化）",\n'
+                        '      "description": "一句話簡介",\n'
+                        '      "estimated_time": "建議停留 X 小時（固定以「建議停留」開頭）"\n'
+                        '    }\n'
+                        '  ]\n'
+                        "}\n\n"
+                        "規則：\n"
+                        f"1. 推薦 4~6 個{category_hint}\n"
+                        f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
+                        f"3. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
+                        "4. 不得推薦機場、航廈等交通節點\n"
+                        "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
+                        f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
+                        "7. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱"
+                    )
+                elif trip_context_text:
+                    final_message = (
+                        "已知旅遊資訊：\n"
+                        f"{trip_context_text}\n\n"
+                        f"使用者問題：{final_message}\n\n"
+                        "請直接根據已知資訊給出具體建議，不得反問使用者任何問題。"
+                    )
+            elif self._is_itinerary_edit_request(final_message) and itinerary_context_text:
                 final_message = (
                     "你是一個旅遊行程編輯器。使用者要透過聊天修改某一天的行程。\n"
                     "請只修改使用者指定的那一天，不要改其他天。\n"
@@ -610,7 +670,7 @@ class GeminiService:
                     "{\n"
                     '  "action": "update_day",\n'
                     '  "target_day": 2,\n'
-                    '  "summary": "已將第 2 天下午改為...",\n'
+                    '  "summary": "（只說本次新增／修改／刪除了什麼，例如：已新增「福岡城跡」在大濠公園之後。不要列出整天行程）",\n'
                     '  "updated_day": {\n'
                     '    "day": 2,\n'
                     '    "weekday": "星期五",\n'
@@ -619,6 +679,7 @@ class GeminiService:
                     "    ]\n"
                     "  }\n"
                     "}\n"
+                    "summary 規則：只描述本次操作（新增了什麼／刪除了什麼／把什麼改成什麼），一句話即可，絕對不可重新列出所有景點。\n"
                     "如果無法完成修改，請回傳 {\"action\": \"need_clarification\", \"question\": \"...\"}。"
                 )
             elif trip_context_text:
@@ -633,7 +694,14 @@ class GeminiService:
             ai_content = self._strip_markdown_text(response.text)
             spot_images = self._build_spot_image_cards(current_itinerary, ai_content, latlng_itinerary=latlng_itinerary)
             parsed_payload = None
-            if self._is_itinerary_edit_request(message):
+            if is_nearby_request:
+                try:
+                    _, _, parsed_payload = self._parse_response_json(response)
+                    if isinstance(parsed_payload, dict):
+                        ai_content = parsed_payload.get("summary", ai_content)
+                except Exception:
+                    parsed_payload = None
+            elif self._is_itinerary_edit_request(message):
                 try:
                     _, _, parsed_payload = self._parse_response_json(response)
                 except Exception:
@@ -729,7 +797,7 @@ class GeminiService:
             address_text = address or "未提供"
             rating_text = str(rating) if rating is not None else "未提供"
 
-            prompt = f"""你是一個旅遊行程助理。請針對下面這個景點，估算遊客大概會停留多久時間。
+            prompt = f"""你是一個旅遊行程助理。請針對下面這個景點，估算遊客大概會停留多久時間，以及預估費用。
 
 景點名稱：{place_name}
 景點類型：{type_text}
@@ -738,14 +806,22 @@ class GeminiService:
 
 請只回傳純 JSON，不要輸出 Markdown 或多餘說明，結構如下：
 {{
-    "time": "建議停留 X 小時"
+    "time": "建議停留 X 小時",
+    "cost": "預估費用"
 }}
 
 規則：
 1. time 請用「建議停留 X 小時」這種自然語句，X 可以是小數（例如 1.5），不要使用 09:00 這類實際時刻。
 2. 如果建議停留時間 < 1小時，請直接寫「建議停留 30 分鐘」或「建議停留 15 分鐘」這種說法，不要寫「建議停留 0.5 小時」。
 3. 請依景點類型與規模合理判斷，例如博物館、主題樂園停留較久，便利商店、車站、小型景點停留較短。
-4. 不要輸出除了 time 以外的欄位。
+4. cost 必須遵守以下格式：
+   - 單一價格：幣別 + 空白 + 千分位數字（例：JPY 3,000）
+   - 價格區間：幣別 + 空白 + 最小值 + 空白-空白 + 最大值（例：JPY 1,000 - 2,500）
+   - 免費：免費
+   - 不確定時：約 JPY 2,000
+   - 禁止輸出沒有幣別或沒有千分位的格式。
+5. 請根據地址判斷幣別，例如日本用 JPY、台灣用 TWD、韓國用 KRW。
+6. 不要輸出除了 time、cost 以外的欄位。
 """
 
             response = self.model.generate_content(
@@ -754,13 +830,16 @@ class GeminiService:
             raw_content, cleaned_json, parsed_json = self._parse_response_json(response)
 
             suggested_time = ""
+            suggested_cost = ""
             if isinstance(parsed_json, dict):
                 suggested_time = str(parsed_json.get("time") or "").strip()
+                suggested_cost = str(parsed_json.get("cost") or "").strip()
 
             return {
                 "success": True,
                 "data": {
                     "time": suggested_time,
+                    "cost": suggested_cost,
                     "raw_output": raw_content or cleaned_json,
                 },
             }
@@ -785,12 +864,36 @@ class GeminiService:
                 else "行程緊湊度：輕鬆，每日可用觀光時間為 6 小時，請安排景點使每日建議停留時間總和不超過 6 小時（含景點間移動時間），景點數不得超過 3 個。"
             )
 
-            prompt = f"""請為以下旅客創建完整的{days}天{location}行程。
+            locations = [loc.strip() for loc in location.replace(",", "、").split("、") if loc.strip()]
+            location_str = "、".join(locations)
+            if len(locations) > 1:
+                days_per_location = max(1, days // len(locations))
+                allocation_lines = []
+                day_cursor = 1
+                for i, loc in enumerate(locations):
+                    end_day = day_cursor + days_per_location - 1 if i < len(locations) - 1 else days
+                    if day_cursor == end_day:
+                        allocation_lines.append(f"- 第{day_cursor}天：{loc}")
+                    else:
+                        allocation_lines.append(f"- 第{day_cursor}～{end_day}天：{loc}")
+                    day_cursor = end_day + 1
+                allocation_plan = "\n            ".join(allocation_lines)
+                location_coverage_rule = (
+                    f"【絕對必要條件】此行程涵蓋以下 {len(locations)} 個城市，每個城市都必須出現在行程中，不得遺漏任何一個：{location_str}。\n"
+                    f"            請嚴格按照以下天數分配（可小幅調整，但每個城市至少要有1天）：\n"
+                    f"            {allocation_plan}\n"
+                    f"            同一天的所有景點必須位於同一個城市，不可混搭不同城市的景點。\n"
+                    f"            若你生成的行程未包含上述所有城市，請視為錯誤並重新生成。\n"
+                )
+            else:
+                location_coverage_rule = ""
+
+            prompt = f"""請為以下旅客創建完整的{days}天{location_str}行程。
             旅客類型: {traveler_type}
             行程緊湊度: {pace_label}
             興趣: {interests_str}
             {date_info}
-            
+            {location_coverage_rule}
             嚴格遵守以下 JSON 結構輸出，確保前端能直接渲染：
             {{
                 "data": [
@@ -816,11 +919,13 @@ class GeminiService:
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
             如果該天原本沒有餐廳或美食安排，請補上一個合適且常見的在地美食或餐廳。
             days[].location.location_name裡面只可以有景點名稱，不要包含任何描述或其他資訊。
+            所有地點名稱必須是 Google Maps 上可以直接搜尋到的具體地點，例如「錦市場」、「上通商店街」、「天文館むじゃき」，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」、「燒肉」），美食景點請一律使用具體的餐廳或市場名稱。
             請避免推薦墓園、墳墓、靈骨塔、墓地、graveyard、cemetery、sacred burial sites 這類景點。
             如果原本可能會想到這類地點，請改成附近的公園、商店街、博物館、神社、寺院或其他更適合一般旅遊的景點。
             絕對不可以推薦任何機場、國際機場、航廈、候機室、機場捷運站這類地點（例如：桃園國際機場、成田機場、羽田機場、關西國際機場等），機場是交通節點，不得列為觀光景點，即使行程起訖點在機場附近也不得列入。
-            所有景點都必須是位於「{location}」當地、實際存在於該城市或地區範圍內的真實景點，絕對不可以出現其他城市或國家的景點。
-            特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location}」當地真實對應、性質相近的景點。
+            此行程的第 1 天是抵達後的第一個遊玩天，最後一天（第 {days} 天）是離開前的最後一個遊玩天，抵達日與離開日各自是額外的一天不在行程內。因此最後一天不需要刻意安排在機場附近或靠近交通樞紐的景點，請依照旅遊體驗最佳化來安排。
+            所有景點都必須是位於「{location_str}」當地、實際存在於這些城市或地區範圍內的真實景點，絕對不可以出現行程清單以外的城市或國家的景點。
+            特別注意：不要因為慣性聯想而誤植台灣的景點（例如九份、台北101、士林夜市、西門町、太魯閣、日月潭、淡水等），除非「{location_str}」本身就位於台灣。如果你想到的景點其實位於其他城市或國家，請改成「{location_str}」當地真實對應、性質相近的景點。
             檢查每日景點的距離不要超過120公里。
             同一區的景點安排在同一天，不要同個區的景點去兩天。
             像是秋葉原電器街和秋葉原根本上是同個地方，就不要同一天安排一個叫秋葉原電器街、一個叫秋葉原的景點，請合併成同一個景點。
@@ -987,8 +1092,10 @@ class GeminiService:
                 except Exception:
                     normalized_existing = None
 
+            if not normalized_existing:
+                return {"success": False, "error": "無法解析現有行程資料，無法生成詳細行程"}
             existing_itinerary_str = json.dumps(
-                normalized_existing if normalized_existing else test_data,
+                normalized_existing,
                 ensure_ascii=False,
                 indent=2,
             )
@@ -1022,20 +1129,20 @@ class GeminiService:
     ]
 }}
 
-規則：
-1. place_name 必須與原始行程完全一致，禁止改名、新增或刪除任何地點。
-2. 每天的 location 數量必須與原始行程完全相同。
-3. description 一句話描述，控制在 25 字以內。
-4. type 必須是以下之一：景點、美食、交通、住宿。
-5. cost 格式：
-   - 單一價格：幣別 + 空白 + 千分位數字（例：JPY 3,000）
-   - 價格區間：幣別 + 最小 - 最大（例：JPY 1,000 - 2,500）
-   - 免費：免費
-   - 不確定：約 JPY 2,000
-   - 禁止輸出無幣別或無千分位的格式。
-6. time 使用「建議停留 X 小時」格式，依景點規模與行程節奏判斷，禁止使用 09:00 這類時刻。
-7. 只回傳純 JSON，不要有任何 markdown 標記或額外說明。
-"""
+            規則：
+            1. place_name 必須與原始行程完全一致，禁止改名、新增或刪除任何地點。
+            2. 每天的 location 數量必須與原始行程完全相同。
+            3. description 一句話描述，控制在 25 字以內。
+            4. type 必須是以下之一：景點、美食、交通、住宿。
+            5. cost 格式：
+            - 單一價格：幣別 + 空白 + 千分位數字（例：JPY 3,000）
+            - 價格區間：幣別 + 最小 - 最大（例：JPY 1,000 - 2,500）
+            - 免費：免費
+            - 不確定：約 JPY 2,000
+            - 禁止輸出無幣別或無千分位的格式。
+            6. time 使用「建議停留 X 小時」格式，依景點規模與行程節奏判斷，禁止使用 09:00 這類時刻。
+            7. 只回傳純 JSON，不要有任何 markdown 標記或額外說明。
+            """
 
             response = self.model.generate_content(
                 prompt, generation_config=self.generation_config

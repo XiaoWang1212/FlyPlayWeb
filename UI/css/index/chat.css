@@ -81,18 +81,7 @@
 	border-radius: 18px 18px 0 0;
 	pointer-events: auto;
 	align-items: center;
-	justify-content: safe center;
-	overflow-x: auto;
-	-webkit-overflow-scrolling: touch;
-	scrollbar-width: none;
-}
-
-.chat-suggestions::-webkit-scrollbar {
-	display: none;
-}
-
-.map-container.sheet-collapsed .chat-suggestions {
-	display: none;
+	justify-content: center;
 }
 
 .map-container.sheet-expanded .chat-suggestions {
@@ -233,6 +222,15 @@
 	aspect-ratio: 16/9;
 	object-fit: cover;
 	background: #ddd;
+}
+
+.chat-spot-no-photo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f0f0f0;
+	color: #aaa;
+	font-size: 28px;
 }
 
 .chat-spot-title {
@@ -382,6 +380,88 @@
 	font-size: 14px;
 	font-weight: 500;
 	color: #1d1d1d;
+}
+
+/* Nearby attractions cards */
+.chat-nearby-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 10px;
+	width: 100%;
+}
+
+.chat-nearby-card {
+	border: 1px solid #e8e8e8;
+	background: #fafafa;
+	border-radius: 10px;
+	padding: 10px 12px;
+}
+
+.chat-nearby-card--clickable {
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.chat-nearby-card--clickable:hover {
+	background: #f0f4ff;
+	border-color: #b8c8f0;
+}
+
+.chat-nearby-card--clickable:active {
+	background: #e4ecff;
+}
+
+.chat-nearby-card--clickable.is-loading {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.chat-nearby-map-hint {
+	font-size: 12px;
+	color: #aaa;
+	flex-shrink: 0;
+	transition: color 0.15s;
+}
+
+.chat-nearby-card--clickable:hover .chat-nearby-map-hint {
+	color: #4a7ce8;
+}
+
+.chat-nearby-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.chat-nearby-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d1d1d;
+	flex: 1;
+}
+
+.chat-nearby-badge {
+	font-size: 11px;
+	color: #666;
+	background: #efefef;
+	border-radius: 4px;
+	padding: 2px 6px;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.chat-nearby-desc {
+	font-size: 13px;
+	color: #555;
+	line-height: 1.4;
+	margin-bottom: 4px;
+}
+
+.chat-nearby-time {
+	font-size: 12px;
+	color: #888;
 }
 
 /* Image modal */

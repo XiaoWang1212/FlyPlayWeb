@@ -485,21 +485,36 @@ async function applySuggestedSpotDuration(activity) {
     });
 
     const payload = await response.json();
+    if (!response.ok) return;
+
     const suggestedTime = payload?.data?.time;
-    if (!response.ok || !suggestedTime) return;
+    const suggestedCost = payload?.data?.cost;
 
     // 等待期間若使用者已手動改過時間，就不要覆蓋。
-    if (activity.time !== "待安排") return;
+    const itemSelector = `.timeline-item[data-activity-id="${CSS.escape(activity.activityId)}"]`;
 
-    activity.time = suggestedTime;
+    if (suggestedTime && activity.time === "待安排") {
+      activity.time = suggestedTime;
+      const badge = document.querySelector(`${itemSelector} .time-badge`);
+      if (badge) badge.textContent = suggestedTime;
+    }
 
-    const badgeSelector = `.timeline-item[data-activity-id="${CSS.escape(
-      activity.activityId,
-    )}"] .time-badge`;
-    const badge = document.querySelector(badgeSelector);
-    if (badge) badge.textContent = suggestedTime;
+    if (suggestedCost && !activity.cost) {
+      activity.cost = suggestedCost;
+      const item = document.querySelector(itemSelector);
+      if (item) {
+        let costEl = item.querySelector(".activity-cost");
+        if (!costEl) {
+          costEl = document.createElement("div");
+          costEl.className = "activity-cost";
+          const desc = item.querySelector(".timeline-desc");
+          if (desc) desc.insertAdjacentElement("afterend", costEl);
+        }
+        costEl.textContent = `💰 ${suggestedCost}`;
+      }
+    }
   } catch (error) {
-    // 建議停留時間取得失敗時，維持「待安排」即可。
+    // 建議停留時間或費用取得失敗時，維持原值即可。
   }
 }
 
@@ -529,7 +544,12 @@ async function addSpotToItinerary(spot, evt) {
     document.getElementById("dragConfirmBtn").classList.add("show");
   }
 
-  if (currentDayIndex === -1) {
+  const dayBtn = document.querySelector(
+    `#dayButtonContainer button[data-day-index="${targetDayIndex}"]`
+  );
+  if (dayBtn) {
+    switchDay(targetDayIndex, dayBtn);
+  } else if (currentDayIndex === -1) {
     displayAllDays();
   } else {
     displayDay(currentDayIndex);

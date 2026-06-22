@@ -425,7 +425,7 @@ fetch(`${API_BASE}/api/google-key`)
 	.then((res) => res.json())
 	.then((data) => {
 		const script = document.createElement("script");
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places&loading=async`;
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places`;
 		script.async = true;
 		script.onload = () => _googleMapsResolve();
 		script.onerror = () => _googleMapsResolve(); // 失敗也 resolve，讓 initMap 裡的錯誤正常拋出

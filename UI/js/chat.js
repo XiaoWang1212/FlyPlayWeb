@@ -378,9 +378,13 @@ function openEditModeForDay(targetDay) {
 	const dayNumber = Number(targetDay || 0);
 
 	if (dayNumber > 0 && Array.isArray(allDays) && allDays.length >= dayNumber) {
-		currentDayIndex = dayNumber - 1;
-		if (typeof displayDay === "function") {
-			displayDay(currentDayIndex);
+		const dayIdx = dayNumber - 1;
+		const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIdx}"]`);
+		if (timelineBtn) {
+			switchDay(dayIdx, timelineBtn);
+		} else {
+			currentDayIndex = dayIdx;
+			if (typeof displayDay === "function") displayDay(dayIdx);
 		}
 	}
 
@@ -400,31 +404,29 @@ function openEditModeForDay(targetDay) {
 	}
 }
 
-function openEditModeWithSearchKeyword(keyword, targetDay) {
+async function openEditModeWithSearchKeyword(keyword, targetDay) {
 	const searchKeyword = String(keyword || "").trim();
 	const dayNumber = Number(targetDay || 0);
 
 	if (dayNumber > 0 && Array.isArray(allDays) && allDays.length >= dayNumber) {
-		currentDayIndex = dayNumber - 1;
-		if (typeof displayDay === "function") {
-			displayDay(currentDayIndex);
+		const dayIdx = dayNumber - 1;
+		const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIdx}"]`);
+		if (timelineBtn) {
+			switchDay(dayIdx, timelineBtn);
+		} else {
+			currentDayIndex = dayIdx;
+			if (typeof displayDay === "function") displayDay(dayIdx);
 		}
 	}
 
 	if (isChatMode && typeof toggleChatMode === "function") {
-		toggleChatMode();
+		await toggleChatMode();
 	}
 
 	if (!isEditMode && typeof toggleEditMode === "function") {
 		toggleEditMode();
 	}
 
-	if (typeof openSheet === "function") {
-		openSheet();
-	}
-	if (typeof syncSheetState === "function") {
-		syncSheetState("sheet-expanded");
-	}
 	if (typeof openSpotSearchModal === "function") {
 		openSpotSearchModal(searchKeyword);
 	}
@@ -458,15 +460,84 @@ async function showDayPickerForDeleteMessage() {
 			btn.classList.add("selected");
 			appendMsg(`第 ${dayNum} 天`, "user");
 			pushConversationMessage("user", `第 ${dayNum} 天`);
-			clearItineraryEditFlow();
-			await addBotMessage(`好的，我幫你切換到第 ${dayNum} 天的編輯模式。找到想刪除的景點後，點右邊的垃圾桶，最後再按確認就完成了。`);
-			await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-			openEditModeForDay(dayNum);
+
+			const activeDays = getActiveDays();
+			const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+			const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIndex}"]`);
+			if (timelineBtn && dayIndex >= 0) switchDay(dayIndex, timelineBtn);
+
+			await showActivityPickerForDeleteMessage(dayNum);
 		});
 		row.appendChild(btn);
 	});
 	msgEl.appendChild(row);
 	scrollToBottom();
+}
+
+async function showActivityPickerForDeleteMessage(dayNum) {
+	const days = getChatCurrentItinerary();
+	const day = days.find((d) => Number(d.day) === dayNum);
+	const activities = Array.isArray(day?.activities) ? day.activities : [];
+
+	if (!activities.length) {
+		await addBotMessage(`第 ${dayNum} 天目前沒有景點可刪除。`);
+		clearItineraryEditFlow();
+		return;
+	}
+
+	const msgEl = await typeMessage(`第 ${dayNum} 天的景點如下，請選擇要刪除的：`, "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: `第 ${dayNum} 天的景點如下，請選擇要刪除的：` });
+
+	const list = document.createElement("div");
+	list.className = "chat-activity-list";
+
+	activities.forEach((activity, index) => {
+		const name = activity.place_name || activity.location_name || activity.name || "未命名景點";
+		const card = document.createElement("button");
+		card.className = "chat-activity-card";
+
+		const numEl = document.createElement("span");
+		numEl.className = "chat-activity-num";
+		numEl.textContent = String(index + 1);
+		card.appendChild(numEl);
+
+		const nameEl = document.createElement("span");
+		nameEl.className = "chat-activity-name";
+		nameEl.textContent = name;
+		card.appendChild(nameEl);
+
+		card.addEventListener("click", async () => {
+			disablePickerContainer(list);
+			card.classList.add("selected");
+			appendMsg(name, "user");
+			pushConversationMessage("user", name);
+			clearItineraryEditFlow();
+
+			deleteActivityFromDay(dayNum, index);
+			await addBotMessage(`已將「${name}」從第 ${dayNum} 天刪除。`);
+		});
+
+		list.appendChild(card);
+	});
+
+	msgEl.appendChild(list);
+	scrollToBottom();
+}
+
+function deleteActivityFromDay(dayNum, actIndex) {
+	const targetDays = (typeof isEditMode !== "undefined" && isEditMode && typeof editedDays !== "undefined" && editedDays) ? editedDays : allDays;
+	const day = targetDays.find((d) => Number(d.day) === dayNum);
+	if (!day || !Array.isArray(day.activities)) return;
+
+	day.activities.splice(actIndex, 1);
+
+	const activeDays = getActiveDays();
+	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+	if (currentDayIndex === -1) {
+		if (typeof displayAllDays === "function") displayAllDays();
+	} else {
+		if (typeof displayDay === "function") displayDay(dayIndex >= 0 ? dayIndex : currentDayIndex);
+	}
 }
 
 async function showDayPickerForAddMessage() {
@@ -514,6 +585,242 @@ async function showDayPickerMessage() {
 	appendDayPickerCards(msgEl, days);
 }
 
+async function showDayPickerForNearbyAttractions(isFood) {
+	const days = getChatCurrentItinerary();
+	if (!days.length) {
+		await addBotMessage("目前沒有載入行程，請先確認行程已建立。");
+		return;
+	}
+	const label = isFood ? "附近美食" : "附近熱門景點";
+	const prompt = `你想查第幾天行程的${label}推薦？`;
+	const msgEl = await typeMessage(prompt, "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: prompt });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+	days.forEach((day) => {
+		const dayNum = Number(day.day);
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+
+			// 靜默切換 timeline 到對應天，讓後續「加入行程」加到正確的天
+			const activeDays = getActiveDays();
+			const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+			const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIndex}"]`);
+			if (timelineBtn && dayIndex >= 0) switchDay(dayIndex, timelineBtn);
+
+			await fetchNearbyAttractions(dayNum, isFood);
+		});
+		row.appendChild(btn);
+	});
+	msgEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function fetchNearbyAttractions(dayNum, isFood) {
+	const tripContext = buildChatTripContext();
+	const currentItinerary = getChatCurrentItinerary();
+	const itineraryId = localStorage.getItem("currentItineraryId") || null;
+	const keyword = isFood ? "附近美食推薦" : "附近熱門景點";
+	const message = `${keyword} 第${dayNum}天`;
+
+	const loadingId = "loading-" + Date.now();
+	document.getElementById("chatMessages").insertAdjacentHTML(
+		"beforeend",
+		`<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
+	);
+	scrollToBottom();
+
+	try {
+		const resp = await fetch(API_BASE + "/api/chat/message", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				message,
+				conversationHistory,
+				tripContext,
+				currentItinerary,
+				currentDayIndex: dayNum - 1,
+				itineraryId,
+			}),
+		});
+
+		const result = await resp.json();
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+
+		if (result && (result.code === 200 || result.success === true)) {
+			const data = result.data || result;
+			const parsed = data.parsed;
+
+			if (parsed && parsed.action === "nearby_attractions" && Array.isArray(parsed.attractions)) {
+				const summary = parsed.summary || `以下是第 ${dayNum} 天所在區域的推薦：`;
+				const msgEl = await typeMessage(summary, "bot", CHAT_TYPEWRITER_SPEED);
+				conversationHistory.push({ role: "assistant", content: summary });
+				appendNearbyAttractionCards(msgEl, parsed.attractions, parsed.target_day ?? dayNum);
+			} else {
+				const aiText = (parsed?.question) || data.response || `抱歉，無法取得第 ${dayNum} 天的推薦，請再試一次。`;
+				await appendMsg(aiText, "bot");
+				conversationHistory.push({ role: "assistant", content: aiText });
+			}
+		} else {
+			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
+		}
+	} catch (err) {
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+		await appendMsg("網路錯誤，請稍後再試", "bot");
+	}
+}
+
+function appendNearbyAttractionCards(parentEl, attractions, dayNum) {
+	if (!Array.isArray(attractions) || attractions.length === 0) return;
+
+	const container = document.createElement("div");
+	container.className = "chat-nearby-list";
+
+	attractions.forEach((spot) => {
+		const card = document.createElement("div");
+		card.className = "chat-nearby-card chat-nearby-card--clickable";
+		card.setAttribute("role", "button");
+		card.setAttribute("tabindex", "0");
+
+		const header = document.createElement("div");
+		header.className = "chat-nearby-header";
+
+		const name = document.createElement("span");
+		name.className = "chat-nearby-name";
+		name.textContent = spot.name || "景點";
+		header.appendChild(name);
+
+		if (spot.type) {
+			const badge = document.createElement("span");
+			badge.className = "chat-nearby-badge";
+			badge.textContent = spot.type;
+			header.appendChild(badge);
+		}
+
+		const mapIcon = document.createElement("span");
+		mapIcon.className = "chat-nearby-map-hint";
+		mapIcon.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+		header.appendChild(mapIcon);
+
+		card.appendChild(header);
+
+		if (spot.description) {
+			const desc = document.createElement("div");
+			desc.className = "chat-nearby-desc";
+			desc.textContent = spot.description;
+			card.appendChild(desc);
+		}
+
+		if (spot.estimated_time) {
+			const time = document.createElement("div");
+			time.className = "chat-nearby-time";
+			const rawTime = String(spot.estimated_time);
+			time.textContent = rawTime.startsWith("建議停留") ? rawTime : `建議停留 ${rawTime}`;
+			card.appendChild(time);
+		}
+
+		card.addEventListener("click", () => showNearbySpotOnMap(spot.name, dayNum, card));
+		card.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") showNearbySpotOnMap(spot.name, dayNum, card);
+		});
+
+		container.appendChild(card);
+	});
+
+	parentEl.appendChild(container);
+	scrollToBottom();
+}
+
+async function showNearbySpotOnMap(spotName, dayNum, cardEl) {
+	if (cardEl.classList.contains("is-loading")) return;
+	cardEl.classList.add("is-loading");
+
+	try {
+		// 用該天最後一個有效座標做 nearby 搜尋
+		const days = getActiveDays();
+		const targetDay = days.find((d, i) => Number(d.day) === Number(dayNum) || i === Number(dayNum) - 1);
+		const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
+		let anchorLocation = null;
+		for (let i = activities.length - 1; i >= 0; i--) {
+			const loc = normalizeActivityLocation(activities[i]?.location);
+			if (loc) { anchorLocation = loc; break; }
+		}
+
+		const authHeaders = {
+			"Content-Type": "application/json",
+			...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
+		};
+
+		const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
+		const useNearby = anchorLocation && isValidCoord(anchorLocation.lat) && isValidCoord(anchorLocation.lng);
+
+		let response;
+		if (useNearby) {
+			response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					textQuery: spotName,
+					location: { latitude: anchorLocation.lat, longitude: anchorLocation.lng },
+					radius: 20000,
+					languageCode: "zh-TW",
+					maxResultCount: 1,
+				}),
+			});
+			// 若 nearby 失敗改走 general search
+			if (!response.ok) response = null;
+		}
+
+		if (!response) {
+			response = await fetch(`${API_BASE}/api/maps/search`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ textQuery: spotName, languageCode: "zh-TW", maxResultCount: 1 }),
+			});
+		}
+
+		const payload = await response.json();
+		const places = payload?.data?.places || [];
+		if (!places.length) return;
+
+		const place = places[0];
+		const spot = {
+			name: place.name || spotName,
+			place_id: place.place_id,
+			address: place.address || "",
+			location: place.location,
+			photo_url: place.photos?.[0]?.photo_url || "",
+			photos: place.photos || [],
+			rating: place.rating,
+		};
+
+		// 切回地圖
+		if (isChatMode) toggleChatMode();
+
+		selectedSpotForAdd = spot;
+		openSpotInfoOnMap(spot, "載入中...", "載入中...");
+
+		// 背景更新營業資訊
+		const { openingHoursText, priceRangeText } = await getBusinessInfo(spot, "");
+		if (selectedSpotForAdd === spot) {
+			openSpotInfoOnMap(spot, openingHoursText, priceRangeText);
+		}
+	} catch (err) {
+		console.error("showNearbySpotOnMap error:", err);
+	} finally {
+		cardEl.classList.remove("is-loading");
+	}
+}
+
 function appendDayPickerCards(parentEl, days) {
 	const row = document.createElement("div");
 	row.className = "chat-picker-row";
@@ -526,6 +833,12 @@ function appendDayPickerCards(parentEl, days) {
 		btn.addEventListener("click", () => {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
+
+			const activeDays = getActiveDays();
+			const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+			const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIndex}"]`);
+			if (timelineBtn && dayIndex >= 0) switchDay(dayIndex, timelineBtn);
+
 			handleDayCardSelected(dayNum, day);
 		});
 		row.appendChild(btn);
@@ -591,7 +904,7 @@ function appendActivityPickerCards(parentEl, activities, dayNumber) {
 		card.addEventListener("click", () => {
 			disablePickerContainer(list);
 			card.classList.add("selected");
-			handleActivityCardSelected(dayNumber, name);
+			handleActivityCardSelected(dayNumber, name, index);
 		});
 
 		list.appendChild(card);
@@ -601,7 +914,7 @@ function appendActivityPickerCards(parentEl, activities, dayNumber) {
 	scrollToBottom();
 }
 
-function handleActivityCardSelected(dayNumber, targetItem) {
+function handleActivityCardSelected(dayNumber, targetItem, targetIndex = -1) {
 	appendMsg(targetItem, "user");
 	pushConversationMessage("user", targetItem);
 
@@ -610,6 +923,7 @@ function handleActivityCardSelected(dayNumber, targetItem) {
 		stage: "choose_mode",
 		targetDay: dayNumber,
 		targetItem,
+		targetIndex,
 	};
 	writeItineraryEditFlow(flow);
 
@@ -672,7 +986,7 @@ async function handleModeCardSelected(mode, flow) {
 
 	if (mode === "manual") {
 		writeItineraryEditFlow({ ...flow, stage: "manual_spot_name" });
-		addBotMessage("請直接輸入你想加入的景點名稱，我會幫你打開編輯頁面並預填搜尋框。");
+		await addBotMessage("請直接輸入你想加入的景點名稱，我會幫你打開編輯頁面並預填搜尋框。");
 		return;
 	}
 
@@ -711,14 +1025,159 @@ async function handleModeCardSelected(mode, flow) {
 
 		removeChatLoadingSpinner(loadingEl);
 		clearItineraryEditFlow();
-		await addBotMessage(
-			`我幫你推薦了「${suggestedSpot}」，已經幫你打開編輯頁面並預填搜尋框。記得也要把原本的「${flow.targetItem}」刪掉喔！`,
+
+		// geocode 並在地圖上顯示推薦景點
+		const geocodedSpot = await geocodeSpotForReplace(suggestedSpot, flow.targetDay);
+		if (geocodedSpot) {
+			if (isChatMode) toggleChatMode();
+			selectedSpotForAdd = geocodedSpot;
+			openSpotInfoOnMap(geocodedSpot, "載入中...", "載入中...");
+			getBusinessInfo(geocodedSpot, "").then(({ openingHoursText, priceRangeText }) => {
+				if (selectedSpotForAdd === geocodedSpot) openSpotInfoOnMap(geocodedSpot, openingHoursText, priceRangeText);
+			});
+		}
+
+		const msgEl = await typeMessage(
+			`AI 推薦用「${suggestedSpot}」替換「${flow.targetItem}」，要換嗎？`,
+			"bot",
+			CHAT_TYPEWRITER_SPEED,
 		);
-		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		openEditModeWithSearchKeyword(suggestedSpot, flow.targetDay);
+		conversationHistory.push({ role: "assistant", content: `AI 推薦用「${suggestedSpot}」替換「${flow.targetItem}」，要換嗎？` });
+		appendReplaceConfirmChips(msgEl, flow, geocodedSpot || { name: suggestedSpot });
 	} catch (error) {
 		removeChatLoadingSpinner(loadingEl);
 		addBotMessage(`AI 推薦時發生問題：${error.message || error}。你也可以改用自己知道的景點名稱。`);
+	}
+}
+
+async function geocodeSpotForReplace(spotName, dayNum) {
+	try {
+		const authHeaders = {
+			"Content-Type": "application/json",
+			...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
+		};
+		const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
+
+		const days = getActiveDays();
+		const targetDay = days.find((d) => Number(d.day) === Number(dayNum));
+		const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
+		let anchorLocation = null;
+		for (let i = activities.length - 1; i >= 0; i--) {
+			const loc = normalizeActivityLocation(activities[i]?.location);
+			if (loc) { anchorLocation = loc; break; }
+		}
+
+		let response;
+		if (anchorLocation && isValidCoord(anchorLocation.lat) && isValidCoord(anchorLocation.lng)) {
+			response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({
+					textQuery: spotName,
+					location: { latitude: anchorLocation.lat, longitude: anchorLocation.lng },
+					radius: 20000,
+					languageCode: "zh-TW",
+					maxResultCount: 1,
+				}),
+			});
+			if (!response.ok) response = null;
+		}
+		if (!response) {
+			response = await fetch(`${API_BASE}/api/maps/search`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ textQuery: spotName, languageCode: "zh-TW", maxResultCount: 1 }),
+			});
+		}
+		const payload = await response.json();
+		const places = payload?.data?.places || [];
+		if (!places.length) return null;
+		const place = places[0];
+		return {
+			name: place.name || spotName,
+			place_id: place.place_id,
+			address: place.address || "",
+			location: place.location,
+			photo_url: place.photos?.[0]?.photo_url || "",
+			photos: place.photos || [],
+			rating: place.rating,
+		};
+	} catch (err) {
+		console.error("geocodeSpotForReplace error:", err);
+		return null;
+	}
+}
+
+function appendReplaceConfirmChips(parentEl, flow, newSpot) {
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+
+	const yesBtn = document.createElement("button");
+	yesBtn.className = "chat-picker-chip";
+	yesBtn.textContent = "是";
+	yesBtn.addEventListener("click", async () => {
+		disablePickerContainer(row);
+		yesBtn.classList.add("selected");
+		appendMsg("是", "user");
+		pushConversationMessage("user", "是");
+		replaceActivityInDay(flow.targetDay, flow.targetItem, newSpot, flow.targetIndex ?? -1);
+		await addBotMessage(`已將「${flow.targetItem}」替換為「${newSpot.name}」。`);
+	});
+
+	const noBtn = document.createElement("button");
+	noBtn.className = "chat-picker-chip";
+	noBtn.textContent = "否";
+	noBtn.addEventListener("click", async () => {
+		disablePickerContainer(row);
+		noBtn.classList.add("selected");
+		appendMsg("否", "user");
+		pushConversationMessage("user", "否");
+		await addBotMessage("好的，行程保持不變。");
+	});
+
+	row.appendChild(yesBtn);
+	row.appendChild(noBtn);
+	parentEl.appendChild(row);
+	scrollToBottom();
+}
+
+function replaceActivityInDay(dayNum, targetItemName, newSpot, targetIndex = -1) {
+	const targetDays = (typeof isEditMode !== "undefined" && isEditMode && typeof editedDays !== "undefined" && editedDays)
+		? editedDays
+		: allDays;
+	const day = targetDays.find((d) => Number(d.day) === dayNum);
+	if (!day || !Array.isArray(day.activities)) return;
+
+	const actIndex = (targetIndex >= 0 && targetIndex < day.activities.length)
+		? targetIndex
+		: day.activities.findIndex((a) => (a.place_name || a.location_name || a.name || "") === targetItemName);
+	if (actIndex === -1) return;
+
+	const oldActivity = day.activities[actIndex];
+	let newLocation = null;
+	if (newSpot.location) {
+		const lat = newSpot.location.lat ?? newSpot.location.latitude;
+		const lng = newSpot.location.lng ?? newSpot.location.longitude;
+		if (lat != null && lng != null) newLocation = { lat: Number(lat), lng: Number(lng) };
+	}
+
+	day.activities[actIndex] = {
+		...oldActivity,
+		place_name: newSpot.name,
+		location: newLocation || oldActivity.location,
+		photo_url: newSpot.photo_url || oldActivity.photo_url || "",
+		photos: newSpot.photos?.length ? newSpot.photos : oldActivity.photos,
+		rating: newSpot.rating ?? oldActivity.rating,
+		address: newSpot.address || oldActivity.address,
+		place_id: newSpot.place_id || oldActivity.place_id,
+	};
+
+	const activeDays = getActiveDays();
+	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+	if (currentDayIndex === -1) {
+		if (typeof displayAllDays === "function") displayAllDays();
+	} else {
+		if (typeof displayDay === "function") displayDay(dayIndex >= 0 ? dayIndex : currentDayIndex);
 	}
 }
 
@@ -791,6 +1250,16 @@ async function handleItineraryEditFlowInput(text) {
 			startItineraryEditFlow();
 			return true;
 		}
+		if (/附近熱門景點|附近景點|附近熱門|周邊景點/.test(String(text || ""))) {
+			addUserMessage(text);
+			await showDayPickerForNearbyAttractions(false);
+			return true;
+		}
+		if (/附近美食推薦|附近美食|附近餐廳/.test(String(text || ""))) {
+			addUserMessage(text);
+			await showDayPickerForNearbyAttractions(true);
+			return true;
+		}
 		return false;
 	}
 
@@ -823,7 +1292,7 @@ async function handleItineraryEditFlowInput(text) {
 		clearItineraryEditFlow();
 		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		openEditModeWithSearchKeyword(spotName, targetDay);
+		await openEditModeWithSearchKeyword(spotName, targetDay);
 		return true;
 	}
 
@@ -843,23 +1312,30 @@ function appendSpotImageCards(parent, spotImages) {
 	gallery.className = "chat-spot-gallery";
 
 	spotImages.forEach((spot) => {
-		if (!spot || !spot.photo_url) return;
+		if (!spot || !spot.name) return;
 
 		const card = document.createElement("div");
 		card.className = "chat-spot-card";
 
-		const img = document.createElement("img");
-		img.className = "chat-spot-image";
-		img.src = spot.photo_url;
-		img.alt = spot.name || "景點圖片";
-		img.loading = "lazy";
-		img.referrerPolicy = "no-referrer";
+		let imageEl;
+		if (spot.photo_url) {
+			imageEl = document.createElement("img");
+			imageEl.className = "chat-spot-image";
+			imageEl.src = spot.photo_url;
+			imageEl.alt = spot.name || "景點圖片";
+			imageEl.loading = "lazy";
+			imageEl.referrerPolicy = "no-referrer";
+		} else {
+			imageEl = document.createElement("div");
+			imageEl.className = "chat-spot-image chat-spot-no-photo";
+			imageEl.textContent = "📷";
+		}
 
 		const title = document.createElement("div");
 		title.className = "chat-spot-title";
 		title.textContent = spot.name || "景點";
 
-		card.appendChild(img);
+		card.appendChild(imageEl);
 		card.appendChild(title);
 
 		if (spot.address) {
@@ -984,7 +1460,7 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 		if (trimmed === "") {
 			afterBullet = 0;
 			p.className = "chat-msg-line";
-		} else if (/^第\s*\d+\s*天/.test(trimmed)) {
+		} else if (/^第\s*\d+\s*天[\s（(]*(星期[一二三四五六日])?[\s）)]*$/.test(trimmed)) {
 			afterBullet = 0;
 			dayCount++;
 			p.className = dayCount === 1
@@ -1151,6 +1627,7 @@ async function toggleChatMode() {
 		chatView.classList.add("active");
 		openSheet();
 		syncSheetState("sheet-expanded");
+		showChatSuggestions();
 		const showedPending = await showPendingChatOutput({ ensureChatMode: false });
 		if (!showedPending) {
 			const showedProjectIntro = await showProjectChatIntroIfNeeded();
@@ -1223,9 +1700,10 @@ async function sendMessage() {
 
 		if (result && (result.code === 200 || result.success === true)) {
 			const data = result.data || result;
-			const aiText =
-				(data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output || (data.parsed && JSON.stringify(data.parsed)))) ||
-				"（無回覆）";
+			const isUpdateDay = data?.parsed?.action === "update_day";
+			const aiText = isUpdateDay
+				? (data.parsed?.summary || "行程已更新。")
+				: ((data && (data.parsed?.summary || data.parsed?.question || data.response || data.raw_output)) || "（無回覆）");
 			await appendMsg(aiText, "bot", []);
 
 			if (Array.isArray(data.spot_images) && data.spot_images.length > 0) {
