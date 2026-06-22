@@ -94,6 +94,7 @@ class DataFixService:
 
         # 第二步：查詢所有地點
         print(f"開始查詢剩餘地點")
+        destination_center = center_location  # 保留目的地中心點作為每日重置基準
         for day in days:
             day_result = {
                 "day": day.get("day"),
@@ -101,12 +102,15 @@ class DataFixService:
                 "locations": []
             }
 
+            # 每天開始時重置中心點為目的地，避免前幾天的中心點漂移導致後續天數地點被過濾
+            day_center = center_location
+
             for loc in day.get('location', []):
                 location_name = loc.get('location_name', '')
 
                 nearby_result = self.google_map_service.search_places_nearby(
                     text_query=location_name,
-                    location=center_location,
+                    location=day_center,
                     radius=50000,
                     language_code='zh-TW',
                     max_results=1
@@ -117,16 +121,15 @@ class DataFixService:
                     location = place.get('location', {})
                     place_name_found = place.get('name', location_name)
 
-                    distance_km = self._calculate_distance_km(center_location, location)
-                    print(f"[datafx] {location_name} → 找到「{place_name_found}」lat={location.get('latitude'):.4f} lng={location.get('longitude'):.4f} 距中心 {distance_km:.1f} km")
+                    distance_km = self._calculate_distance_km(destination_center, location)
+                    print(f"[datafx] {location_name} → 找到「{place_name_found}」lat={location.get('latitude'):.4f} lng={location.get('longitude'):.4f} 距目的地 {distance_km:.1f} km")
 
-                    # 距離計算失敗或超過50公里，都跳過
                     if distance_km is None:
                         print(f"跳過 {location_name}，無法計算距離（坐標不完整）")
                         continue
 
-                    if distance_km > 50:
-                        print(f"跳過 {location_name}，距離中心點 {distance_km:.2f} 公里，超過 50 公里")
+                    if distance_km > 500:
+                        print(f"跳過 {location_name}，距目的地 {distance_km:.2f} 公里，超過 500 公里")
                         continue
 
                     day_result["locations"].append({
@@ -136,14 +139,13 @@ class DataFixService:
                         "location": location
                     })
 
-                    # 更新中心點
+                    # 更新當天中心點，供同天後續地點搜尋使用
                     if location.get('latitude') is not None:
-                        center_location = {
+                        day_center = {
                             'latitude': location['latitude'],
                             'longitude': location['longitude']
                         }
                 else:
-                    # 搜尋失敗，無法確定坐標，無法計算距離，直接跳過
                     print(f"無法搜尋 {location_name}，跳過")
                     continue
 

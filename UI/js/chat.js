@@ -832,8 +832,8 @@ async function handleItineraryEditFlowInput(text) {
 }
 
 
-const CHAT_TYPEWRITER_SPEED = 30;
-const CHAT_TYPEWRITER_SPEED_SLOW = 45;
+const CHAT_TYPEWRITER_SPEED = 20
+const CHAT_TYPEWRITER_SPEED_SLOW = 20
 
 // 逐字顯示訊息（打字機效果）
 function appendSpotImageCards(parent, spotImages) {

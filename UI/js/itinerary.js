@@ -214,7 +214,7 @@ async function generateDetailedItinerary() {
 				? currentDay.activities
 				: [];
 
-			const list = day.location || day.activities || [];
+			const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
 			const normalizedList = list.map((item, itemIndex) => {
 				let matched = currentActivities.find((a) => a?.place_name === item?.place_name);
 				if (!matched) matched = currentActivities[itemIndex];
@@ -291,7 +291,7 @@ async function enrichWithPictureInfo(detailedData) {
 				? currentDay.activities
 				: [];
 
-			const list = day.location || day.activities || [];
+			const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
 			const normalizedList = list.map((item, itemIndex) => {
 				let matched = currentActivities.find(
 					(a) => a?.place_name === item?.place_name,
@@ -364,7 +364,7 @@ function convertToAllDaysFormat(days) {
 	return days.map((day) => ({
 		day: day.day,
 		weekday: day.weekday,
-		activities: (day.location || day.activities || []).map((item) => ({
+		activities: ((Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || []).map((item) => ({
 			time: item.time,
 			place_name: item.place_name,
 			description: item.description || "",
