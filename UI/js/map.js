@@ -257,7 +257,7 @@ async function handleMapPlaceClick(event) {
 function displayAllDays() {
 	clearMapRoutes(); // 先清除舊路線
 
-	const allBounds = new google.maps.LatLngBounds();
+	const bounds = new google.maps.LatLngBounds();
 
 	getActiveDays().forEach((day, dayIndex) => {
 		if (!day || !day.activities) {
@@ -283,7 +283,7 @@ function displayAllDays() {
 			return;
 		}
 
-		routeActivities.forEach((a) => allBounds.extend(a.location));
+		routeActivities.forEach((a) => bounds.extend(a.location));
 
 		renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
 			strokeColor: getColorByDay(dayIndex),
@@ -292,8 +292,8 @@ function displayAllDays() {
 		});
 	});
 
-	if (!allBounds.isEmpty()) {
-		map.fitBounds(allBounds, { top: 60, right: 40, bottom: 320, left: 40 });
+	if (!bounds.isEmpty()) {
+		map.fitBounds(bounds, { top: 60, right: 40, bottom: 320, left: 40 });
 	}
 
 	loadAllTimelineActivities();
@@ -430,7 +430,7 @@ fetch(`${API_BASE}/api/google-key`)
 	.then((res) => res.json())
 	.then((data) => {
 		const script = document.createElement("script");
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places&loading=async`;
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=routes,places`;
 		script.async = true;
 		script.onload = () => _googleMapsResolve();
 		script.onerror = () => _googleMapsResolve(); // 失敗也 resolve，讓 initMap 裡的錯誤正常拋出

@@ -1,18 +1,26 @@
 ﻿// ===== 行程資料載入與處理 =====
 
-// 根據建立行程時選擇的開始日期，計算「第 N 天」對應的星期幾
+// 根據行程開始日期計算「第 N 天」對應的星期幾（第1天為開始日期+1，保留搭機日）
 function getWeekdayLabel(dayNumber) {
-	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
-	const startDate =
-		localStorage.getItem("currentItineraryStartDate") ||
-		tripSetup.startDate ||
+	const currentProjectId =
+		sessionStorage.getItem("currentProjectId") ||
+		localStorage.getItem("currentProjectId") ||
 		"";
 
+	// 只從與當前專案繫結的來源讀取，避免跨專案污染
+	const startDate =
+		localStorage.getItem("currentItineraryStartDate") ||
+		(currentProjectId
+			? localStorage.getItem(`projectStartDate_${currentProjectId}`)
+			: null) ||
+		"";
+
+	if (!startDate) return "";
+
+	// 解析 ISO 日期字串（YYYY-MM-DD）
 	const parts = String(startDate).split("-").map(Number);
 	if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return "";
 
-	// 第1天保留給搭機日，行程實際從開始日期的次日算起，
-	// 故第 N 天對應「開始日期 + N」天
 	const date = new Date(parts[0], parts[1] - 1, parts[2]);
 	date.setDate(date.getDate() + Number(dayNumber));
 
@@ -206,7 +214,7 @@ async function generateDetailedItinerary() {
 				? currentDay.activities
 				: [];
 
-			const list = day.location || day.activities || [];
+			const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
 			const normalizedList = list.map((item, itemIndex) => {
 				let matched = currentActivities.find((a) => a?.place_name === item?.place_name);
 				if (!matched) matched = currentActivities[itemIndex];
@@ -283,7 +291,7 @@ async function enrichWithPictureInfo(detailedData) {
 				? currentDay.activities
 				: [];
 
-			const list = day.location || day.activities || [];
+			const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
 			const normalizedList = list.map((item, itemIndex) => {
 				let matched = currentActivities.find(
 					(a) => a?.place_name === item?.place_name,
@@ -356,7 +364,7 @@ function convertToAllDaysFormat(days) {
 	return days.map((day) => ({
 		day: day.day,
 		weekday: day.weekday,
-		activities: (day.location || day.activities || []).map((item) => ({
+		activities: ((Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || []).map((item) => ({
 			time: item.time,
 			place_name: item.place_name,
 			description: item.description || "",

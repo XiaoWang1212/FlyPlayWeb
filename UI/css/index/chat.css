@@ -401,6 +401,36 @@
 	padding: 10px 12px;
 }
 
+.chat-nearby-card--clickable {
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.chat-nearby-card--clickable:hover {
+	background: #f0f4ff;
+	border-color: #b8c8f0;
+}
+
+.chat-nearby-card--clickable:active {
+	background: #e4ecff;
+}
+
+.chat-nearby-card--clickable.is-loading {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.chat-nearby-map-hint {
+	font-size: 12px;
+	color: #aaa;
+	flex-shrink: 0;
+	transition: color 0.15s;
+}
+
+.chat-nearby-card--clickable:hover .chat-nearby-map-hint {
+	color: #4a7ce8;
+}
+
 .chat-nearby-header {
 	display: flex;
 	align-items: center;
