@@ -281,6 +281,7 @@ function openSpotInfoOnMap(
   spot,
   openingHoursText = "載入中...",
   priceRangeText = "載入中...",
+  options = {},
 ) {
   if (!map || !spot) return;
 
@@ -302,6 +303,7 @@ function openSpotInfoOnMap(
       spot,
       openingHoursText,
       priceRangeText,
+      options,
     )}</div>`,
     maxWidth: 360,
   });

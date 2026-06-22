@@ -1031,9 +1031,9 @@ async function handleModeCardSelected(mode, flow) {
 		if (geocodedSpot) {
 			if (isChatMode) toggleChatMode();
 			selectedSpotForAdd = geocodedSpot;
-			openSpotInfoOnMap(geocodedSpot, "載入中...", "載入中...");
+			openSpotInfoOnMap(geocodedSpot, "載入中...", "載入中...", { showAddButton: false });
 			getBusinessInfo(geocodedSpot, "").then(({ openingHoursText, priceRangeText }) => {
-				if (selectedSpotForAdd === geocodedSpot) openSpotInfoOnMap(geocodedSpot, openingHoursText, priceRangeText);
+				if (selectedSpotForAdd === geocodedSpot) openSpotInfoOnMap(geocodedSpot, openingHoursText, priceRangeText, { showAddButton: false });
 			});
 		}
 

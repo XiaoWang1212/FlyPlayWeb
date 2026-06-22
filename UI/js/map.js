@@ -257,6 +257,8 @@ async function handleMapPlaceClick(event) {
 function displayAllDays() {
 	clearMapRoutes(); // 先清除舊路線
 
+	const bounds = new google.maps.LatLngBounds();
+
 	getActiveDays().forEach((day, dayIndex) => {
 		if (!day || !day.activities) {
 			console.warn(`[ALL] 第 ${dayIndex + 1} 天資料異常`, day);
@@ -281,8 +283,7 @@ function displayAllDays() {
 			return;
 		}
 
-		map.panTo({ lat: avgLat - 0.07, lng: avgLng });
-		map.setZoom(11.5);
+		routeActivities.forEach((a) => bounds.extend(a.location));
 
 		renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
 			strokeColor: getColorByDay(dayIndex),
@@ -290,6 +291,10 @@ function displayAllDays() {
 			strokeOpacity: 0.6,
 		});
 	});
+
+	if (!bounds.isEmpty()) {
+		map.fitBounds(bounds, { top: 60, right: 40, bottom: 320, left: 40 });
+	}
 
 	loadAllTimelineActivities();
 }
