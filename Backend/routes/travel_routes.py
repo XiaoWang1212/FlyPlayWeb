@@ -50,7 +50,16 @@ def delete_project(project_id):
 @login_required
 def list_itineraries(project_id):
     result = travel_ctrl.list_itineraries(project_id)
-    return unified_response(200, "查詢成功", result["data"])
+    rows = result["data"] or []
+    serialized = []
+    for row in rows:
+        d = dict(row)
+        val = d.get("start_date")
+        if val is not None:
+            # 確保輸出為 YYYY-MM-DD 字串，避免 Flask 將 datetime.date 轉成 HTTP date 格式
+            d["start_date"] = val.isoformat()[:10] if hasattr(val, "isoformat") else str(val)[:10]
+        serialized.append(d)
+    return unified_response(200, "查詢成功", serialized)
 
 
 @travel_bp.route("/itinerary", methods=["POST"])
