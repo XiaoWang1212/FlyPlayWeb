@@ -281,6 +281,7 @@ function openSpotInfoOnMap(
   spot,
   openingHoursText = "載入中...",
   priceRangeText = "載入中...",
+  options = {},
 ) {
   if (!map || !spot) return;
 
@@ -302,6 +303,7 @@ function openSpotInfoOnMap(
       spot,
       openingHoursText,
       priceRangeText,
+      options,
     )}</div>`,
     maxWidth: 360,
   });
@@ -544,7 +546,12 @@ async function addSpotToItinerary(spot, evt) {
     document.getElementById("dragConfirmBtn").classList.add("show");
   }
 
-  if (currentDayIndex === -1) {
+  const dayBtn = document.querySelector(
+    `#dayButtonContainer button[data-day-index="${targetDayIndex}"]`
+  );
+  if (dayBtn) {
+    switchDay(targetDayIndex, dayBtn);
+  } else if (currentDayIndex === -1) {
     displayAllDays();
   } else {
     displayDay(currentDayIndex);
