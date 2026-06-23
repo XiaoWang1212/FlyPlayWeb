@@ -456,6 +456,30 @@ class GeminiService:
         keywords = ["附近熱門景點", "附近景點", "附近熱門", "周邊景點", "附近美食推薦", "附近美食", "附近餐廳"]
         return any(kw in str(message or "") for kw in keywords)
 
+    def _collect_itinerary_spot_names(self, current_itinerary):
+        """收集行程中所有景點名稱，用於去重過濾。"""
+        names = set()
+        if not isinstance(current_itinerary, list):
+            return names
+        for day in current_itinerary:
+            if not isinstance(day, dict):
+                continue
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                continue
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                ).strip()
+                if name:
+                    names.add(name)
+        return names
+
     def _extract_last_spot_of_day(self, current_itinerary, target_day):
         """取得指定天的最後一個景點名稱，作為距離計算的參考點。"""
         if not isinstance(current_itinerary, list):
@@ -746,6 +770,16 @@ class GeminiService:
                     _, _, parsed_payload = self._parse_response_json(response)
                     if isinstance(parsed_payload, dict):
                         ai_content = parsed_payload.get("summary", ai_content)
+                        existing_names = self._collect_itinerary_spot_names(current_itinerary)
+                        attractions = parsed_payload.get("attractions") or []
+                        if existing_names and isinstance(attractions, list):
+                            parsed_payload["attractions"] = [
+                                a for a in attractions
+                                if isinstance(a, dict) and not any(
+                                    ex in a.get("name", "") or a.get("name", "") in ex
+                                    for ex in existing_names
+                                )
+                            ]
                 except Exception:
                     parsed_payload = None
             elif self._is_itinerary_edit_request(message):
