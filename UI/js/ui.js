@@ -57,15 +57,39 @@ function toggleSidebar() {
 	overlay.classList.toggle("active");
 }
 
-function toggleBookmark(iconElement) {
-	event.stopPropagation();
-	if (iconElement.classList.contains("fas")) {
-		iconElement.classList.remove("fas");
-		iconElement.classList.add("far");
-	} else {
-		iconElement.classList.remove("far");
-		iconElement.classList.add("fas");
+const PINNED_PROJECTS_KEY = "pinnedProjectIds";
+
+function getPinnedProjectIds() {
+	try {
+		const raw = localStorage.getItem(PINNED_PROJECTS_KEY);
+		return raw ? JSON.parse(raw) : [];
+	} catch {
+		return [];
 	}
+}
+
+function setPinnedProjectIds(ids) {
+	localStorage.setItem(PINNED_PROJECTS_KEY, JSON.stringify(ids));
+}
+
+function togglePinProject(projectId) {
+	const pinnedIds = getPinnedProjectIds();
+	const isPinned = pinnedIds.includes(projectId);
+	setPinnedProjectIds(
+		isPinned
+			? pinnedIds.filter((id) => id !== projectId)
+			: [projectId, ...pinnedIds],
+	);
+}
+
+function sortProjectsByPin(projects) {
+	const pinnedIds = getPinnedProjectIds();
+	const pinnedSet = new Set(pinnedIds);
+	const pinned = pinnedIds
+		.map((id) => projects.find((p) => p.project_id === id))
+		.filter(Boolean);
+	const unpinned = projects.filter((p) => !pinnedSet.has(p.project_id));
+	return [...pinned, ...unpinned];
 }
 
 async function downloadPDF() {
@@ -202,6 +226,17 @@ async function downloadPDF() {
 		tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
 	}
 
+	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
+	const coverMetaParts = [
+		tripSetup.departureLabel,
+		tripSetup.companionLabel,
+		(tripSetup.travelTypeLabels && tripSetup.travelTypeLabels.length > 0
+			? tripSetup.travelTypeLabels.join("、")
+			: tripSetup.travelTypeLabel) || null,
+		tripSetup.tripPaceLabel,
+	].filter(Boolean);
+	const coverMeta = coverMetaParts.join(" ・ ");
+
 	const sidebarColors = [
 		"#507A8A",
 		"#688B58",
@@ -224,17 +259,21 @@ async function downloadPDF() {
         }
         .pdf-cover h1 { font-size: 56px; letter-spacing: 4px; margin-bottom: 20px; color: #FFFFFF;}
         .pdf-cover p { font-size: 18px; color: #D4C9A8; letter-spacing: 2px; }
+        .pdf-cover .pdf-cover-meta { font-size: 12px; color: #A89D85; letter-spacing: 1px; margin-top: 28px; }
 
         .pdf-day-page {
-          display: flex; width: 800px; min-height: 1131px;
+          display: flex; width: 800px; height: 1131px;
           background-color: #FAF8F5;
+          overflow: hidden;
+          box-sizing: border-box;
         }
 
-        .pdf-sidebar { width: 140px; min-height: 1131px; padding-top: 60px; text-align: center; color: #FFFFFF; flex-shrink: 0; }
+        .pdf-sidebar { width: 140px; padding-top: 60px; text-align: center; color: #FFFFFF; flex-shrink: 0; box-sizing: border-box; }
         .pdf-sidebar .day-label { font-size: 14px; letter-spacing: 2px; opacity: 0.8; }
         .pdf-sidebar .day-num { font-size: 64px; font-weight: 700; line-height: 1; margin: 10px 0; }
         .pdf-sidebar .day-date { font-size: 14px; opacity: 0.8; }
-        .pdf-content { flex-grow: 1; padding: 45px 40px; }
+        .pdf-content { flex-grow: 1; padding: 45px 40px; box-sizing: border-box; overflow: hidden; }
+        .pdf-content-inner { transform-origin: top left; }
         .pdf-day-title { font-size: 22px; font-weight: 700; border-bottom: 1px solid #E0D8C8; padding-bottom: 16px; margin-bottom: 18px; }
         .pdf-item { margin-bottom: 28px; }
         .pdf-item-detail { flex-grow: 1; }
@@ -251,6 +290,7 @@ async function downloadPDF() {
         <p style="margin-bottom: 10px;">TRAVEL ITINERARY</p>
         <h1>${tripTitle}</h1>
         <p>${allDays.length} 天深度遊</p>
+        ${coverMeta ? `<p class="pdf-cover-meta">${coverMeta}</p>` : ""}
       </div>
   `;
 
@@ -313,9 +353,11 @@ async function downloadPDF() {
           <div class="day-date">${day.weekday || ""}</div>
         </div>
         <div class="pdf-content">
-          <div class="pdf-day-title">${topPlaces}</div>
-          ${activitiesHtml}
-          ${mapImg}
+          <div class="pdf-content-inner">
+            <div class="pdf-day-title">${topPlaces}</div>
+            ${activitiesHtml}
+            ${mapImg}
+          </div>
         </div>
       </div>
     `;
@@ -325,6 +367,33 @@ async function downloadPDF() {
 
 	const printElement = document.createElement("div");
 	printElement.innerHTML = htmlContent;
+
+	// 量測每天內容的實際高度，超出單頁可用空間時等比縮小至剛好一頁
+	const measureContainer = document.createElement("div");
+	measureContainer.style.position = "absolute";
+	measureContainer.style.top = "0";
+	measureContainer.style.left = "-9999px";
+	measureContainer.innerHTML = htmlContent;
+	document.body.appendChild(measureContainer);
+
+	const measuredContents = measureContainer.querySelectorAll(".pdf-content");
+	const printContents = printElement.querySelectorAll(".pdf-content");
+	measuredContents.forEach((contentEl, i) => {
+		const innerEl = contentEl.querySelector(".pdf-content-inner");
+		const targetInnerEl = printContents[i]?.querySelector(".pdf-content-inner");
+		if (!innerEl || !targetInnerEl) return;
+		const style = window.getComputedStyle(contentEl);
+		const availableHeight =
+			contentEl.clientHeight -
+			parseFloat(style.paddingTop) -
+			parseFloat(style.paddingBottom);
+		const scale = Math.min(1, availableHeight / innerEl.scrollHeight);
+		if (scale < 1) {
+			targetInnerEl.style.transform = `scale(${scale})`;
+			targetInnerEl.style.width = `${100 / scale}%`;
+		}
+	});
+	document.body.removeChild(measureContainer);
 
 	const opt = {
 		margin: 0,
@@ -470,12 +539,16 @@ function renderProjects(projects) {
 		return;
 	}
 
-	projects.forEach((project) => {
+	const pinnedIds = getPinnedProjectIds();
+	const sortedProjects = sortProjectsByPin(projects);
+
+	sortedProjects.forEach((project) => {
+		const isPinned = pinnedIds.includes(project.project_id);
 		const item = document.createElement("div");
 		item.className = "trip-item";
 		item.innerHTML = `
 <div class="trip-info">
-  <i class="far fa-bookmark bookmark-icon"></i>
+  <i class="${isPinned ? "fas" : "far"} fa-bookmark bookmark-icon"></i>
   <div class="trip-text">
     <h4>${project.title || "未命名行程"}</h4>
     <span>${(project.created_at || "").split("T")[0] || ""}</span>
@@ -489,6 +562,13 @@ function renderProjects(projects) {
 
 		const moreBtn = item.querySelector(".trip-more-btn");
 		const dropdown = item.querySelector(".trip-dropdown");
+		const bookmarkIcon = item.querySelector(".bookmark-icon");
+
+		bookmarkIcon.addEventListener("click", (e) => {
+			e.stopPropagation();
+			togglePinProject(project.project_id);
+			renderProjects(projects);
+		});
 
 		moreBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
