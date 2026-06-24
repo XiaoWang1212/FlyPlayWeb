@@ -135,6 +135,29 @@ function goBack() {
   goBackWithTransition();
 }
 
+async function goBackAndDeleteIncompleteProject() {
+  const projectId = sessionStorage.getItem("currentProjectId");
+  const token = localStorage.getItem("userToken");
+
+  if (projectId && token) {
+    try {
+      await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (_) {
+      // 刪除失敗也繼續返回，不阻擋使用者
+    }
+  }
+
+  sessionStorage.removeItem("currentProjectId");
+  sessionStorage.removeItem("currentProjectTitle");
+  goBackWithTransition();
+}
+
 // 那個像 iOS 的滾輪天數選取器
 function toggleDaysPicker() {
   const pickerGroup = document.getElementById("days-picker-group");
@@ -158,6 +181,9 @@ function toggleDaysPicker() {
   pickerGroup.classList.toggle("active");
 
   if (pickerGroup.classList.contains("active")) {
+    // 每次打開時重新計算哪些天數不可選
+    refreshDaysPickerDisabledState(pickerScroll);
+
     // 打開時：把目前顯示的值設為 active，然後滾過去
     const selectedValue = document.getElementById("selected-days").textContent;
     const selectableItems = Array.from(pickerScroll.children).filter(
@@ -187,6 +213,32 @@ function toggleDaysPicker() {
     // 關閉選擇器時，檢查是否該顯示 AI 按鈕
     showAIRecommendButton();
   }
+}
+
+// 取目前已選目的地數量
+function getSelectedDestinationsCount() {
+  try {
+    const raw = localStorage.getItem("selectedDestinations");
+    if (!raw) return 0;
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.length : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+// 每次打開天數選擇器時，將不足目的地數量的選項設為 disabled
+function refreshDaysPickerDisabledState(pickerScroll) {
+  const destCount = getSelectedDestinationsCount();
+  pickerScroll.querySelectorAll(".picker-item").forEach((item) => {
+    const val = Number(item.dataset.value || 0);
+    if (val === 0) return; // 占位項保持原本 disabled
+    if (destCount > 0 && val < destCount) {
+      item.classList.add("disabled");
+    } else {
+      item.classList.remove("disabled");
+    }
+  });
 }
 
 // 生成天數選項（1-7 天）
@@ -654,8 +706,12 @@ function showAIRecommendButton() {
   const btn = document.getElementById("ai-recommend-btn");
   const hint = document.getElementById("missing-field-hint");
 
-  // 兩個必填欄位都有填才顯示按鈕
-  if (hasDeparture && hasDestination) {
+  const daysValue = Number(tripSetup.daysValue || 0);
+  const destCount = destinations.length;
+  const daysValid = daysValue === 0 || daysValue >= destCount; // 尚未選天數也算通過
+
+  // 兩個必填欄位都有填，且天數 >= 目的地數量，才顯示按鈕
+  if (hasDeparture && hasDestination && daysValid) {
     if (btn) {
       // 只有在按鈕目前是隱藏狀態時，才關閉所有選擇器
       const wasHidden = !btn.classList.contains("show");
@@ -668,13 +724,12 @@ function showAIRecommendButton() {
       hint.classList.remove("show");
     }
   } else {
-    // 有缺欄位：隱藏按鈕，顯示提醒
+    // 有缺欄位或天數不足：隱藏按鈕，顯示提醒
     if (btn) {
       btn.classList.remove("show");
     }
 
     if (hint) {
-      // 根據缺少的欄位顯示不同提醒
       let message = "";
       if (!hasDeparture && !hasDestination) {
         message = "請選擇出發地和目的地";
@@ -682,6 +737,8 @@ function showAIRecommendButton() {
         message = "請選擇出發地";
       } else if (!hasDestination) {
         message = "請選擇目的地";
+      } else if (!daysValid) {
+        message = `已選 ${destCount} 個目的地，天數需至少選 ${destCount} 天`;
       }
 
       hint.textContent = message;

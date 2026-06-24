@@ -311,6 +311,14 @@ h1 {
     margin-bottom: 8px;
 }
 
+.destination-limit-hint {
+    display: none;
+    font-size: 13px;
+    color: #e57373;
+    margin-top: 8px;
+    text-align: center;
+}
+
 .selected-list {
     display: flex;
     flex-wrap: wrap;

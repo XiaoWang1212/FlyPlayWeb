@@ -271,6 +271,13 @@
         if (index > -1) {
             selectedDestinations.splice(index, 1);
         } else {
+            // 如果已設定天數，目的地數量不能超過天數
+            const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
+            const daysValue = Number(tripSetup.daysValue || 0);
+            if (daysValue > 0 && selectedDestinations.length >= daysValue) {
+                showDestinationLimitHint(`已達上限，目前天數為 ${daysValue} 天，最多選擇 ${daysValue} 個目的地`);
+                return;
+            }
             if (selectedDestinations.length === 0) {
                 baseDestination = dest;
             }
@@ -282,6 +289,15 @@
         }
 
         refreshUI();
+    }
+
+    function showDestinationLimitHint(message) {
+        const hint = document.getElementById("destination-limit-hint");
+        if (!hint) return;
+        hint.textContent = message;
+        hint.style.display = "block";
+        clearTimeout(hint._hideTimer);
+        hint._hideTimer = setTimeout(() => { hint.style.display = "none"; }, 3000);
     }
 
     // -------------------- remove（同步修正） --------------------
