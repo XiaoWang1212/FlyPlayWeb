@@ -39,7 +39,9 @@ function openTransitModal(block) {
             if (walkingRaw) {
               try {
                 const { dur: walkDur } = JSON.parse(walkingRaw);
-                const walkMinutes = parseInt(walkDur, 10);
+                const _wh = String(walkDur).match(/(\d+)\s*小時/);
+                const _wm = String(walkDur).match(/(\d+)\s*分/);
+                const walkMinutes = (_wh ? parseInt(_wh[1], 10) * 60 : 0) + (_wm ? parseInt(_wm[1], 10) : 0);
                 if (walkMinutes <= 5) {
                   el.innerHTML = `<span class="tno-route">建議步行</span>`;
                   document.getElementById('tm_TRANSIT')?.classList.add('disabled');
@@ -159,7 +161,9 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
 
         if (isTransit) {
           durationMinutes = data.duration_minutes;
-          durationText = `${durationMinutes} 分`;
+          const _th = Math.floor(durationMinutes / 60);
+          const _tm = durationMinutes % 60;
+          durationText = _th > 0 ? `${_th} 小時 ${_tm} 分` : `${_tm} 分`;
           distanceText = `(估算)`;
         } else {
           durationText = data.duration;
@@ -257,7 +261,9 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
       if (data.success) {
         let durationText, distanceText;
         if (isTransit) {
-          durationText = `${data.duration_minutes} 分`;
+          const _th = Math.floor(data.duration_minutes / 60);
+          const _tm = data.duration_minutes % 60;
+          durationText = _th > 0 ? `${_th} 小時 ${_tm} 分` : `${_tm} 分`;
           distanceText = `(估算)`;
         } else {
           durationText = data.duration;
@@ -281,7 +287,9 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
   const transitEl = document.getElementById('tmi_TRANSIT');
   if (walkingEl && transitEl) {
     const walkingText = walkingEl.textContent || '';
-    const walkMinutes = parseInt(walkingText, 10);
+    const _wh = walkingText.match(/(\d+)\s*小時/);
+    const _wm = walkingText.match(/(\d+)\s*分/);
+    const walkMinutes = (_wh ? parseInt(_wh[1], 10) * 60 : 0) + (_wm ? parseInt(_wm[1], 10) : 0);
     if (walkMinutes <= 5) {
       transitEl.innerHTML = `<span class="tno-route">建議步行</span>`;
       document.getElementById('tm_TRANSIT')?.classList.add('disabled');
