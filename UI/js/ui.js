@@ -57,38 +57,19 @@ function toggleSidebar() {
 	overlay.classList.toggle("active");
 }
 
-const PINNED_PROJECTS_KEY = "pinnedProjectIds";
-
-function getPinnedProjectIds() {
-	try {
-		const raw = localStorage.getItem(PINNED_PROJECTS_KEY);
-		return raw ? JSON.parse(raw) : [];
-	} catch {
-		return [];
-	}
-}
-
-function setPinnedProjectIds(ids) {
-	localStorage.setItem(PINNED_PROJECTS_KEY, JSON.stringify(ids));
-}
-
-function togglePinProject(projectId) {
-	const pinnedIds = getPinnedProjectIds();
-	const isPinned = pinnedIds.includes(projectId);
-	setPinnedProjectIds(
-		isPinned
-			? pinnedIds.filter((id) => id !== projectId)
-			: [projectId, ...pinnedIds],
-	);
+async function togglePinProject(projectId) {
+	await fetch(`${API_BASE}/api/travel/project/${projectId}/pin`, {
+		method: "PATCH",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${token}`,
+		},
+	});
 }
 
 function sortProjectsByPin(projects) {
-	const pinnedIds = getPinnedProjectIds();
-	const pinnedSet = new Set(pinnedIds);
-	const pinned = pinnedIds
-		.map((id) => projects.find((p) => p.project_id === id))
-		.filter(Boolean);
-	const unpinned = projects.filter((p) => !pinnedSet.has(p.project_id));
+	const pinned = projects.filter((p) => p.is_pinned);
+	const unpinned = projects.filter((p) => !p.is_pinned);
 	return [...pinned, ...unpinned];
 }
 
@@ -539,11 +520,10 @@ function renderProjects(projects) {
 		return;
 	}
 
-	const pinnedIds = getPinnedProjectIds();
 	const sortedProjects = sortProjectsByPin(projects);
 
 	sortedProjects.forEach((project) => {
-		const isPinned = pinnedIds.includes(project.project_id);
+		const isPinned = !!project.is_pinned;
 		const item = document.createElement("div");
 		item.className = "trip-item";
 		item.innerHTML = `
@@ -564,10 +544,10 @@ function renderProjects(projects) {
 		const dropdown = item.querySelector(".trip-dropdown");
 		const bookmarkIcon = item.querySelector(".bookmark-icon");
 
-		bookmarkIcon.addEventListener("click", (e) => {
+		bookmarkIcon.addEventListener("click", async (e) => {
 			e.stopPropagation();
-			togglePinProject(project.project_id);
-			renderProjects(projects);
+			await togglePinProject(project.project_id);
+			await loadProjects();
 		});
 
 		moreBtn.addEventListener("click", (e) => {

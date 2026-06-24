@@ -129,6 +129,12 @@ class TravelController:
 
         return self.gemini_service.format_itinerary_for_display(raw_output, parsed, latlng_itinerary=latlng_itinerary)
 
+    def toggle_project_pin(self, project_id):
+        data = self.travel_service.toggle_project_pin(project_id)
+        if not data:
+            return {"success": False, "error": "專案不存在"}
+        return {"success": True, "data": data}
+
     def delete_project(self, project_id):
         data = self.travel_service.delete_project(project_id)
         if not data:

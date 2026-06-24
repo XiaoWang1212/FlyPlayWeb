@@ -15,6 +15,10 @@ SQL_STATEMENTS = [
     ALTER TABLE itineraries
     DROP COLUMN IF EXISTS travel_style;
     """,
+    """
+    ALTER TABLE projects
+    ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE;
+    """,
 ]
 
 
@@ -37,7 +41,7 @@ def run_migration() -> None:
 
         conn.commit()
 
-    print("✅ itineraries schema migration 完成（interests/start_date/travel_style）")
+    print("✅ migration 完成（itineraries: interests/start_date/travel_style; projects: is_pinned）")
 
 
 if __name__ == "__main__":

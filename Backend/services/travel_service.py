@@ -102,7 +102,7 @@ class TravelService:
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT project_id, user_id, title, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY created_at DESC",
+                    "SELECT project_id, user_id, title, is_pinned, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY created_at DESC",
                     (user_id,),
                 )
                 return cur.fetchall()
@@ -172,6 +172,15 @@ class TravelService:
                 cur.execute(
                     "DELETE FROM itineraries WHERE itinerary_id=%s RETURNING itinerary_id",
                     (itinerary_id,),
+                )
+                return cur.fetchone()
+
+    def toggle_project_pin(self, project_id):
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE projects SET is_pinned = NOT is_pinned WHERE project_id=%s RETURNING project_id, is_pinned",
+                    (project_id,),
                 )
                 return cur.fetchone()
 

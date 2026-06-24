@@ -37,6 +37,15 @@ def create_project():
     return unified_response(201, "專案建立成功", result["data"])
 
 
+@travel_bp.route("/project/<int:project_id>/pin", methods=["PATCH"])
+@login_required
+def toggle_project_pin(project_id):
+    result = travel_ctrl.toggle_project_pin(project_id)
+    if not result["success"]:
+        return unified_response(404, result.get("error"))
+    return unified_response(200, "書籤已更新", result["data"])
+
+
 @travel_bp.route("/project/<int:project_id>", methods=["DELETE"])
 @login_required
 def delete_project(project_id):

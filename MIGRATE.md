@@ -23,3 +23,4 @@ docker compose exec backend python migrate.py
 - 新增 `interests`（JSONB，預設 `[]`）
 - 新增 `start_date`（DATE）
 - 移除 `travel_style`
+- 新增 `is_pinned`
