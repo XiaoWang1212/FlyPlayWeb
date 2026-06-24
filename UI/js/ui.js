@@ -465,12 +465,19 @@ function renderProjects(projects) {
 	const list = document.querySelector(".trip-list");
 	if (!list) return console.error("trip-list 不存在");
 	list.innerHTML = "";
-	if (!Array.isArray(projects) || projects.length === 0) {
+
+	// __tutorial__ 永遠隱藏，用 title 識別而非 ID
+	const tutorialProject = Array.isArray(projects)
+		? projects.find((p) => p.title === "__tutorial__")
+		: null;
+	const visibleProjects = (Array.isArray(projects) ? projects : [])
+		.filter((p) => p.title !== "__tutorial__");
+
+	if (visibleProjects.length === 0) {
 		list.innerHTML = "<div class='empty'>尚無行程</div>";
-		return;
 	}
 
-	projects.forEach((project) => {
+	visibleProjects.forEach((project) => {
 		const item = document.createElement("div");
 		item.className = "trip-item";
 		item.innerHTML = `
@@ -520,6 +527,46 @@ function renderProjects(projects) {
 		item.addEventListener("click", () => openProject(project));
 		list.appendChild(item);
 	});
+
+	// 固定教學指引項目（不可刪除，永遠在最下方）
+	const divider = document.createElement("hr");
+	divider.className = "sidebar-divider";
+	list.appendChild(divider);
+
+	const tutorialItem = document.createElement("div");
+	tutorialItem.className = "trip-item tutorial-guide-item";
+	tutorialItem.innerHTML = `
+<div class="trip-info">
+  <i class="fas fa-graduation-cap tutorial-guide-icon"></i>
+  <div class="trip-text">
+    <h4>教學指引</h4>
+    <span>重新體驗操作流程</span>
+  </div>
+</div>
+<i class="fas fa-chevron-right tutorial-guide-arrow"></i>`;
+	tutorialItem.addEventListener("click", async () => {
+		if (tutorialProject) {
+			const redo = confirm("要重新進行一次教學嗎？\n選「確定」會清掉當前的教學行程，重新開始；選「取消」則直接查看現有教學行程。");
+			if (redo) {
+				localStorage.removeItem("fp_tutorial_setup_done");
+				localStorage.removeItem("fp_tutorial_index_done");
+				sessionStorage.setItem("currentProjectId", String(tutorialProject.project_id));
+				sessionStorage.setItem("navigationType", "forward");
+				window.location.href = "setup.html";
+			} else {
+				toggleSidebar();
+				await openProject(tutorialProject);
+			}
+		} else {
+			localStorage.removeItem("fp_tutorial_setup_done");
+			localStorage.removeItem("fp_tutorial_index_done");
+			sessionStorage.removeItem("currentProjectId");
+			sessionStorage.removeItem("currentProjectTitle");
+			sessionStorage.setItem("navigationType", "forward");
+			window.location.href = "setup.html";
+		}
+	});
+	list.appendChild(tutorialItem);
 }
 
 async function deleteProject(projectId) {
@@ -563,6 +610,14 @@ async function loadProjects() {
 	if (redirectToLoginIfUnauthorized(res.status, body)) return;
 	console.log("loadProjects", res.status, body);
 	if (res.ok && body.code === 200) {
+		// 判斷是否有可見行程（__tutorial__ 不算）
+		if (!body.data || body.data.length === 0) {
+			sessionStorage.removeItem("currentProjectId");
+			sessionStorage.removeItem("currentProjectTitle");
+			sessionStorage.setItem("navigationType", "forward");
+			window.location.href = "setup.html";
+			return;
+		}
 		renderProjects(body.data);
 	} else {
 		console.warn("loadProjects 錯誤", res.status, body);

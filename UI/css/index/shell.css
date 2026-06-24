@@ -200,6 +200,27 @@ header {
 	transform: scale(1.2);
 }
 
+.tutorial-guide-item {
+	opacity: 0.75;
+	transition: opacity 0.2s;
+}
+
+.tutorial-guide-item:hover {
+	opacity: 1;
+}
+
+.tutorial-guide-icon {
+	padding: 5px;
+	color: #888;
+	font-size: 15px;
+}
+
+.tutorial-guide-arrow {
+	color: #bbb;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
 .map-container {
 	flex: 1;
 	position: relative;

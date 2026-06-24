@@ -938,6 +938,34 @@ async function submitAIRecommendation() {
     return;
   }
 
+  // 教學模式：沒有 project_id 就找或建立 __tutorial__ project
+  if (!Number(sessionStorage.getItem("currentProjectId") || 0)) {
+    try {
+      const uid = Number(localStorage.getItem("userId") || 0);
+      // 先查是否已有 __tutorial__ project
+      const listRes = await fetch(`${API_BASE}/api/travel/projects?user_id=${uid}`, {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
+      const listBody = await listRes.json().catch(() => ({}));
+      const existing = (listBody.data || []).find((p) => p.title === "__tutorial__");
+      if (existing) {
+        sessionStorage.setItem("currentProjectId", String(existing.project_id));
+      } else {
+        const resp = await fetch(`${API_BASE}/api/travel/project`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ user_id: uid, title: "__tutorial__" }),
+        });
+        const result = await resp.json().catch(() => ({}));
+        if (resp.ok && result.code === 201) {
+          sessionStorage.setItem("currentProjectId", String(result.data.project_id));
+        }
+      }
+    } catch (e) {
+      console.warn("教學行程建立失敗:", e);
+    }
+  }
+
   const payload = buildItineraryPayload();
   if (!payload.destination) {
     alert("請先選擇目的地");
