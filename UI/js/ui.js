@@ -215,20 +215,11 @@ async function downloadPDF() {
 	const selectedDests = JSON.parse(
 		projectDestsRaw || localStorage.getItem("selectedDestinations") || "[]",
 	);
-	let tripTitle;
-	if (selectedDests.length > 0) {
-		const countries = [...new Set(selectedDests.map((d) => d.country).filter(Boolean))];
-		const cities = selectedDests.map((d) => d.city).filter(Boolean).join("");
-		if (cities) {
-			tripTitle = countries.length === 1
-				? `${countries[0]}${cities}之旅`
-				: `${cities}之旅`;
-		} else {
-			tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
-		}
-	} else {
-		tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
-	}
+	// 標題一律以目的地城市為準，取不到目的地才退回命名／預設值
+	const cities = selectedDests.map((d) => d.city).filter(Boolean).join("");
+	const tripTitle = cities
+		? `${cities}之旅`
+		: sessionStorage.getItem("currentProjectTitle") || "我的旅程";
 
 	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
 	const coverMetaParts = [
@@ -787,6 +778,14 @@ async function openProject(project) {
 		const projectDests = localStorage.getItem(`projectDestinations_${project.project_id}`);
 		if (projectDests) {
 			localStorage.setItem("selectedDestinations", projectDests);
+		} else if (body.data[0]?.destination) {
+			// 本機沒有目的地快取（例如其他裝置/重置後生成的行程），
+			// 改用 DB itinerary 的 destination 字串還原城市，確保 PDF 標題仍以目的地為準
+			const cities = String(body.data[0].destination)
+				.split(/[、,，]/)
+				.map((s) => ({ city: s.trim() }))
+				.filter((d) => d.city);
+			localStorage.setItem("selectedDestinations", JSON.stringify(cities));
 		} else {
 			localStorage.removeItem("selectedDestinations");
 		}
