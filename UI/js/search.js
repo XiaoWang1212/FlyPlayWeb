@@ -757,7 +757,7 @@ async function performSpotSearch(
 
     if (!places.length) {
       if (showNoResultMessage) {
-        showSearchMessage("找不到相關景點，請嘗試其他關鍵字");
+        showSearchMessage("找不到附近相關景點，請嘗試其他關鍵字");
       } else {
         spotSearchResults.innerHTML = "";
       }
