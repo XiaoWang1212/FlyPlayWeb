@@ -126,8 +126,12 @@ def create_app():
                     existing_latlng = json.loads(existing_latlng)
                 except Exception:
                     existing_latlng = None
-            if existing_latlng and existing_latlng.get("data"):
-                return jsonify({"success": True, "data": existing_latlng["data"], "itinerary_id": itinerary_id}), 200
+            if existing_latlng:
+                # data_latlng 可能是 list（直接存 result["data"]）或 dict（{"data": [...]}）
+                if isinstance(existing_latlng, list) and existing_latlng:
+                    return jsonify({"success": True, "data": existing_latlng, "itinerary_id": itinerary_id}), 200
+                elif isinstance(existing_latlng, dict) and existing_latlng.get("data"):
+                    return jsonify({"success": True, "data": existing_latlng["data"], "itinerary_id": itinerary_id}), 200
 
             # 無 data_latlng 時，從 data_json 重新生成座標
             data_json = itinerary.get("data_json")

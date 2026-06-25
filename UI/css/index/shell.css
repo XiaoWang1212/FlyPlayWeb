@@ -109,8 +109,17 @@ header {
 	display: flex;
 	justify-content: flex-start;
 	align-items: center;
-	padding: 15px 0;
+	padding: 0 0 15px;
 	cursor: pointer;
+}
+
+/* 尚無行程提示：置中純文字 */
+.trip-empty {
+	padding: 0 10px 15px;
+	text-align: center;
+	font-size: 13px;
+	line-height: 1.7;
+	color: #999;
 }
 
 .trip-more-btn {
