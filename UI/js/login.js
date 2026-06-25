@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5001/api/auth/login"; // 如有反向代理請調整
+const API_URL = `http://${window.location.hostname}:5001/api/auth/login`;
 const loginForm = document.getElementById("loginForm");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
