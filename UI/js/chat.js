@@ -12,8 +12,8 @@ function setChatResponding(responding) {
 	const icon = btn.querySelector("i");
 	if (responding) {
 		if (icon) icon.className = "fas fa-stop";
-		btn.style.borderRadius = "6px";
-		btn.style.background = "#c0392b";
+		btn.style.borderRadius = "50%";
+		btn.style.background = "var(--color-primary)";
 		btn.classList.add("is-responding");
 		_hideChatSuggestionsTemp();
 	} else {
