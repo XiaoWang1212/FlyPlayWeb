@@ -344,7 +344,7 @@ async function downloadPDF() {
 		}
 
 		const mapImg = mapImages[dayIndex]
-			? `<div style="margin-top:100px;display:flex;justify-content:center;">
+			? `<div class="pdf-map" style="margin-top:100px;display:flex;justify-content:center;">
                <img src="${mapImages[dayIndex]}" style="width:360px;height:360px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
              </div>`
 			: "";
@@ -369,10 +369,7 @@ async function downloadPDF() {
 
 	htmlContent += `</div>`;
 
-	const printElement = document.createElement("div");
-	printElement.innerHTML = htmlContent;
-
-	// 量測每天內容的實際高度，超出單頁可用空間時等比縮小至剛好一頁
+	// 先在離屏容器量測每天內容的實際高度
 	const measureContainer = document.createElement("div");
 	measureContainer.style.position = "absolute";
 	measureContainer.style.top = "0";
@@ -380,23 +377,59 @@ async function downloadPDF() {
 	measureContainer.innerHTML = htmlContent;
 	document.body.appendChild(measureContainer);
 
-	const measuredContents = measureContainer.querySelectorAll(".pdf-content");
-	const printContents = printElement.querySelectorAll(".pdf-content");
-	measuredContents.forEach((contentEl, i) => {
-		const innerEl = contentEl.querySelector(".pdf-content-inner");
-		const targetInnerEl = printContents[i]?.querySelector(".pdf-content-inner");
-		if (!innerEl || !targetInnerEl) return;
+	// 內容超出單頁時改為「換頁」而非縮小字級；地圖等區塊整塊移到下一頁避免被切到
+	const wrapper = measureContainer.firstElementChild;
+	const dayPageEls = Array.from(wrapper.querySelectorAll(".pdf-day-page"));
+	const newPagesHtml = [];
+	dayPageEls.forEach((dayPageEl) => {
+		const sidebarHtml = dayPageEl.querySelector(".pdf-sidebar").outerHTML;
+		const contentEl = dayPageEl.querySelector(".pdf-content");
+		const innerEl = dayPageEl.querySelector(".pdf-content-inner");
 		const style = window.getComputedStyle(contentEl);
 		const availableHeight =
 			contentEl.clientHeight -
 			parseFloat(style.paddingTop) -
 			parseFloat(style.paddingBottom);
-		const scale = Math.min(1, availableHeight / innerEl.scrollHeight);
-		if (scale < 1) {
-			targetInnerEl.style.transform = `scale(${scale})`;
-			targetInnerEl.style.width = `${100 / scale}%`;
-		}
+
+		const pages = [];
+		let current = [];
+		let currentH = 0;
+		Array.from(innerEl.children).forEach((block) => {
+			const bs = window.getComputedStyle(block);
+			const h =
+				block.offsetHeight +
+				parseFloat(bs.marginTop) +
+				parseFloat(bs.marginBottom);
+			// 該區塊放不下且當前頁已有內容，先換頁
+			if (currentH + h > availableHeight && current.length > 0) {
+				pages.push(current);
+				current = [];
+				currentH = 0;
+				// 地圖被迫換頁時，把上一頁最後一個行程一起帶下來，避免地圖落單成一頁
+				if (block.classList.contains("pdf-map")) {
+					const prevPage = pages[pages.length - 1];
+					if (prevPage.length > 1) current.push(prevPage.pop());
+				}
+			}
+			current.push(block.outerHTML);
+			currentH += h;
+		});
+		if (current.length > 0) pages.push(current);
+
+		pages.forEach((blocks) => {
+			newPagesHtml.push(
+				`<div class="pdf-day-page">${sidebarHtml}<div class="pdf-content"><div class="pdf-content-inner">${blocks.join(
+					""
+				)}</div></div></div>`
+			);
+		});
 	});
+
+	// 以分頁後的內容重建列印元素（保留封面與 <style>）
+	dayPageEls.forEach((el) => el.remove());
+	wrapper.insertAdjacentHTML("beforeend", newPagesHtml.join(""));
+	const printElement = wrapper;
+	measureContainer.removeChild(wrapper);
 	document.body.removeChild(measureContainer);
 
 	const opt = {
