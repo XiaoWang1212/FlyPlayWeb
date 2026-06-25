@@ -526,7 +526,7 @@ function openEditModeForDay(targetDay) {
 	}
 }
 
-async function openEditModeWithSearchKeyword(keyword, targetDay) {
+async function openEditModeWithSearchKeyword(keyword, targetDay, replaceTarget = null) {
 	const searchKeyword = String(keyword || "").trim();
 	const dayNumber = Number(targetDay || 0);
 
@@ -550,7 +550,7 @@ async function openEditModeWithSearchKeyword(keyword, targetDay) {
 	}
 
 	if (typeof openSpotSearchModal === "function") {
-		openSpotSearchModal(searchKeyword);
+		openSpotSearchModal(searchKeyword, replaceTarget);
 	}
 }
 
@@ -1449,12 +1449,24 @@ async function handleItineraryEditFlowInput(text) {
 			return true;
 		}
 
+		// 此流程從 choose_mode 進入，一定是「修改行程」，選好地點後要替換 targetItem 而非新增。
 		const targetDay = currentFlow.targetDay;
+		const targetItem = currentFlow.targetItem;
+		const targetIndex = currentFlow.targetIndex ?? -1;
+		const hasTarget = targetItem || targetIndex >= 0;
 		clearItineraryEditFlow();
 		addUserMessage(text);
-		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
+		await addBotMessage(
+			hasTarget
+				? `我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框，選好地點後會替換「${targetItem}」。`
+				: `我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`,
+		);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
-		await openEditModeWithSearchKeyword(spotName, targetDay);
+		await openEditModeWithSearchKeyword(
+			spotName,
+			targetDay,
+			hasTarget ? { targetItem, targetIndex } : null,
+		);
 		return true;
 	}
 
