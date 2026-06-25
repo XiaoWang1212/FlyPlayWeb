@@ -119,7 +119,17 @@ def create_app():
             if not itinerary:
                 return jsonify({"success": False, "error": "未找到该行程"}), 404
 
-            # 提取 data_json
+            # 若 DB 已有 data_latlng（含使用者編輯結果），直接回傳，不重新生成
+            existing_latlng = itinerary.get("data_latlng")
+            if isinstance(existing_latlng, str):
+                try:
+                    existing_latlng = json.loads(existing_latlng)
+                except Exception:
+                    existing_latlng = None
+            if existing_latlng and existing_latlng.get("data"):
+                return jsonify({"success": True, "data": existing_latlng["data"], "itinerary_id": itinerary_id}), 200
+
+            # 無 data_latlng 時，從 data_json 重新生成座標
             data_json = itinerary.get("data_json")
             if isinstance(data_json, str):
                 data_json = json.loads(data_json)

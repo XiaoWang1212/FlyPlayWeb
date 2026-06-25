@@ -306,7 +306,6 @@ class GeminiService:
 
         # 移除 markdown 代碼塊標記
         if raw_text.startswith("```"):
-            # 找到第一個和最後一個 ```
             parts = raw_text.split("```")
             if len(parts) >= 3:
                 raw_text = parts[1]
@@ -321,6 +320,20 @@ class GeminiService:
         # 移除代碼塊結尾的 ```
         if raw_text.endswith("```"):
             raw_text = raw_text[:-3].strip()
+
+        # 擷取第一個 { 到最後一個 }（避免 Gemini 在 JSON 前後加說明文字）
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            raw_text = raw_text[start:end + 1]
+
+        # 移除 // 單行注解
+        raw_text = re.sub(r"//[^\n]*", "", raw_text)
+
+        # 將 Python 字面值換成 JSON 合法值
+        raw_text = re.sub(r"\bNone\b", "null", raw_text)
+        raw_text = re.sub(r"\bTrue\b", "true", raw_text)
+        raw_text = re.sub(r"\bFalse\b", "false", raw_text)
 
         # 移除 trailing commas（,後面只跟著空白/換行再接 } 或 ]）
         raw_text = re.sub(r",\s*([}\]])", r"\1", raw_text)

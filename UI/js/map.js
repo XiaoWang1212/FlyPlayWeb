@@ -271,15 +271,9 @@ function displayAllDays() {
 		);
 
 		if (activities.length < 2) {
-			console.warn(`[ALL] 第 ${dayIndex + 1} 天活動數量不足`, activities);
 			return;
 		}
 		if (routeActivities.length < 2) {
-			console.warn(`[ALL] 第 ${dayIndex + 1} 天有效路線點不足`, {
-				activities,
-				routeActivities,
-				判斷結果: activities.map((a) => isValidRouteLocation(a)),
-			});
 			return;
 		}
 

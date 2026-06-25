@@ -624,6 +624,10 @@ async function loadProjects() {
 	console.log("loadProjects", res.status, body);
 	if (res.ok && body.code === 200) {
 		renderProjects(body.data);
+		const sorted = sortProjectsByPin(body.data || []);
+		if (sorted.length > 0) {
+			await openProject(sorted[0]);
+		}
 	} else {
 		console.warn("loadProjects 錯誤", res.status, body);
 	}

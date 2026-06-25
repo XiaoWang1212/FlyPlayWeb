@@ -495,14 +495,18 @@ async function applySuggestedSpotDuration(activity) {
     // 等待期間若使用者已手動改過時間，就不要覆蓋。
     const itemSelector = `.timeline-item[data-activity-id="${CSS.escape(activity.activityId)}"]`;
 
+    let updated = false;
+
     if (suggestedTime && activity.time === "待安排") {
       activity.time = suggestedTime;
+      updated = true;
       const badge = document.querySelector(`${itemSelector} .time-badge`);
       if (badge) badge.textContent = suggestedTime;
     }
 
     if (suggestedCost && !activity.cost) {
       activity.cost = suggestedCost;
+      updated = true;
       const item = document.querySelector(itemSelector);
       if (item) {
         let costEl = item.querySelector(".activity-cost");
@@ -514,6 +518,11 @@ async function applySuggestedSpotDuration(activity) {
         }
         costEl.textContent = `💰 ${suggestedCost}`;
       }
+    }
+
+    // 若 AI 建議回來時使用者已按下「完成」（不再是 edit mode），直接存進 DB
+    if (updated && !isEditMode && typeof saveItineraryToDb === "function") {
+      saveItineraryToDb(allDays);
     }
   } catch (error) {
     // 建議停留時間或費用取得失敗時，維持原值即可。

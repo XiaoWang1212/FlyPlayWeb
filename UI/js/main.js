@@ -120,6 +120,11 @@ window.visualViewport.addEventListener("scroll", function () {
 
 // --- 初始化 ---
 window.onload = async function () {
+	// openProject（由 loadProjects 觸發）已完成初始化，跳過重複執行
+	if (Array.isArray(allDays) && allDays.length > 0) {
+		console.log("=== 頁面初始化完成（由 openProject 完成）===");
+		return;
+	}
 	try {
 		const coordinatesLoaded = await loadCoordinatesFirst();
 

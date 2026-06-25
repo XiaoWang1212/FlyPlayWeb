@@ -120,6 +120,7 @@ function openGoogleMapsRoute(event, block) {
 }
 
 async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelectFastest = false) {
+  if ((oLat === 0 && oLng === 0) || (dLat === 0 && dLng === 0)) return;
   // 直線距離（Haversine）
   const toRad = x => x * Math.PI / 180;
   const dLa = toRad(dLat - oLat), dLo = toRad(dLng - oLng);
@@ -307,9 +308,9 @@ async function initTransitBlocks() {
     const dLat = parseFloat(block.dataset.destLat);
     const dLng = parseFloat(block.dataset.destLng);
 
-    // 確保坐標有效
-    if (!isNaN(oLat) && !isNaN(oLng) && !isNaN(dLat) && !isNaN(dLng)) {
-      // 自動計算並選擇最佳模式，將 block 傳入
+    // 確保坐標有效且非 0,0
+    const validCoord = (lat, lng) => !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
+    if (validCoord(oLat, oLng) && validCoord(dLat, dLng)) {
       await _fetchTransitData(oLat, oLng, dLat, dLng, block, true);
       _updateBlockDisplay(block);
     }

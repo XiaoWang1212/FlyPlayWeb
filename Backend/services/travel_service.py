@@ -102,7 +102,7 @@ class TravelService:
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT project_id, user_id, title, is_pinned, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY created_at DESC",
+                    "SELECT project_id, user_id, title, is_pinned, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY updated_at DESC",
                     (user_id,),
                 )
                 return cur.fetchall()
@@ -146,21 +146,21 @@ class TravelService:
     def update_itinerary(self, itinerary_id, **fields):
         if not fields:
             return None
-        allowed = ["days", "destination", "type", "money", "data_json"]
+        allowed = ["days", "destination", "type", "money", "data_json", "data_latlng", "detailed_itinerary"]
         set_items = []
         values = []
         for key, value in fields.items():
             if key not in allowed:
                 continue
             set_items.append(f"{key}=%s")
-            if key == "data_json":
+            if key in ("data_json", "data_latlng", "detailed_itinerary"):
                 values.append(json.dumps(value))
             else:
                 values.append(value)
         if not set_items:
             return None
         values.append(itinerary_id)
-        sql = f"UPDATE itineraries SET {', '.join(set_items)}, updated_at=NOW() WHERE itinerary_id=%s RETURNING *"
+        sql = f"UPDATE itineraries SET {', '.join(set_items)} WHERE itinerary_id=%s RETURNING *"
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, tuple(values))

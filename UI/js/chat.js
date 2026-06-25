@@ -65,6 +65,87 @@ function _mergeSpotPhotosToLocalItinerary(spotImages) {
 
 }
 
+function buildUpdatedDetailed(days) {
+	const detailedRaw = localStorage.getItem("detailed_itinerary");
+	if (!detailedRaw) return null;
+	let detailed;
+	try { detailed = JSON.parse(detailedRaw); } catch (_) { return null; }
+
+	const daysSource = detailed?.parsed?.days || detailed?.days || [];
+
+	// 建立 place_name → 富資料 的查找表（AI 描述、費用、電話等）
+	const richByName = {};
+	for (const day of daysSource) {
+		const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
+		for (const item of list) {
+			const name = (item.place_name || item.location_name || "").trim();
+			if (name) richByName[name] = item;
+		}
+	}
+
+	// 以 allDays 為主結構重建每天活動：保留舊景點的富資料，新景點補上搜尋得到的資料
+	const updatedDays = days.map((day) => {
+		const activities = (day.activities || []).map((act) => {
+			const name = (act.place_name || act.location_name || act.name || "").trim();
+			const rich = richByName[name] || {};
+			return {
+				...rich,
+				place_name: name || rich.place_name || "",
+				place_id: act.place_id || rich.place_id || "",
+				location: act.location || rich.location || null,
+				time: act.time || rich.time || "",
+				photo_url: act.photo_url || act.photos?.[0]?.photo_url || rich.photo_url || "",
+				photos: act.photos?.length ? act.photos : (rich.photos || []),
+				address: act.address || rich.address || "",
+				rating: act.rating ?? rich.rating ?? null,
+				description: rich.description || act.description || "",
+				cost: rich.cost || act.cost || "",
+				type: rich.type || act.type || "",
+			};
+		});
+		return { day: day.day, weekday: day.weekday || `第${day.day}天`, activities };
+	});
+
+	if (detailed?.parsed?.days) {
+		return { ...detailed, parsed: { ...detailed.parsed, days: updatedDays } };
+	}
+	return { ...detailed, days: updatedDays };
+}
+
+async function saveItineraryToDb(days) {
+	const itineraryId = localStorage.getItem("currentItineraryId");
+	const token = localStorage.getItem("userToken");
+	if (!itineraryId) { console.warn("[saveItineraryToDb] 缺少 currentItineraryId"); return; }
+	if (!token) { console.warn("[saveItineraryToDb] 缺少 userToken"); return; }
+	if (!Array.isArray(days) || days.length === 0) { console.warn("[saveItineraryToDb] days 為空", days); return; }
+	try {
+		const serialized = serializeChatItinerary(days);
+		const updatedDetailed = buildUpdatedDetailed(days);
+		const body = { data_latlng: serialized };
+		if (updatedDetailed) body.detailed_itinerary = updatedDetailed;
+
+		console.log("[saveItineraryToDb] 送出儲存，itineraryId:", itineraryId, "days:", days.length, "天");
+		const res = await fetch(`${API_BASE}/api/travel/itinerary/${itineraryId}`, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify(body),
+		});
+		if (!res.ok) {
+			const text = await res.text();
+			console.error("[saveItineraryToDb] 後端錯誤", res.status, text);
+		} else {
+			console.log("[saveItineraryToDb] 儲存成功", res.status);
+			localStorage.setItem("data_latlng", JSON.stringify({ ...serialized, itinerary_id: itineraryId }));
+			if (updatedDetailed) localStorage.setItem("detailed_itinerary", JSON.stringify(updatedDetailed));
+		}
+	} catch (err) {
+		console.error("[saveItineraryToDb] 網路錯誤", err);
+	}
+}
+
 function serializeChatItinerary(days) {
 	return {
 		data: (days || []).map((day) => ({
@@ -76,6 +157,10 @@ function serializeChatItinerary(days) {
 				place_id: activity.place_id || "",
 				location: activity.location || null,
 				time: activity.time || "",
+				cost: activity.cost || "",
+				photo_url: activity.photo_url || activity.photos?.[0]?.photo_url || "",
+				address: activity.address || "",
+				rating: activity.rating ?? null,
 			})),
 		})),
 	};
@@ -84,7 +169,10 @@ function serializeChatItinerary(days) {
 function persistChatItinerary(days) {
 	if (!Array.isArray(days) || days.length === 0) return;
 
-	localStorage.setItem("data_latlng", JSON.stringify(serializeChatItinerary(days)));
+	const _serialized = serializeChatItinerary(days);
+	const _itineraryId = localStorage.getItem("currentItineraryId");
+	if (_itineraryId) _serialized.itinerary_id = _itineraryId;
+	localStorage.setItem("data_latlng", JSON.stringify(_serialized));
 
 	const detailedRaw = localStorage.getItem("detailed_itinerary");
 	if (detailedRaw) {
@@ -111,6 +199,8 @@ function persistChatItinerary(days) {
 			localStorage.setItem("generatedItinerary", JSON.stringify(generated));
 		} catch (_) {}
 	}
+
+	saveItineraryToDb(days);
 }
 
 function applyChatItineraryUpdate(parsed) {
@@ -533,11 +623,27 @@ function deleteActivityFromDay(dayNum, actIndex) {
 
 	const activeDays = getActiveDays();
 	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+	const resolvedIndex = dayIndex >= 0 ? dayIndex : currentDayIndex;
+
 	if (currentDayIndex === -1) {
-		if (typeof displayAllDays === "function") displayAllDays();
+		if (typeof clearMapRoutes === "function") clearMapRoutes();
+		if (typeof loadAllTimelineActivities === "function") loadAllTimelineActivities();
 	} else {
-		if (typeof displayDay === "function") displayDay(dayIndex >= 0 ? dayIndex : currentDayIndex);
+		if (typeof clearMapRoutes === "function") clearMapRoutes();
+		if (resolvedIndex >= 0 && typeof loadSingleDayTimeline === "function") {
+			loadSingleDayTimeline(activeDays[resolvedIndex], resolvedIndex);
+		}
+		if (day.activities.length >= 2 && typeof renderDayRoute === "function") {
+			const routeActivities = day.activities.filter((a) => typeof isValidRouteLocation === "function" ? isValidRouteLocation(a) : true);
+			renderDayRoute(routeActivities, resolvedIndex, mapRouteSession, {
+				strokeColor: getColorByDay(resolvedIndex),
+				strokeWeight: 7,
+				strokeOpacity: 0.9,
+			});
+		}
 	}
+
+	persistChatItinerary(allDays);
 }
 
 async function showDayPickerForAddMessage() {
@@ -1179,6 +1285,8 @@ function replaceActivityInDay(dayNum, targetItemName, newSpot, targetIndex = -1)
 	} else {
 		if (typeof displayDay === "function") displayDay(dayIndex >= 0 ? dayIndex : currentDayIndex);
 	}
+
+	saveItineraryToDb(allDays);
 }
 
 function appendActionPickerCards(parentEl) {

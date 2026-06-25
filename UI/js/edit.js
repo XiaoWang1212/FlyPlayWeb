@@ -167,6 +167,13 @@ function confirmDrag() {
 		editedDays = null;
 	}
 
+	if (typeof saveItineraryToDb === "function") {
+		console.log("[confirmDrag] 準備存 DB，allDays:", allDays?.length, "天", allDays);
+		saveItineraryToDb(allDays);
+	} else {
+		console.warn("[confirmDrag] saveItineraryToDb 未定義，請確認 chat.js 有載入");
+	}
+
 	document.getElementById("dragConfirmBtn").classList.remove("show");
 	sortable.option("disabled", true);
 	isDragChanged = false;

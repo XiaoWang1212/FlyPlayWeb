@@ -66,14 +66,17 @@ async function loadCoordinatesFirst() {
 						activities: (dayData.locations || []).map((loc) => ({
 							place_name: loc.location_name,
 							location: {
-								lat: loc.location?.latitude || 0,
-								lng: loc.location?.longitude || 0,
+								lat: loc.location?.lat || loc.location?.latitude || 0,
+								lng: loc.location?.lng || loc.location?.longitude || 0,
 							},
 							place_id: loc.place_id || "",
 							time: loc.time || "",
+							cost: loc.cost || "",
+							photo_url: loc.photo_url || "",
+							address: loc.address || "",
+							rating: loc.rating ?? null,
 							description: "",
 							type: "",
-							cost: "",
 						})),
 					}));
 					return true;
@@ -111,17 +114,20 @@ async function loadCoordinatesFirst() {
 			return {
 				day: dayData.day,
 				weekday: dayData.weekday || `第${dayData.day}天`,
-				activities: dayData.locations.map((loc) => ({
+				activities: (dayData.locations || []).map((loc) => ({
 					place_name: loc.location_name,
 					location: {
-						lat: loc.location.latitude || 0,
-						lng: loc.location.longitude || 0,
+						lat: loc.location?.lat || loc.location?.latitude || 0,
+						lng: loc.location?.lng || loc.location?.longitude || 0,
 					},
 					place_id: loc.place_id || "",
 					time: loc.time || "",
+					cost: loc.cost || "",
+					photo_url: loc.photo_url || "",
+					address: loc.address || "",
+					rating: loc.rating ?? null,
 					description: "",
 					type: "",
-					cost: "",
 				})),
 			};
 		});
@@ -205,26 +211,62 @@ async function generateDetailedItinerary() {
 		const daysSource = dbDetailed?.parsed?.days || dbDetailed?.days || [];
 		if (!Array.isArray(daysSource) || !daysSource.length) return false;
 
-		// 將 allDays 座標合併進 detailed 資料
-		const mergedDays = daysSource.map((day, dayIndex) => {
-			const currentDay = allDays.find(
-				(d, idx) => Number(d?.day) === Number(day?.day) || idx === dayIndex,
-			);
-			const currentActivities = Array.isArray(currentDay?.activities)
-				? currentDay.activities
-				: [];
+		// 以 allDays (data_latlng) 為主結構；detailed_itinerary 只用來補充富資料（描述、照片等）
+		// 這樣使用者的新增/刪除/排序才不會被舊的 detailed_itinerary 覆蓋
+		const baseSource = Array.isArray(allDays) && allDays.length > 0 ? allDays : null;
 
-			const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
-			const normalizedList = list.map((item, itemIndex) => {
-				let matched = currentActivities.find((a) => a?.place_name === item?.place_name);
-				if (!matched) matched = currentActivities[itemIndex];
-				return { ...item, location: item.location || matched?.location || null };
+		const mergedDays = baseSource
+			? allDays.map((currentDay, dayIndex) => {
+				const detailedDay = daysSource.find(
+					(d, idx) => Number(d?.day) === Number(currentDay?.day) || idx === dayIndex,
+				);
+				const detailedList = detailedDay
+					? ((Array.isArray(detailedDay.location) && detailedDay.location.length ? detailedDay.location : null) || detailedDay.activities || [])
+					: [];
+
+				const activities = (currentDay.activities || []).map((act) => {
+					const rich = detailedList.find(
+						(item) => (item?.place_name || item?.location_name || "") === (act?.place_name || ""),
+					) || {};
+					const actLoc = act.location;
+					const isValidLoc = actLoc &&
+						((typeof actLoc.lat === "number" && actLoc.lat !== 0) ||
+						 (typeof actLoc.latitude === "number" && actLoc.latitude !== 0));
+					// 結構欄位以 act (allDays) 為主；描述/費用/類型等內容欄位保留 rich（AI 生成），不讓空字串覆蓋
+					return {
+						...rich,
+						place_name: act.place_name || rich.place_name || "",
+						place_id: act.place_id || rich.place_id || "",
+						time: act.time || rich.time || "",
+						activityId: act.activityId || rich.activityId || "",
+						photo_url: act.photo_url || act.photos?.[0]?.photo_url || rich.photo_url || "",
+						photos: act.photos?.length ? act.photos : (rich.photos || []),
+						address: act.address || rich.address || "",
+						rating: act.rating ?? rich.rating ?? null,
+						description: rich.description || act.description || "",
+						cost: rich.cost || act.cost || "",
+						type: rich.type || act.type || "",
+						location: isValidLoc ? actLoc : (rich.location || actLoc || null),
+					};
+				});
+
+				return { ...currentDay, activities };
+			})
+			: daysSource.map((day, dayIndex) => {
+				const currentDay = allDays.find(
+					(d, idx) => Number(d?.day) === Number(day?.day) || idx === dayIndex,
+				);
+				const currentActivities = Array.isArray(currentDay?.activities) ? currentDay.activities : [];
+				const list = (Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || [];
+				const normalizedList = list.map((item, itemIndex) => {
+					let matched = currentActivities.find((a) => a?.place_name === item?.place_name);
+					if (!matched) matched = currentActivities[itemIndex];
+					return { ...item, location: item.location || matched?.location || null };
+				});
+				return Array.isArray(day.location)
+					? { ...day, location: normalizedList }
+					: { ...day, activities: normalizedList };
 			});
-
-			return Array.isArray(day.location)
-				? { ...day, location: normalizedList }
-				: { ...day, activities: normalizedList };
-		});
 
 		allDays = convertToAllDaysFormat(mergedDays);
 		createDayButtons();
@@ -365,17 +407,19 @@ function convertToAllDaysFormat(days) {
 		day: day.day,
 		weekday: day.weekday,
 		activities: ((Array.isArray(day.location) && day.location.length ? day.location : null) || day.activities || []).map((item) => ({
-			time: item.time,
-			place_name: item.place_name,
+			time: item.time || "",
+			place_name: item.place_name || item.location_name || "",
+			place_id: item.place_id || "",
+			activityId: item.activityId || item.place_id || "",
 			description: item.description || "",
 			type: item.type || "景點",
-			cost: item.cost || "未知",
+			cost: item.cost || "",
 			location: item.location || null,
 			photo_url: item.photo_url || (Array.isArray(item.photos) && item.photos[0]?.photo_url) || "",
-			photos: item.photos,
-			rating: item.rating,
-			address: item.address,
-			phone: item.phone,
+			photos: item.photos || [],
+			rating: item.rating ?? null,
+			address: item.address || "",
+			phone: item.phone || "",
 		})),
 	}));
 }
