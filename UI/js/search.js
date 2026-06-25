@@ -625,7 +625,7 @@ async function addSpotToItinerary(spot, evt) {
   if (isEditMode && editedDays) {
     isDragChanged = true;
     // 編輯模式下顯示確認按鈕。
-    document.getElementById("dragConfirmBtn").classList.add("show");
+    // document.getElementById("dragConfirmBtn").classList.add("show");
   }
 
   const dayBtn = document.querySelector(
