@@ -646,6 +646,7 @@ function renderProjects(projects) {
 			// 點擊即時把灰底移到目前選中的行程
 			list.querySelectorAll(".trip-item.active").forEach((el) => el.classList.remove("active"));
 			item.classList.add("active");
+			toggleSidebar();
 			openProject(project);
 		});
 		list.appendChild(item);
@@ -749,7 +750,6 @@ async function loadProjects() {
 			window.location.href = "setup.html";
 			return;
 		}
-		renderProjects(body.data);
 		// 預設開啟第一個「可見」專案（排除 __tutorial__）
 		const visibleData = (body.data || []).filter((p) => p.title !== "__tutorial__");
 		// 有真實 project 代表使用者已用過 app，補上教學完成 key 避免換瀏覽器後重跑教學
@@ -758,6 +758,11 @@ async function loadProjects() {
 			localStorage.setItem("fp_tutorial_index_done", "1");
 		}
 		const sorted = sortProjectsByPin(visibleData);
+		// 永遠預設第一個，先設定好讓 renderProjects 標記正確灰底
+		if (sorted.length > 0) {
+			sessionStorage.setItem("currentProjectId", String(sorted[0].project_id));
+		}
+		renderProjects(body.data);
 		if (sorted.length > 0) {
 			await openProject(sorted[0]);
 		}

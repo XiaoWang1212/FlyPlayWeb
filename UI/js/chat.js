@@ -695,7 +695,7 @@ function deleteActivityFromDay(dayNum, actIndex) {
 		}
 	}
 
-	persistChatItinerary(allDays);
+	saveItineraryToDb(allDays);
 }
 
 async function showDayPickerForAddMessage() {
@@ -1200,10 +1200,9 @@ async function handleModeCardSelected(mode, flow) {
 		removeChatLoadingSpinner(loadingEl);
 		clearItineraryEditFlow();
 
-		// geocode 並在地圖上顯示推薦景點
+		// geocode 並在地圖上標示推薦景點（不自動跳轉畫面）
 		const geocodedSpot = await geocodeSpotForReplace(suggestedSpot, flow.targetDay);
 		if (geocodedSpot) {
-			if (isChatMode) toggleChatMode();
 			selectedSpotForAdd = geocodedSpot;
 			openSpotInfoOnMap(geocodedSpot, "載入中...", "載入中...", { showAddButton: false });
 			getBusinessInfo(geocodedSpot, "").then(({ openingHoursText, priceRangeText }) => {
@@ -1356,10 +1355,15 @@ function replaceActivityInDay(dayNum, targetItemName, newSpot, targetIndex = -1)
 
 	const activeDays = getActiveDays();
 	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+	const resolvedIdx = dayIndex >= 0 ? dayIndex : currentDayIndex;
+
 	if (currentDayIndex === -1) {
 		if (typeof displayAllDays === "function") displayAllDays();
+		if (typeof loadAllTimelineActivities === "function") loadAllTimelineActivities();
 	} else {
-		if (typeof displayDay === "function") displayDay(dayIndex >= 0 ? dayIndex : currentDayIndex);
+		if (typeof displayDay === "function") displayDay(resolvedIdx);
+		if (typeof clearMapRoutes === "function") clearMapRoutes();
+		if (typeof loadSingleDayTimeline === "function") loadSingleDayTimeline(activeDays[resolvedIdx], resolvedIdx);
 	}
 
 	saveItineraryToDb(allDays);
