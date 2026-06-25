@@ -612,7 +612,7 @@ function renderProjects(projects) {
 			});
 		});
 
-		item.addEventListener("click", () => openProject(project));
+		item.addEventListener("click", () => { toggleSidebar(); openProject(project); });
 		list.appendChild(item);
 	});
 
