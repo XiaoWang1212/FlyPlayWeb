@@ -162,6 +162,78 @@ def create_app():
             print(traceback.format_exc())
             return jsonify({"success": False, "error": f"服务器错误: {str(e)}"}), 500
 
+    @app.route("/admin/migrate-photos", methods=["POST"])
+    def migrate_photos():
+        """一次性 migration：把 DB 裡含舊 API key 的 photo_url 換成 CDN URL"""
+        import re
+
+        def extract_photo_name(url: str):
+            m = re.search(r"/v1/(places/[^/]+/photos/[^/]+)/media", url)
+            return m.group(1) if m else None
+
+        def walk_and_replace(obj, resolve_fn, stats):
+            if isinstance(obj, dict):
+                for key, val in obj.items():
+                    if key == "photo_url" and isinstance(val, str) and "places.googleapis.com" in val:
+                        name = extract_photo_name(val)
+                        if name:
+                            cdn = resolve_fn(name)
+                            if cdn:
+                                obj[key] = cdn
+                                stats["fixed"] += 1
+                            else:
+                                stats["failed"] += 1
+                        else:
+                            stats["skipped"] += 1
+                    else:
+                        walk_and_replace(val, resolve_fn, stats)
+            elif isinstance(obj, list):
+                for item in obj:
+                    walk_and_replace(item, resolve_fn, stats)
+
+        rows = travel_service.get_all_itineraries_with_photos()
+        total_fixed = 0
+        total_failed = 0
+        itineraries_updated = 0
+
+        for row in rows:
+            iid = row["itinerary_id"]
+            data_latlng = row.get("data_latlng")
+            detailed = row.get("detailed_itinerary")
+
+            if isinstance(data_latlng, str):
+                try: data_latlng = json.loads(data_latlng)
+                except Exception: data_latlng = None
+            if isinstance(detailed, str):
+                try: detailed = json.loads(detailed)
+                except Exception: detailed = None
+
+            stats = {"fixed": 0, "failed": 0, "skipped": 0}
+            if data_latlng:
+                walk_and_replace(data_latlng, google_map_service._resolve_photo_url, stats)
+            if detailed:
+                walk_and_replace(detailed, google_map_service._resolve_photo_url, stats)
+
+            if stats["fixed"] > 0:
+                try:
+                    travel_service.update_itinerary_ai_data(
+                        iid,
+                        data_latlng=data_latlng if data_latlng else None,
+                        detailed_itinerary=detailed if detailed else None,
+                    )
+                    itineraries_updated += 1
+                except Exception as e:
+                    print(f"[migrate-photos] itinerary {iid} save error: {e}")
+            total_fixed += stats["fixed"]
+            total_failed += stats["failed"]
+
+        return jsonify({
+            "success": True,
+            "itineraries_updated": itineraries_updated,
+            "photos_fixed": total_fixed,
+            "photos_failed": total_failed,
+        }), 200
+
     @app.route("/cache/clear", methods=["POST"])
     def clear_cache():
         """清除所有快取"""

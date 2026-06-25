@@ -116,6 +116,15 @@ class PlaceCache:
             
     def clear_all(self):
         """清除所有快取"""
+        if self.use_postgres:
+            try:
+                with psycopg2.connect(self.database_url) as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute('DELETE FROM places')
+                    conn.commit()
+                return
+            except PsycopgError:
+                pass
         with sqlite3.connect(self.db_path) as conn:
             conn.execute('DELETE FROM places')
             conn.commit()

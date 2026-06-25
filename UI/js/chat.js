@@ -1509,6 +1509,12 @@ function appendSpotImageCards(parent, spotImages) {
 			imageEl.alt = spot.name || "景點圖片";
 			imageEl.loading = "lazy";
 			imageEl.referrerPolicy = "no-referrer";
+			imageEl.onerror = () => {
+				const placeholder = document.createElement("div");
+				placeholder.className = "chat-spot-image chat-spot-no-photo";
+				placeholder.textContent = "📷";
+				imageEl.replaceWith(placeholder);
+			};
 		} else {
 			imageEl = document.createElement("div");
 			imageEl.className = "chat-spot-image chat-spot-no-photo";
@@ -1547,6 +1553,12 @@ function createSpotCardElement(spot) {
 	img.alt = spot.name || "景點圖片";
 	img.loading = "lazy";
 	img.referrerPolicy = "no-referrer";
+	img.onerror = () => {
+		const placeholder = document.createElement("div");
+		placeholder.className = "chat-spot-image chat-spot-no-photo";
+		placeholder.textContent = "📷";
+		img.replaceWith(placeholder);
+	};
 
 	const title = document.createElement("div");
 	title.className = "chat-spot-title";

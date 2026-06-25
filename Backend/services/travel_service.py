@@ -76,6 +76,14 @@ class TravelService:
             conn.commit()
         return new_id
 
+    def get_all_itineraries_with_photos(self):
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT itinerary_id, data_latlng, detailed_itinerary FROM itineraries"
+                )
+                return cur.fetchall()
+
     def get_itineraries(self, project_id):
         with self._conn() as conn:
             with conn.cursor() as cur:
