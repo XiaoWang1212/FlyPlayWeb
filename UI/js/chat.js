@@ -3,6 +3,39 @@
 let conversationHistory = [];
 let hasShownChatWelcome = false;
 let hasHiddenChatSuggestions = false;
+let _chatAbortController = null;
+let _chatTypingAborted = false;
+
+function setChatResponding(responding) {
+	const btn = document.getElementById("chatSendBtn");
+	if (!btn) return;
+	const icon = btn.querySelector("i");
+	if (responding) {
+		if (icon) icon.className = "fas fa-stop";
+		btn.style.borderRadius = "6px";
+		btn.style.background = "#c0392b";
+		btn.classList.add("is-responding");
+		_hideChatSuggestionsTemp();
+	} else {
+		if (icon) icon.className = "fas fa-paper-plane";
+		btn.style.borderRadius = "";
+		btn.style.background = "";
+		btn.classList.remove("is-responding");
+		if (!hasHiddenChatSuggestions) {
+			showChatSuggestions();
+		}
+	}
+}
+
+function stopChatResponse() {
+	if (_chatAbortController) {
+		_chatAbortController.abort();
+		_chatAbortController = null;
+	}
+	_chatTypingAborted = true;
+	setChatResponding(false);
+	showChatSuggestions();
+}
 
 const CHAT_FLOW_TRANSITION_DELAY_MS = 3000;
 
@@ -528,6 +561,22 @@ function disablePickerContainer(el) {
 	});
 }
 
+function appendCancelChipToRow(row) {
+	const btn = document.createElement("button");
+	btn.className = "chat-picker-chip chat-picker-chip--cancel";
+	btn.textContent = "取消";
+	btn.addEventListener("click", async () => {
+		disablePickerContainer(row);
+		btn.classList.add("selected");
+		appendMsg("取消", "user");
+		pushConversationMessage("user", "取消");
+		clearItineraryEditFlow();
+		await addBotMessage("已取消。若你想重新開始，可以再輸入「調整行程」。");
+		showChatSuggestions();
+	});
+	row.appendChild(btn);
+}
+
 async function showDayPickerForDeleteMessage() {
 	const days = getChatCurrentItinerary();
 	if (!days.length) {
@@ -560,6 +609,7 @@ async function showDayPickerForDeleteMessage() {
 		});
 		row.appendChild(btn);
 	});
+	appendCancelChipToRow(row);
 	msgEl.appendChild(row);
 	scrollToBottom();
 }
@@ -572,6 +622,7 @@ async function showActivityPickerForDeleteMessage(dayNum) {
 	if (!activities.length) {
 		await addBotMessage(`第 ${dayNum} 天目前沒有景點可刪除。`);
 		clearItineraryEditFlow();
+		showChatSuggestions();
 		return;
 	}
 
@@ -605,6 +656,7 @@ async function showActivityPickerForDeleteMessage(dayNum) {
 
 			deleteActivityFromDay(dayNum, index);
 			await addBotMessage(`已將「${name}」從第 ${dayNum} 天刪除。`);
+			showChatSuggestions();
 		});
 
 		list.appendChild(card);
@@ -675,6 +727,7 @@ async function showDayPickerForAddMessage() {
 		});
 		row.appendChild(btn);
 	});
+	appendCancelChipToRow(row);
 	msgEl.appendChild(row);
 	scrollToBottom();
 }
@@ -743,10 +796,14 @@ async function fetchNearbyAttractions(dayNum, isFood) {
 	);
 	scrollToBottom();
 
+	_chatTypingAborted = false;
+	_chatAbortController = new AbortController();
+	setChatResponding(true);
 	try {
 		const resp = await fetch(API_BASE + "/api/chat/message", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
+			signal: _chatAbortController.signal,
 			body: JSON.stringify({
 				message,
 				conversationHistory,
@@ -781,7 +838,13 @@ async function fetchNearbyAttractions(dayNum, isFood) {
 	} catch (err) {
 		const loader = document.getElementById(loadingId);
 		if (loader) loader.remove();
-		await appendMsg("網路錯誤，請稍後再試", "bot");
+		if (err.name !== "AbortError") {
+			await appendMsg("網路錯誤，請稍後再試", "bot");
+		}
+	} finally {
+		_chatAbortController = null;
+		_chatTypingAborted = false;
+		setChatResponding(false);
 	}
 }
 
@@ -949,6 +1012,7 @@ function appendDayPickerCards(parentEl, days) {
 		});
 		row.appendChild(btn);
 	});
+	appendCancelChipToRow(row);
 
 	parentEl.appendChild(row);
 	scrollToBottom();
@@ -1096,6 +1160,9 @@ async function handleModeCardSelected(mode, flow) {
 		return;
 	}
 
+	_chatTypingAborted = false;
+	_chatAbortController = new AbortController();
+	setChatResponding(true);
 	const loadingEl = showChatLoadingSpinner();
 	try {
 		const tripContext = buildChatTripContext();
@@ -1103,6 +1170,7 @@ async function handleModeCardSelected(mode, flow) {
 		const resp = await fetch(API_BASE + "/api/chat/itinerary-suggestion", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
+			signal: _chatAbortController.signal,
 			body: JSON.stringify({
 				tripContext,
 				currentItinerary,
@@ -1152,7 +1220,13 @@ async function handleModeCardSelected(mode, flow) {
 		appendReplaceConfirmChips(msgEl, flow, geocodedSpot || { name: suggestedSpot });
 	} catch (error) {
 		removeChatLoadingSpinner(loadingEl);
-		addBotMessage(`AI 推薦時發生問題：${error.message || error}。你也可以改用自己知道的景點名稱。`);
+		if (error.name !== "AbortError") {
+			addBotMessage(`AI 推薦時發生問題：${error.message || error}。你也可以改用自己知道的景點名稱。`);
+		}
+	} finally {
+		_chatAbortController = null;
+		_chatTypingAborted = false;
+		setChatResponding(false);
 	}
 }
 
@@ -1228,6 +1302,7 @@ function appendReplaceConfirmChips(parentEl, flow, newSpot) {
 		pushConversationMessage("user", "是");
 		replaceActivityInDay(flow.targetDay, flow.targetItem, newSpot, flow.targetIndex ?? -1);
 		await addBotMessage(`已將「${flow.targetItem}」替換為「${newSpot.name}」。`);
+		showChatSuggestions();
 	});
 
 	const noBtn = document.createElement("button");
@@ -1239,6 +1314,7 @@ function appendReplaceConfirmChips(parentEl, flow, newSpot) {
 		appendMsg("否", "user");
 		pushConversationMessage("user", "否");
 		await addBotMessage("好的，行程保持不變。");
+		showChatSuggestions();
 	});
 
 	row.appendChild(yesBtn);
@@ -1377,7 +1453,8 @@ async function handleItineraryEditFlowInput(text) {
 	if (/^(取消|結束|退出|離開)$/.test(normalizeFlowText(flowText))) {
 		clearItineraryEditFlow();
 		addUserMessage(text);
-		addBotMessage("已取消修改行程流程。若你想重新開始，可以再輸入「修改行程」。");
+		await addBotMessage("已取消修改行程流程。若你想重新開始，可以再輸入「修改行程」。");
+		showChatSuggestions();
 		return true;
 	}
 
@@ -1591,10 +1668,25 @@ async function typeMessage(text, type, speed = CHAT_TYPEWRITER_SPEED, spotImages
 
 		// Type this line character-by-character
 		for (let ci = 0; ci <= lineText.length; ci++) {
+			if (_chatTypingAborted) {
+				p.textContent = lineText; // 立即補完這行
+				break;
+			}
 			p.textContent = lineText.slice(0, ci);
 			scrollToBottom();
 			const waitMs = Math.max(10, speed);
 			if (ci < lineText.length) await new Promise((r) => setTimeout(r, waitMs));
+		}
+
+		if (_chatTypingAborted) {
+			// 立即顯示所有剩餘行
+			for (let ri = li + 1; ri < lines.length; ri++) {
+				const rp = document.createElement("div");
+				rp.className = "chat-msg-line";
+				rp.textContent = lines[ri];
+				div.appendChild(rp);
+			}
+			break;
 		}
 
 		// 描述行打完後才插入景點圖片
@@ -1716,12 +1808,14 @@ function showChatWelcomeMessage() {
 }
 
 function hideChatSuggestions() {
-	if (hasHiddenChatSuggestions) return;
-	const chatSuggestions = document.getElementById("chatSuggestions");
-	if (!chatSuggestions) return;
-
 	hasHiddenChatSuggestions = true;
-	chatSuggestions.classList.add("suggestions-hidden");
+	const chatSuggestions = document.getElementById("chatSuggestions");
+	if (chatSuggestions) chatSuggestions.classList.add("suggestions-hidden");
+}
+
+function _hideChatSuggestionsTemp() {
+	const chatSuggestions = document.getElementById("chatSuggestions");
+	if (chatSuggestions) chatSuggestions.classList.add("suggestions-hidden");
 }
 
 // 切換聊天模式
@@ -1768,30 +1862,35 @@ async function sendMessage() {
 	if (!text) return;
 	input.value = "";
 
-	if (await handleItineraryEditFlowInput(text)) {
-		return;
-	}
-
-	const tripContext = buildChatTripContext();
-	const currentItinerary = getChatCurrentItinerary();
-
-	hideChatSuggestions();
-	addUserMessage(text);
-
-	const loadingId = "loading-" + Date.now();
-	document
-		.getElementById("chatMessages")
-		.insertAdjacentHTML(
-			"beforeend",
-			`<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
-		);
-	scrollToBottom();
+	_chatTypingAborted = false;
+	_chatAbortController = new AbortController();
+	setChatResponding(true);
 
 	try {
+		const flowHandled = await handleItineraryEditFlowInput(text);
+		if (flowHandled) {
+			return;
+		}
+
+		const tripContext = buildChatTripContext();
+		const currentItinerary = getChatCurrentItinerary();
+
+		addUserMessage(text);
+
+		const loadingId = "loading-" + Date.now();
+		document
+			.getElementById("chatMessages")
+			.insertAdjacentHTML(
+				"beforeend",
+				`<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
+			);
+		scrollToBottom();
+
 		const itineraryId = localStorage.getItem("currentItineraryId") || null;
 		const resp = await fetch(API_BASE + "/api/chat/message", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
+			signal: _chatAbortController.signal,
 			body: JSON.stringify({
 				message: text,
 				conversationHistory,
@@ -1829,14 +1928,19 @@ async function sendMessage() {
 			} else {
 				conversationHistory.push({ role: "assistant", content: aiText });
 			}
-				// 保持聊天視窗狀態，不在每次傳送後自動縮回半層
 		} else {
 			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
 		}
 	} catch (err) {
-		const loader = document.getElementById(loadingId);
+		const loader = document.getElementById("chatMessages")?.querySelector(".typing");
 		if (loader) loader.remove();
-		await appendMsg("網路錯誤，請稍後再試", "bot");
+		if (err.name !== "AbortError") {
+			await appendMsg("網路錯誤，請稍後再試", "bot");
+		}
+	} finally {
+		_chatAbortController = null;
+		_chatTypingAborted = false;
+		setChatResponding(false);
 	}
 }
 
@@ -1869,15 +1973,22 @@ function sendSuggestedQuestion(question, buttonElement) {
 	}
 
 	input.value = question;
-	input.focus();
-	if (typeof input.setSelectionRange === "function") {
-		input.setSelectionRange(question.length, question.length);
-	}
+	void sendMessage();
 }
 
 function scrollToBottom() {
 	const container = document.getElementById("chatMessages");
 	container.scrollTop = container.scrollHeight;
+}
+
+function chatSendBtnClicked() {
+	console.log("[chat] chatSendBtnClicked");
+	const btn = document.getElementById("chatSendBtn");
+	if (btn && btn.classList.contains("is-responding")) {
+		stopChatResponse();
+	} else {
+		void sendMessage();
+	}
 }
 
 document.addEventListener("DOMContentLoaded", () => {
