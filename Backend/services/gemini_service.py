@@ -15,8 +15,11 @@ class GeminiService:
     def __init__(self):
         genai.configure(api_key=Config.GEMINI_API_KEY)
         self.system_prompt = (
-            "你是一個旅遊規劃 AI。若系統已提供旅遊上下文，請直接使用，不要詢問任何追加問題。"
+            "你是一個旅遊規劃 AI，說話風格簡潔自然，像朋友聊天一樣。"
+            "若系統已提供旅遊上下文，請直接使用，不要詢問任何追加問題。"
             "不論資訊是否完整，都必須直接給出具體建議，不得反問使用者。"
+            "回覆長度規則：一般問題（景點好不好玩、推薦、感想類）請用 2～3 句話回答，直接給結論與重點，不要長篇介紹；"
+            "只有在使用者明確要求詳細說明時才可以回覆較長的內容。"
             "所有回覆請使用繁體中文純文字，不要輸出 Markdown、不要使用 **、#、-、編號清單或 code block。"
             "如果使用者的問題與旅遊、行程、景點、美食、住宿、交通無關，請直接婉拒回答並引導回旅遊主題，不要嘗試回答數學、科學、程式或其他非旅遊問題。"
         )
@@ -466,6 +469,62 @@ class GeminiService:
         keywords = ["附近熱門景點", "附近景點", "附近熱門", "周邊景點", "附近美食推薦", "附近美食", "附近餐廳"]
         return any(kw in str(message or "") for kw in keywords)
 
+    def _collect_itinerary_spot_names(self, current_itinerary):
+        """收集行程中所有景點名稱，用於去重過濾。"""
+        names = set()
+        if not isinstance(current_itinerary, list):
+            return names
+        for day in current_itinerary:
+            if not isinstance(day, dict):
+                continue
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                continue
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                ).strip()
+                if name:
+                    names.add(name)
+        return names
+
+    def _extract_last_spot_of_day(self, current_itinerary, target_day):
+        """取得指定天的最後一個景點名稱，作為距離計算的參考點。"""
+        if not isinstance(current_itinerary, list):
+            return None
+        for day in current_itinerary:
+            if not isinstance(day, dict):
+                continue
+            day_no = day.get("day") or 0
+            try:
+                day_no = int(day_no)
+            except Exception:
+                continue
+            if day_no != target_day:
+                continue
+            activities = day.get("activities") or day.get("location") or day.get("locations") or []
+            if not isinstance(activities, list):
+                continue
+            last_name = None
+            for activity in activities:
+                if not isinstance(activity, dict):
+                    continue
+                name = (
+                    activity.get("place_name")
+                    or activity.get("location_name")
+                    or activity.get("name")
+                    or ""
+                ).strip()
+                if name:
+                    last_name = name
+            return last_name
+        return None
+
     def _extract_target_day_from_message(self, message):
         text = str(message or "")
         match = re.search(r'第\s*([0-9一二三四五六七八九十]+)\s*天', text)
@@ -632,33 +691,45 @@ class GeminiService:
                 category_hint = "美食餐廳" if is_food_request else "熱門景點"
                 if target_day and itinerary_context_text:
                     is_nearby_request = True
+                    last_spot = self._extract_last_spot_of_day(current_itinerary, target_day) if is_food_request else None
+                    if is_food_request and last_spot:
+                        intro_text = (
+                            f"你是一個旅遊行程助理。請以第 {target_day} 天的最後一個景點「{last_spot}」為參考點，"
+                            f"推薦一些從該景點開車 30 分鐘以內可抵達、但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
+                        )
+                        distance_rule = f"2. 所有推薦的{category_hint}必須距離「{last_spot}」開車不超過 30 分鐘，嚴格遵守此距離限制，不得推薦超出此範圍的地點\n"
+                    else:
+                        intro_text = (
+                            f"你是一個旅遊行程助理。請根據第 {target_day} 天的行程所在城市／區域，"
+                            f"推薦一些該地區值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
+                        )
+                        distance_rule = f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
                     final_message = (
-                        f"你是一個旅遊行程助理。請根據第 {target_day} 天的行程所在城市／區域，"
-                        f"推薦一些該地區值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
-                        f"旅遊資訊：\n{trip_context_text or '無'}\n\n"
-                        f"現有行程：\n{itinerary_context_text}\n\n"
-                        "請只回傳純 JSON，不要輸出 Markdown 或多餘說明，格式如下：\n"
-                        "{\n"
-                        f'  "action": "nearby_attractions",\n'
-                        f'  "target_day": {target_day},\n'
-                        f'  "summary": "以下為第 {target_day} 天推薦的其他{category_hint}",\n'
-                        '  "attractions": [\n'
-                        '    {\n'
-                        '      "name": "景點名稱",\n'
-                        '      "type": "景點類型（景點／美食／購物／文化）",\n'
-                        '      "description": "一句話簡介",\n'
-                        '      "estimated_time": "建議停留 X 小時（固定以「建議停留」開頭）"\n'
-                        '    }\n'
-                        '  ]\n'
-                        "}\n\n"
-                        "規則：\n"
-                        f"1. 推薦 4~6 個{category_hint}\n"
-                        f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
-                        f"3. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
-                        "4. 不得推薦機場、航廈等交通節點\n"
-                        "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
-                        f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
-                        "7. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱"
+                        intro_text
+                        + f"旅遊資訊：\n{trip_context_text or '無'}\n\n"
+                        + f"現有行程：\n{itinerary_context_text}\n\n"
+                        + "請只回傳純 JSON，不要輸出 Markdown 或多餘說明，格式如下：\n"
+                        + "{\n"
+                        + f'  "action": "nearby_attractions",\n'
+                        + f'  "target_day": {target_day},\n'
+                        + f'  "summary": "以下為第 {target_day} 天推薦的其他{category_hint}",\n'
+                        + '  "attractions": [\n'
+                        + '    {\n'
+                        + '      "name": "景點名稱",\n'
+                        + '      "type": "景點類型（景點／美食／購物／文化）",\n'
+                        + '      "description": "一句話簡介",\n'
+                        + '      "estimated_time": "建議停留 X 小時（固定以「建議停留」開頭）"\n'
+                        + '    }\n'
+                        + '  ]\n'
+                        + "}\n\n"
+                        + "規則：\n"
+                        + f"1. 推薦 4~6 個{category_hint}\n"
+                        + distance_rule
+                        + f"3. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
+                        + "4. 不得推薦機場、航廈等交通節點\n"
+                        + "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
+                        + f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
+                        + "7. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱"
                     )
                 elif trip_context_text:
                     final_message = (
@@ -712,6 +783,16 @@ class GeminiService:
                     _, _, parsed_payload = self._parse_response_json(response)
                     if isinstance(parsed_payload, dict):
                         ai_content = parsed_payload.get("summary", ai_content)
+                        existing_names = self._collect_itinerary_spot_names(current_itinerary)
+                        attractions = parsed_payload.get("attractions") or []
+                        if existing_names and isinstance(attractions, list):
+                            parsed_payload["attractions"] = [
+                                a for a in attractions
+                                if isinstance(a, dict) and not any(
+                                    ex in a.get("name", "") or a.get("name", "") in ex
+                                    for ex in existing_names
+                                )
+                            ]
                 except Exception:
                     parsed_payload = None
             elif self._is_itinerary_edit_request(message):
