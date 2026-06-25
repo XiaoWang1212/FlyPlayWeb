@@ -823,10 +823,7 @@ class GeminiService:
                         if existing_names and isinstance(attractions, list):
                             parsed_payload["attractions"] = [
                                 a for a in attractions
-                                if isinstance(a, dict) and not any(
-                                    ex in a.get("name", "") or a.get("name", "") in ex
-                                    for ex in existing_names
-                                )
+                                if isinstance(a, dict) and a.get("name", "").strip() not in existing_names
                             ]
                 except Exception:
                     parsed_payload = None
