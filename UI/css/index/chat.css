@@ -57,8 +57,8 @@
 .chat-messages {
 	flex: 1;
 	padding: 20px;
-	padding-bottom: calc(240px + var(--safe-bottom, 0px));
-	scroll-padding-bottom: calc(240px + var(--safe-bottom, 0px));
+	padding-bottom: calc(120px + var(--safe-bottom, 0px));
+	scroll-padding-bottom: calc(120px + var(--safe-bottom, 0px));
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
@@ -215,7 +215,7 @@
 	border: 1px solid #ececec;
 	border-radius: 10px;
 	overflow: hidden;
-	width: 250px;
+	width: min(250px, 100%);
 	flex-shrink: 0;
 }
 

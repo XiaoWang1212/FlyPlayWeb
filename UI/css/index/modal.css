@@ -1,3 +1,99 @@
+/* 通用確認 Modal */
+.confirm-modal {
+	position: fixed;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 3000;
+	padding: 20px;
+}
+
+.confirm-modal.active {
+	display: flex;
+}
+
+.confirm-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(6, 10, 24, 0.6);
+	backdrop-filter: blur(4px);
+}
+
+.confirm-modal-panel {
+	position: relative;
+	width: 100%;
+	max-width: 340px;
+	background: #fff;
+	border-radius: 20px;
+	padding: 28px 22px 20px;
+	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+	z-index: 1;
+}
+
+.confirm-modal-title {
+	font-size: 18px;
+	font-weight: 700;
+	color: #0f1a3a;
+	margin-bottom: 10px;
+	line-height: 1.4;
+}
+
+.confirm-modal-message {
+	font-size: 14px;
+	color: #475569;
+	margin-bottom: 22px;
+	line-height: 1.6;
+}
+
+.confirm-modal-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.confirm-modal-button {
+	flex: 1;
+	height: 46px;
+	border: none;
+	border-radius: 14px;
+	font-size: 15px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: transform 0.1s;
+}
+
+.confirm-modal-button:active {
+	transform: scale(0.97);
+}
+
+.confirm-modal-button.secondary {
+	background: #eef1f5;
+	color: #334155;
+}
+
+.confirm-modal-button.danger {
+	background: #dc2626;
+	color: #fff;
+	box-shadow: 0 6px 16px rgba(220, 38, 38, 0.28);
+}
+
+.confirm-modal-button.primary {
+	background: #0f1a3a;
+	color: #fff;
+	box-shadow: 0 6px 16px rgba(15, 26, 58, 0.22);
+}
+
+@media (max-width: 480px) {
+	.confirm-modal {
+		padding: 14px;
+	}
+
+	.confirm-modal-panel {
+		max-width: 100%;
+		padding: 24px 18px 18px;
+	}
+}
+
 /* Modal: 新行程建立彈窗與行動版 responsive 樣式 */
 .new-trip-modal {
 	position: fixed;

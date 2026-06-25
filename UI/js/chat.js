@@ -1458,23 +1458,22 @@ async function handleItineraryEditFlowInput(text) {
 		return true;
 	}
 
-	addUserMessage(text);
-
 	if (currentFlow.stage === "choose_action" || currentFlow.stage === "ask_day_for_add" || currentFlow.stage === "ask_day_for_delete" || currentFlow.stage === "pick_day" || currentFlow.stage === "pick_activity" || currentFlow.stage === "choose_mode") {
 		clearItineraryEditFlow();
 		return false;
 	}
 
-
 	if (currentFlow.stage === "manual_spot_name") {
 		const spotName = flowText.replace(/^[「"'【\[]|[」"'】\]]$/g, "").trim();
 		if (!spotName) {
+			addUserMessage(text);
 			addBotMessage("請輸入你想加入的景點名稱。");
 			return true;
 		}
 
 		const targetDay = currentFlow.targetDay;
 		clearItineraryEditFlow();
+		addUserMessage(text);
 		await addBotMessage(`我已幫你打開編輯頁面，並把「${spotName}」放進搜尋框。`);
 		await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
 		await openEditModeWithSearchKeyword(spotName, targetDay);

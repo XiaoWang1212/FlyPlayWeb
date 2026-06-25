@@ -1,5 +1,28 @@
 // ===== UI 互動功能 =====
 
+function showConfirmModal({ title, message, okLabel = "確定", okStyle = "primary", onOk, onCancel } = {}) {
+	const modal = document.getElementById("confirmModal");
+	document.getElementById("confirmModalTitle").textContent = title || "";
+	document.getElementById("confirmModalMessage").textContent = message || "";
+	const okBtn = document.getElementById("confirmModalOk");
+	const cancelBtn = document.getElementById("confirmModalCancel");
+	okBtn.textContent = okLabel;
+	okBtn.className = `confirm-modal-button ${okStyle}`;
+
+	const close = () => {
+		modal.classList.remove("active");
+		modal.setAttribute("aria-hidden", "true");
+		okBtn.replaceWith(okBtn.cloneNode(true));
+		cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+	};
+
+	document.getElementById("confirmModalOk").addEventListener("click", () => { close(); onOk?.(); });
+	document.getElementById("confirmModalCancel").addEventListener("click", () => { close(); onCancel?.(); });
+
+	modal.classList.add("active");
+	modal.setAttribute("aria-hidden", "false");
+}
+
 function syncSheetState(state) {
 	mapContainer.classList.remove(
 		"sheet-expanded",
@@ -577,11 +600,16 @@ function renderProjects(projects) {
 			downloadPDF();
 		});
 
-		item.querySelector(".delete-item").addEventListener("click", async (e) => {
+		item.querySelector(".delete-item").addEventListener("click", (e) => {
 			e.stopPropagation();
 			dropdown.classList.remove("open");
-			if (!confirm(`確定要刪除「${project.title || "未命名行程"}」嗎？`)) return;
-			await deleteProject(project.project_id);
+			showConfirmModal({
+				title: "刪除行程",
+				message: `確定要刪除「${project.title || "未命名行程"}」嗎？此操作無法復原。`,
+				okLabel: "刪除",
+				okStyle: "danger",
+				onOk: () => deleteProject(project.project_id),
+			});
 		});
 
 		item.addEventListener("click", () => openProject(project));
@@ -604,19 +632,25 @@ function renderProjects(projects) {
   </div>
 </div>
 <i class="fas fa-chevron-right tutorial-guide-arrow"></i>`;
-	tutorialItem.addEventListener("click", async () => {
+	tutorialItem.addEventListener("click", () => {
 		if (tutorialProject) {
-			const redo = confirm("要重新進行一次教學嗎？\n選「確定」會清掉當前的教學行程，重新開始；選「取消」則直接查看現有教學行程。");
-			if (redo) {
-				localStorage.removeItem("fp_tutorial_setup_done");
-				localStorage.removeItem("fp_tutorial_index_done");
-				sessionStorage.setItem("currentProjectId", String(tutorialProject.project_id));
-				sessionStorage.setItem("navigationType", "forward");
-				window.location.href = "setup.html";
-			} else {
-				toggleSidebar();
-				await openProject(tutorialProject);
-			}
+			showConfirmModal({
+				title: "重新進行教學？",
+				message: "選「重新開始」會清掉當前的教學行程，重新體驗操作流程；選「繼續查看」則直接進入現有教學行程。",
+				okLabel: "重新開始",
+				okStyle: "primary",
+				onOk: () => {
+					localStorage.removeItem("fp_tutorial_setup_done");
+					localStorage.removeItem("fp_tutorial_index_done");
+					sessionStorage.setItem("currentProjectId", String(tutorialProject.project_id));
+					sessionStorage.setItem("navigationType", "forward");
+					window.location.href = "setup.html";
+				},
+				onCancel: () => {
+					toggleSidebar();
+					openProject(tutorialProject);
+				},
+			});
 		} else {
 			localStorage.removeItem("fp_tutorial_setup_done");
 			localStorage.removeItem("fp_tutorial_index_done");
@@ -683,6 +717,11 @@ async function loadProjects() {
 		renderProjects(body.data);
 		// 預設開啟第一個「可見」專案（排除 __tutorial__）
 		const visibleData = (body.data || []).filter((p) => p.title !== "__tutorial__");
+		// 有真實 project 代表使用者已用過 app，補上教學完成 key 避免換瀏覽器後重跑教學
+		if (visibleData.length > 0) {
+			localStorage.setItem("fp_tutorial_setup_done", "1");
+			localStorage.setItem("fp_tutorial_index_done", "1");
+		}
 		const sorted = sortProjectsByPin(visibleData);
 		if (sorted.length > 0) {
 			await openProject(sorted[0]);
@@ -765,6 +804,11 @@ async function openProject(project) {
 		}
 		if (typeof queueChatInitialMessage === "function" && typeof buildChatInitialMessage === "function") {
 			queueChatInitialMessage(buildChatInitialMessage(project.title || ""));
+		}
+		// 若已在聊天模式，切換 project 後 toggleChatMode 不會再被呼叫，
+		// 需直接消費 pending 訊息，否則聊天框保持空白
+		if (isChatMode && typeof showPendingChatOutput === "function") {
+			await showPendingChatOutput({ ensureChatMode: false });
 		}
 	} else {
 		// 沒 itinerary -> 轉 setup

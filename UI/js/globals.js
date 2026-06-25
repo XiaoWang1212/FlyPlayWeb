@@ -7,7 +7,7 @@ let allDays = [];
 let currentDayIndex = -1;
 
 // API 根路徑
-const API_BASE = "http://127.0.0.1:5001";
+const API_BASE = `http://${window.location.hostname}:5001`;
 
 // 地圖中心座標（由實際資料計算，預設東京）
 let avgLat = 35.6762;
