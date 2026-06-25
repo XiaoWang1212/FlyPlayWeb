@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>旅程規劃</title>
         <link rel="stylesheet" href="css/setup.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css"/>
     </head>
     <body>
         <!-- 飛機 overlay 由 js/flight-animation.js 動態注入 -->
@@ -15,7 +16,7 @@
             <h1>旅程規劃</h1>
             <!-- 只有表單區域內部捲動，標題/返回鍵維持固定 -->
             <div class="form-scroll">
-            <div class="form-group">
+            <div class="form-group" id="departure-form-group">
                 <label>抵達機場</label>
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDeparturePage()">
@@ -25,7 +26,7 @@
                 </div>
             </div>
 
-            <div class="form-group layer-above">
+            <div class="form-group layer-above" id="destination-form-group">
                 <label class="label-with-hint">目的地<span class="label-hint">依機場而定</span></label>
                 <div class="select-wrapper">
                     <button class="destination-btn" onclick="goToDestinationPage()">
@@ -112,5 +113,7 @@
             <script src="js/page_transition.js"></script>
             <script src="js/flight-animation.js"></script>
             <script src="js/setup.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.js.iife.js"></script>
+            <script src="js/tutorial.js"></script>
         </body>
     </html>

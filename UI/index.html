@@ -43,6 +43,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -262,9 +263,6 @@
             <div id="timelineList">
               <!-- 行程項目會動態生成在這裡 -->
             </div>
-            <div class="add-item-btn" onclick="addItem()">
-              <i class="fas fa-plus"></i> 新增行程
-            </div>
             <div style="height: 20px"></div>
             <div
               id="dragConfirmBtn"
@@ -352,5 +350,7 @@
     <!-- 飛機俯衝轉場（與 setup.html 同一套渲染） -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="js/flight-animation.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.js.iife.js"></script>
+    <script src="js/tutorial.js"></script>
   </body>
 </html>
