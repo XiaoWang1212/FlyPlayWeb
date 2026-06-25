@@ -100,7 +100,7 @@ function toggleEditMode(evt) {
 		}
 		openSheet();
 		sortable.option("disabled", false);
-		document.getElementById("dragConfirmBtn").classList.remove("show");
+		document.getElementById("dragConfirmBtn")?.classList.remove("show");
 	} else {
 		if (isDragChanged) {
 			timelineList.innerHTML = originalTimelineHTML;
@@ -113,7 +113,7 @@ function toggleEditMode(evt) {
 		const editLabel = document.getElementById("editTextLabel");
 		if (editLabel) editLabel.textContent = "編輯";
 		sortable.option("disabled", true);
-		document.getElementById("dragConfirmBtn").classList.remove("show");
+		document.getElementById("dragConfirmBtn")?.classList.remove("show");
 
 		if (currentDayIndex === -1) {
 			displayAllDays();
@@ -174,7 +174,7 @@ function confirmDrag() {
 		console.warn("[confirmDrag] saveItineraryToDb 未定義，請確認 chat.js 有載入");
 	}
 
-	document.getElementById("dragConfirmBtn").classList.remove("show");
+	// document.getElementById("dragConfirmBtn")?.classList.remove("show");
 	sortable.option("disabled", true);
 	isDragChanged = false;
 

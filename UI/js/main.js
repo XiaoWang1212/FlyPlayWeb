@@ -55,7 +55,7 @@ let sortable = new Sortable(timelineList, {
 			saveCurrentDayOrder(currentDayIndex);
 		}
 		isDragChanged = true;
-		document.getElementById("dragConfirmBtn").classList.add("show");
+		document.getElementById("dragConfirmBtn")?.classList.add("show");
 	},
 });
 

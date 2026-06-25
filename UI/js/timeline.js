@@ -253,7 +253,7 @@ function switchDay(dayIndex, clickedBtn) {
 			isEditMode = false;
 			timelineView.classList.remove("editing");
 			sortable.option("disabled", true);
-			document.getElementById("dragConfirmBtn").classList.remove("show");
+			document.getElementById("dragConfirmBtn")?.classList.remove("show");
 		}
 		displayAllDays();
 	} else {
