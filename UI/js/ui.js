@@ -524,7 +524,7 @@ function renderProjects(projects) {
 		.filter((p) => p.title !== "__tutorial__");
 
 	if (visibleProjects.length === 0) {
-		list.innerHTML = "<div class='empty'>尚無行程</div>";
+		list.innerHTML = `<div class="trip-empty">點擊上方，開始規劃<br>你的第一趟旅程吧！</div>`;
 	}
 
 	const sortedProjects = sortProjectsByPin(visibleProjects);
