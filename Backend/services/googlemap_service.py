@@ -9,6 +9,24 @@ class GoogleMapService:
         self.api_key = Config.GOOGLE_MAPS_API_KEY
         self.base_url = "https://places.googleapis.com/v1"
         self.place_cache = PlaceCache()
+
+    def _resolve_photo_url(self, photo_name: str, max_height: int = 400) -> str:
+        """用 skipHttpRedirect=true 拿實際 CDN URL，不含 API key，跨 browser 永遠有效"""
+        if not photo_name:
+            return ""
+        cache_key = f"photo_cdn_{photo_name}_{max_height}"
+        cached = self.place_cache.get(cache_key)
+        if cached:
+            return cached.get("url", "")
+        try:
+            url = f"{self.base_url}/{photo_name}/media"
+            params = {"maxHeightPx": max_height, "key": self.api_key, "skipHttpRedirect": "true"}
+            resp = requests.get(url, params=params, timeout=8)
+            cdn_url = resp.json().get("photoUri", "") if resp.ok else ""
+        except Exception:
+            cdn_url = ""
+        self.place_cache.set(cache_key, {"url": cdn_url})
+        return cdn_url
     
     def search_places(self, text_query: str, language_code: str = "zh-TW", max_results: int = 5):
         cache_key = f"search_{text_query}_{language_code}_{max_results}"
@@ -38,7 +56,7 @@ class GoogleMapService:
                 simplified_photos = []
                 for photo in photos[:3]:
                     photo_name = photo.get('name', '')
-                    photo_url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=400&key={self.api_key}" if photo_name else ""
+                    photo_url = self._resolve_photo_url(photo_name)
                     simplified_photos.append({
                         'name': photo_name,
                         'photo_url': photo_url,
@@ -117,7 +135,7 @@ class GoogleMapService:
                     simplified_photos = []
                     for photo in photos[:3]:
                         photo_name = photo.get('name', '')
-                        photo_url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=400&key={self.api_key}" if photo_name else ""
+                        photo_url = self._resolve_photo_url(photo_name)
                         simplified_photos.append({
                             'name': photo_name,
                             'photo_url': photo_url,
