@@ -576,10 +576,16 @@ function renderProjects(projects) {
 
 	const sortedProjects = sortProjectsByPin(visibleProjects);
 
+	// 目前選中的行程 id，用來標示側邊欄的灰底
+	const activeProjectId = sessionStorage.getItem("currentProjectId");
+
 	sortedProjects.forEach((project) => {
 		const isPinned = !!project.is_pinned;
 		const item = document.createElement("div");
 		item.className = "trip-item";
+		if (activeProjectId && String(project.project_id) === activeProjectId) {
+			item.classList.add("active");
+		}
 		item.innerHTML = `
 <div class="trip-info">
   <i class="${isPinned ? "fas" : "far"} fa-bookmark bookmark-icon"></i>
@@ -636,7 +642,12 @@ function renderProjects(projects) {
 			});
 		});
 
-		item.addEventListener("click", () => openProject(project));
+		item.addEventListener("click", () => {
+			// 點擊即時把灰底移到目前選中的行程
+			list.querySelectorAll(".trip-item.active").forEach((el) => el.classList.remove("active"));
+			item.classList.add("active");
+			openProject(project);
+		});
 		list.appendChild(item);
 	});
 
