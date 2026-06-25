@@ -754,11 +754,22 @@ async function openProject(project) {
 		// 從 DB 載入 detailed_itinerary 並更新 allDays（補圖已在 setup 階段完成）
 		await generateDetailedItinerary();
 
+		// 切換 project 時一律回到行程顯示，不停留在 chat
+		if (typeof isChatMode !== "undefined" && isChatMode && typeof toggleChatMode === "function") {
+			await toggleChatMode();
+		}
+		if (typeof openSheet === "function") openSheet();
+
 		if (typeof resetChatConversation === "function") {
 			resetChatConversation();
 		}
 		if (typeof queueChatInitialMessage === "function" && typeof buildChatInitialMessage === "function") {
 			queueChatInitialMessage(buildChatInitialMessage(project.title || ""));
+		}
+		// 若已在聊天模式，切換 project 後 toggleChatMode 不會再被呼叫，
+		// 需直接消費 pending 訊息，否則聊天框保持空白
+		if (isChatMode && typeof showPendingChatOutput === "function") {
+			await showPendingChatOutput({ ensureChatMode: false });
 		}
 	} else {
 		// 沒 itinerary -> 轉 setup
