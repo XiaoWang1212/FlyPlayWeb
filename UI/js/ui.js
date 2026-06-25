@@ -760,6 +760,11 @@ async function openProject(project) {
 		if (typeof queueChatInitialMessage === "function" && typeof buildChatInitialMessage === "function") {
 			queueChatInitialMessage(buildChatInitialMessage(project.title || ""));
 		}
+		// 若已在聊天模式，切換 project 後 toggleChatMode 不會再被呼叫，
+		// 需直接消費 pending 訊息，否則聊天框保持空白
+		if (isChatMode && typeof showPendingChatOutput === "function") {
+			await showPendingChatOutput({ ensureChatMode: false });
+		}
 	} else {
 		// 沒 itinerary -> 轉 setup
 		sessionStorage.setItem("currentProjectId", project.project_id);
