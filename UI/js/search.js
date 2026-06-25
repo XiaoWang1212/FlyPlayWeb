@@ -640,6 +640,9 @@ async function addSpotToItinerary(spot, evt) {
   }
 
   openSheet();
+  if (typeof isChatMode !== "undefined" && isChatMode && typeof toggleChatMode === "function") {
+    await toggleChatMode();
+  }
   closeSpotSearchModal();
 
   applySuggestedSpotDuration(newActivity);
