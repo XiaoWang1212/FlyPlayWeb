@@ -691,19 +691,54 @@ class GeminiService:
                 category_hint = "美食餐廳" if is_food_request else "熱門景點"
                 if target_day and itinerary_context_text:
                     is_nearby_request = True
+                    destination = ""
+                    if isinstance(trip_context, dict):
+                        dest = trip_context.get("destination") or trip_context.get("destinations")
+                        if isinstance(dest, list):
+                            destination = "、".join(
+                                str(item.get("city") or item.get("name") or item.get("label") or "")
+                                for item in dest if isinstance(item, dict)
+                            )
+                        elif isinstance(dest, str):
+                            destination = dest.strip()
+                    dest_label = f"「{destination}」" if destination else "行程目的地"
+                    hard_location_block = (
+                        f"【絕對限制】此行程的目的地是 {dest_label}。"
+                        f"所有推薦的地點都必須實際位於 {dest_label} 境內。"
+                        f"嚴格禁止推薦台灣（台北、台中、高雄等）或任何非 {dest_label} 的地點。"
+                        f"若你推薦的地點不在 {dest_label}，視為錯誤輸出，請重新選擇。\n\n"
+                    )
                     last_spot = self._extract_last_spot_of_day(current_itinerary, target_day) if is_food_request else None
                     if is_food_request and last_spot:
                         intro_text = (
-                            f"你是一個旅遊行程助理。請以第 {target_day} 天的最後一個景點「{last_spot}」為參考點，"
+                            hard_location_block
+                            + f"請以第 {target_day} 天的最後一個景點「{last_spot}」為參考點，"
                             f"推薦一些從該景點開車 30 分鐘以內可抵達、但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
                         )
-                        distance_rule = f"2. 所有推薦的{category_hint}必須距離「{last_spot}」開車不超過 30 分鐘，嚴格遵守此距離限制，不得推薦超出此範圍的地點\n"
+                        distance_rule = (
+                            f"2. 所有推薦必須位於 {dest_label} 境內，絕對禁止推薦台灣或其他非目的地的地點\n"
+                            f"3. 距離「{last_spot}」開車不超過 30 分鐘，嚴格遵守此距離限制，不得推薦超出此範圍的地點\n"
+                        )
+                    elif is_food_request:
+                        intro_text = (
+                            hard_location_block
+                            + f"請根據第 {target_day} 天的行程所在城市／區域，"
+                            f"推薦一些尚未出現在行程中的{category_hint}。\n\n"
+                        )
+                        distance_rule = (
+                            f"2. 所有推薦必須位於 {dest_label} 境內，絕對禁止推薦台灣或其他非目的地的地點\n"
+                            f"3. 必須與第 {target_day} 天的行程在同城市或同區域，不得跨城市或跨國推薦\n"
+                        )
                     else:
                         intro_text = (
-                            f"你是一個旅遊行程助理。請根據第 {target_day} 天的行程所在城市／區域，"
-                            f"推薦一些該地區值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
+                            hard_location_block
+                            + f"請根據第 {target_day} 天的行程所在城市／區域，"
+                            f"推薦一些值得造訪但「尚未出現在第 {target_day} 天行程中」的{category_hint}。\n\n"
                         )
-                        distance_rule = f"2. 必須與第 {target_day} 天的行程在同城市或同區域\n"
+                        distance_rule = (
+                            f"2. 所有推薦必須位於 {dest_label} 境內，絕對禁止推薦台灣或其他非目的地的地點\n"
+                            f"3. 必須與第 {target_day} 天的行程在同城市或同區域，不得跨城市或跨國推薦\n"
+                        )
                     final_message = (
                         intro_text
                         + f"旅遊資訊：\n{trip_context_text or '無'}\n\n"
@@ -725,11 +760,11 @@ class GeminiService:
                         + "規則：\n"
                         + f"1. 推薦 4~6 個{category_hint}\n"
                         + distance_rule
-                        + f"3. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
-                        + "4. 不得推薦機場、航廈等交通節點\n"
-                        + "5. 不得輸出任何 need_clarification，直接給出推薦結果\n"
-                        + f"6. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
-                        + "7. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱"
+                        + f"4. 絕對不得推薦已出現在整個行程（任何一天）中的地點，包含所有天的景點與美食\n"
+                        + "5. 不得推薦機場、航廈等交通節點\n"
+                        + "6. 不得輸出任何 need_clarification，直接給出推薦結果\n"
+                        + f"7. summary 固定填寫「以下為第 {target_day} 天推薦的其他{category_hint}」，不要更改這個格式\n"
+                        + "8. name 必須是 Google Maps 可直接搜尋到的具體地點名稱，不得使用泛稱或食物種類（例如「京料理」、「拉麵店」），美食請使用具體的餐廳或市場名稱\n"
                     )
                 elif trip_context_text:
                     final_message = (
@@ -831,6 +866,21 @@ class GeminiService:
                 current_itinerary, day_value - 1 if day_value > 0 else -1
             )
 
+            destination = ""
+            if isinstance(trip_context, dict):
+                dest = trip_context.get("destination") or trip_context.get("destinations")
+                if isinstance(dest, list):
+                    destination = "、".join(
+                        str(item.get("city") or item.get("name") or item.get("label") or "")
+                        for item in dest if isinstance(item, dict)
+                    )
+                elif isinstance(dest, str):
+                    destination = dest.strip()
+            destination_constraint = (
+                f"\n6. 推薦的景點必須位於「{destination}」境內，絕對不得推薦不在此目的地的地點。特別注意不要因為慣性聯想推薦到台灣或其他非目的地國家／地區的景點。"
+                if destination else ""
+            )
+
             prompt = f"""你是一個旅遊行程編輯助理。
 請根據使用者目前的行程與想修改的目標，推薦一個最適合加入或替換的景點名稱。
 
@@ -839,7 +889,7 @@ class GeminiService:
 2. 如果當天行程主要集中在同一城市或同一區域，請優先推薦同城市、同區域或鄰近區域的景點。
 3. 如果無法確認距離是否符合限制，請優先選擇更接近現有行程的地點，不要推薦太遠或跨區過多的景點。
 4. 避免推薦與當天行程地點無明顯關聯、且搜尋框可能難以直接找到的地名。
-5. 避免推薦機場、航廈、候機室這類地點，機場只是交通節點，不應列為觀光景點。
+5. 推薦的地點必須是適合一般旅客的觀光景點、美食餐廳或文化設施，絕對不得推薦汽車展示中心、汽車經銷商、加油站、停車場、政府機關、銀行、醫院、超市、便利商店等非觀光場所。機場只是交通節點，亦不應列為觀光景點。{destination_constraint}
 
 請只回傳純 JSON，不要輸出 Markdown 或多餘說明。
 
@@ -1008,6 +1058,7 @@ class GeminiService:
             - 輕鬆：每日可用觀光時間 6 小時，景點建議停留時間總和不超過 6 小時，景點數不超過 3 個
             - 緊湊：每日可用觀光時間 10 小時，景點建議停留時間總和接近 10 小時，景點數不超過 5 個
             若單一景點建議停留時間已達 5 小時以上，該天不得再安排其他景點。
+            【輕鬆行程最少行程數規則】行程緊湊度為「輕鬆」時，每天至少要安排 2 個行程（景點＋美食，或景點＋景點）。唯一例外是當天有主題樂園、大型遊樂園等建議停留時間達 5 小時以上的大型設施，才允許當天只有 1 個行程。廟宇、神社、寺院、公園、城跡、歷史遺址等一般景點的停留時間通常為 1～2 小時，絕對不得作為輕鬆行程當天的唯一行程；若安排了這類景點，必須再補充至少一個景點或美食。
             如果當天只有一個行程請補上一個美食。
             {pace_rule}
             每一天的 location 裡面至少要有一個 type 為「美食」的項目。
