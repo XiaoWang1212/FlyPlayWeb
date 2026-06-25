@@ -215,7 +215,7 @@
 	border: 1px solid #ececec;
 	border-radius: 10px;
 	overflow: hidden;
-	width: 250px;
+	width: min(250px, 100%);
 	flex-shrink: 0;
 }
 

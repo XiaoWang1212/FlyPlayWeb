@@ -16,7 +16,7 @@
 
 let scrollEndTimeout;
 
-const API_BASE = "http://127.0.0.1:5001";
+const API_BASE = `http://${window.location.hostname}:5001`;
 
 function formatItineraryFallbackText(rawOutput, parsedOutput) {
   const itinerary = parsedOutput?.parsed || parsedOutput;
