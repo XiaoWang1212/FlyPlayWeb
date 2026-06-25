@@ -215,20 +215,11 @@ async function downloadPDF() {
 	const selectedDests = JSON.parse(
 		projectDestsRaw || localStorage.getItem("selectedDestinations") || "[]",
 	);
-	let tripTitle;
-	if (selectedDests.length > 0) {
-		const countries = [...new Set(selectedDests.map((d) => d.country).filter(Boolean))];
-		const cities = selectedDests.map((d) => d.city).filter(Boolean).join("");
-		if (cities) {
-			tripTitle = countries.length === 1
-				? `${countries[0]}${cities}之旅`
-				: `${cities}之旅`;
-		} else {
-			tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
-		}
-	} else {
-		tripTitle = sessionStorage.getItem("currentProjectTitle") || "我的旅程";
-	}
+	// 標題一律以目的地城市為準，取不到目的地才退回命名／預設值
+	const cities = selectedDests.map((d) => d.city).filter(Boolean).join("");
+	const tripTitle = cities
+		? `${cities}之旅`
+		: sessionStorage.getItem("currentProjectTitle") || "我的旅程";
 
 	const tripSetup = JSON.parse(localStorage.getItem("tripSetup") || "{}");
 	const coverMetaParts = [
@@ -344,7 +335,7 @@ async function downloadPDF() {
 		}
 
 		const mapImg = mapImages[dayIndex]
-			? `<div style="margin-top:100px;display:flex;justify-content:center;">
+			? `<div class="pdf-map" style="margin-top:100px;display:flex;justify-content:center;">
                <img src="${mapImages[dayIndex]}" style="width:360px;height:360px;object-fit:cover;border-radius:12px;border:1px solid #E0D8C8;display:block;" />
              </div>`
 			: "";
@@ -369,10 +360,7 @@ async function downloadPDF() {
 
 	htmlContent += `</div>`;
 
-	const printElement = document.createElement("div");
-	printElement.innerHTML = htmlContent;
-
-	// 量測每天內容的實際高度，超出單頁可用空間時等比縮小至剛好一頁
+	// 先在離屏容器量測每天內容的實際高度
 	const measureContainer = document.createElement("div");
 	measureContainer.style.position = "absolute";
 	measureContainer.style.top = "0";
@@ -380,23 +368,59 @@ async function downloadPDF() {
 	measureContainer.innerHTML = htmlContent;
 	document.body.appendChild(measureContainer);
 
-	const measuredContents = measureContainer.querySelectorAll(".pdf-content");
-	const printContents = printElement.querySelectorAll(".pdf-content");
-	measuredContents.forEach((contentEl, i) => {
-		const innerEl = contentEl.querySelector(".pdf-content-inner");
-		const targetInnerEl = printContents[i]?.querySelector(".pdf-content-inner");
-		if (!innerEl || !targetInnerEl) return;
+	// 內容超出單頁時改為「換頁」而非縮小字級；地圖等區塊整塊移到下一頁避免被切到
+	const wrapper = measureContainer.firstElementChild;
+	const dayPageEls = Array.from(wrapper.querySelectorAll(".pdf-day-page"));
+	const newPagesHtml = [];
+	dayPageEls.forEach((dayPageEl) => {
+		const sidebarHtml = dayPageEl.querySelector(".pdf-sidebar").outerHTML;
+		const contentEl = dayPageEl.querySelector(".pdf-content");
+		const innerEl = dayPageEl.querySelector(".pdf-content-inner");
 		const style = window.getComputedStyle(contentEl);
 		const availableHeight =
 			contentEl.clientHeight -
 			parseFloat(style.paddingTop) -
 			parseFloat(style.paddingBottom);
-		const scale = Math.min(1, availableHeight / innerEl.scrollHeight);
-		if (scale < 1) {
-			targetInnerEl.style.transform = `scale(${scale})`;
-			targetInnerEl.style.width = `${100 / scale}%`;
-		}
+
+		const pages = [];
+		let current = [];
+		let currentH = 0;
+		Array.from(innerEl.children).forEach((block) => {
+			const bs = window.getComputedStyle(block);
+			const h =
+				block.offsetHeight +
+				parseFloat(bs.marginTop) +
+				parseFloat(bs.marginBottom);
+			// 該區塊放不下且當前頁已有內容，先換頁
+			if (currentH + h > availableHeight && current.length > 0) {
+				pages.push(current);
+				current = [];
+				currentH = 0;
+				// 地圖被迫換頁時，把上一頁最後一個行程一起帶下來，避免地圖落單成一頁
+				if (block.classList.contains("pdf-map")) {
+					const prevPage = pages[pages.length - 1];
+					if (prevPage.length > 1) current.push(prevPage.pop());
+				}
+			}
+			current.push(block.outerHTML);
+			currentH += h;
+		});
+		if (current.length > 0) pages.push(current);
+
+		pages.forEach((blocks) => {
+			newPagesHtml.push(
+				`<div class="pdf-day-page">${sidebarHtml}<div class="pdf-content"><div class="pdf-content-inner">${blocks.join(
+					""
+				)}</div></div></div>`
+			);
+		});
 	});
+
+	// 以分頁後的內容重建列印元素（保留封面與 <style>）
+	dayPageEls.forEach((el) => el.remove());
+	wrapper.insertAdjacentHTML("beforeend", newPagesHtml.join(""));
+	const printElement = wrapper;
+	measureContainer.removeChild(wrapper);
 	document.body.removeChild(measureContainer);
 
 	const opt = {
@@ -552,10 +576,16 @@ function renderProjects(projects) {
 
 	const sortedProjects = sortProjectsByPin(visibleProjects);
 
+	// 目前選中的行程 id，用來標示側邊欄的灰底
+	const activeProjectId = sessionStorage.getItem("currentProjectId");
+
 	sortedProjects.forEach((project) => {
 		const isPinned = !!project.is_pinned;
 		const item = document.createElement("div");
 		item.className = "trip-item";
+		if (activeProjectId && String(project.project_id) === activeProjectId) {
+			item.classList.add("active");
+		}
 		item.innerHTML = `
 <div class="trip-info">
   <i class="${isPinned ? "fas" : "far"} fa-bookmark bookmark-icon"></i>
@@ -612,7 +642,12 @@ function renderProjects(projects) {
 			});
 		});
 
-		item.addEventListener("click", () => openProject(project));
+		item.addEventListener("click", () => {
+			// 點擊即時把灰底移到目前選中的行程
+			list.querySelectorAll(".trip-item.active").forEach((el) => el.classList.remove("active"));
+			item.classList.add("active");
+			openProject(project);
+		});
 		list.appendChild(item);
 	});
 
@@ -754,6 +789,14 @@ async function openProject(project) {
 		const projectDests = localStorage.getItem(`projectDestinations_${project.project_id}`);
 		if (projectDests) {
 			localStorage.setItem("selectedDestinations", projectDests);
+		} else if (body.data[0]?.destination) {
+			// 本機沒有目的地快取（例如其他裝置/重置後生成的行程），
+			// 改用 DB itinerary 的 destination 字串還原城市，確保 PDF 標題仍以目的地為準
+			const cities = String(body.data[0].destination)
+				.split(/[、,，]/)
+				.map((s) => ({ city: s.trim() }))
+				.filter((d) => d.city);
+			localStorage.setItem("selectedDestinations", JSON.stringify(cities));
 		} else {
 			localStorage.removeItem("selectedDestinations");
 		}
