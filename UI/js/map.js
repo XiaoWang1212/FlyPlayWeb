@@ -323,6 +323,24 @@ function displayDay(dayIndex) {
 	});
 }
 
+// 依目前選取的天數重新繪製地圖路線、標記與時間線
+// （供聊天 AI 修改行程後刷新畫面使用）
+function refreshItineraryView() {
+	if (typeof google === "undefined" || !map) return;
+
+	if (currentDayIndex === -1) {
+		displayAllDays();
+		return;
+	}
+
+	const days = getActiveDays();
+	const idx =
+		currentDayIndex >= 0 && currentDayIndex < days.length
+			? currentDayIndex
+			: 0;
+	displayDay(idx);
+}
+
 async function initMap() {
 	try {
 		let aiItinerary = localStorage.getItem("data_latlng");

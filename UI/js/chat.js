@@ -275,10 +275,9 @@ function applyChatItineraryUpdate(parsed) {
 	if (typeof createDayButtons === "function") {
 		createDayButtons();
 	}
-	if (currentDayIndex === -1) {
-		if (typeof displayAllDays === "function") displayAllDays();
-	} else if (typeof displayDay === "function") {
-		displayDay(currentDayIndex);
+	// 重新繪製地圖路線、標記與時間線
+	if (typeof refreshItineraryView === "function") {
+		refreshItineraryView();
 	}
 
 	return true;
@@ -673,26 +672,9 @@ function deleteActivityFromDay(dayNum, actIndex) {
 
 	day.activities.splice(actIndex, 1);
 
-	const activeDays = getActiveDays();
-	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
-	const resolvedIndex = dayIndex >= 0 ? dayIndex : currentDayIndex;
-
-	if (currentDayIndex === -1) {
-		if (typeof clearMapRoutes === "function") clearMapRoutes();
-		if (typeof loadAllTimelineActivities === "function") loadAllTimelineActivities();
-	} else {
-		if (typeof clearMapRoutes === "function") clearMapRoutes();
-		if (resolvedIndex >= 0 && typeof loadSingleDayTimeline === "function") {
-			loadSingleDayTimeline(activeDays[resolvedIndex], resolvedIndex);
-		}
-		if (day.activities.length >= 2 && typeof renderDayRoute === "function") {
-			const routeActivities = day.activities.filter((a) => typeof isValidRouteLocation === "function" ? isValidRouteLocation(a) : true);
-			renderDayRoute(routeActivities, resolvedIndex, mapRouteSession, {
-				strokeColor: getColorByDay(resolvedIndex),
-				strokeWeight: 7,
-				strokeOpacity: 0.9,
-			});
-		}
+	// 重新繪製地圖路線、標記與時間線
+	if (typeof refreshItineraryView === "function") {
+		refreshItineraryView();
 	}
 
 	saveItineraryToDb(allDays);
@@ -1353,17 +1335,9 @@ function replaceActivityInDay(dayNum, targetItemName, newSpot, targetIndex = -1)
 		place_id: newSpot.place_id || oldActivity.place_id,
 	};
 
-	const activeDays = getActiveDays();
-	const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
-	const resolvedIdx = dayIndex >= 0 ? dayIndex : currentDayIndex;
-
-	if (currentDayIndex === -1) {
-		if (typeof displayAllDays === "function") displayAllDays();
-		if (typeof loadAllTimelineActivities === "function") loadAllTimelineActivities();
-	} else {
-		if (typeof displayDay === "function") displayDay(resolvedIdx);
-		if (typeof clearMapRoutes === "function") clearMapRoutes();
-		if (typeof loadSingleDayTimeline === "function") loadSingleDayTimeline(activeDays[resolvedIdx], resolvedIdx);
+	// 重新繪製地圖與時間線（displayDay/displayAllDays 內部已會更新對應時間線）
+	if (typeof refreshItineraryView === "function") {
+		refreshItineraryView();
 	}
 
 	saveItineraryToDb(allDays);
