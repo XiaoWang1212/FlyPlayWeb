@@ -805,10 +805,26 @@ async function fetchNearbyAttractions(dayNum, isFood) {
 			const parsed = data.parsed;
 
 			if (parsed && parsed.action === "nearby_attractions" && Array.isArray(parsed.attractions)) {
+				// 卡片出現前先用 nearby 搜尋補上每個推薦景點的座標，
+				// 並濾掉距離當天任一景點超過 40 公里的推薦。
+				const spinnerEl = showChatLoadingSpinner();
+				const nearbyAttractions = await filterNearbyAttractionsByDistance(
+					parsed.attractions,
+					parsed.target_day ?? dayNum,
+				);
+				removeChatLoadingSpinner(spinnerEl);
+
+				if (!nearbyAttractions.length) {
+					const emptyMsg = `第 ${dayNum} 天附近沒有距離合適的推薦，請再試一次或換一天看看。`;
+					await appendMsg(emptyMsg, "bot");
+					conversationHistory.push({ role: "assistant", content: emptyMsg });
+					return;
+				}
+
 				const summary = parsed.summary || `以下是第 ${dayNum} 天所在區域的推薦：`;
 				const msgEl = await typeMessage(summary, "bot", CHAT_TYPEWRITER_SPEED);
 				conversationHistory.push({ role: "assistant", content: summary });
-				appendNearbyAttractionCards(msgEl, parsed.attractions, parsed.target_day ?? dayNum);
+				appendNearbyAttractionCards(msgEl, nearbyAttractions, parsed.target_day ?? dayNum);
 			} else {
 				const aiText = (parsed?.question) || data.response || `抱歉，無法取得第 ${dayNum} 天的推薦，請再試一次。`;
 				await appendMsg(aiText, "bot");
@@ -828,6 +844,138 @@ async function fetchNearbyAttractions(dayNum, isFood) {
 		_chatTypingAborted = false;
 		setChatResponding(false);
 	}
+}
+
+// 用 nearby（無錨點則改 general）搜尋取得景點座標，回傳 { lat, lng, place } 或 null
+async function geocodeNearbySpotName(spotName, anchorLocation) {
+	const name = String(spotName || "").trim();
+	if (!name) return null;
+	try {
+		const authHeaders = {
+			"Content-Type": "application/json",
+			...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
+		};
+		const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
+
+		const extractCoord = (payload) => {
+			const places = payload?.data?.places || [];
+			if (!places.length) return null;
+			const place = places[0];
+			const lat = place.location?.lat ?? place.location?.latitude;
+			const lng = place.location?.lng ?? place.location?.longitude;
+			if (lat == null || lng == null) return null;
+			return { lat: Number(lat), lng: Number(lng), place };
+		};
+
+		let result = null;
+		// 有錨點先用 nearby（locationBias）搜尋
+		if (anchorLocation && isValidCoord(anchorLocation.latitude) && isValidCoord(anchorLocation.longitude)) {
+			try {
+				const r = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+					method: "POST",
+					headers: authHeaders,
+					body: JSON.stringify({
+						textQuery: name,
+						location: { latitude: anchorLocation.latitude, longitude: anchorLocation.longitude },
+						radius: 50000,
+						languageCode: "zh-TW",
+						maxResultCount: 1,
+					}),
+				});
+				if (r.ok) result = extractCoord(await r.json());
+			} catch (_) {}
+		}
+		// nearby 沒結果（含 locationBias 沒命中）就改用一般文字搜尋，務必取得真實座標
+		if (!result) {
+			const r = await fetch(`${API_BASE}/api/maps/search`, {
+				method: "POST",
+				headers: authHeaders,
+				body: JSON.stringify({ textQuery: name, languageCode: "zh-TW", maxResultCount: 1 }),
+			});
+			if (r.ok) result = extractCoord(await r.json());
+		}
+		return result;
+	} catch (err) {
+		console.error("geocodeNearbySpotName error:", err);
+		return null;
+	}
+}
+
+// 先補上每個推薦景點的座標，並濾掉與當天任一景點距離超過 maxKm 公里的推薦。
+// 為避免漏算：當天景點若沒存座標，會用名稱補搜出參考座標；解析不到座標的推薦一律剔除。
+async function filterNearbyAttractionsByDistance(attractions, dayNum, maxKm = 40) {
+	if (!Array.isArray(attractions) || attractions.length === 0) return [];
+
+	const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
+
+	const days = getActiveDays();
+	const targetDay = days.find((d, i) => Number(d.day) === Number(dayNum) || i === Number(dayNum) - 1);
+	const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
+
+	// 1) 收集當天已存的有效座標（排除空值與 0,0），其餘記下名稱稍後補搜
+	const dayLocations = [];
+	const namesNeedingGeocode = [];
+	for (const a of activities) {
+		const loc = normalizeActivityLocation(a?.location);
+		if (loc && isValidCoord(loc.latitude) && isValidCoord(loc.longitude)) {
+			dayLocations.push(loc);
+		} else {
+			const nm = (a?.place_name || a?.location_name || a?.name || "").trim();
+			if (nm) namesNeedingGeocode.push(nm);
+		}
+	}
+
+	// 2) 當天景點缺座標 → 用名稱補搜參考座標，確保有比較基準（否則會整批漏過濾）
+	if (namesNeedingGeocode.length) {
+		const refGeos = await Promise.all(
+			namesNeedingGeocode.map((nm) => geocodeNearbySpotName(nm, dayLocations[0] || null)),
+		);
+		for (const g of refGeos) {
+			if (g && isValidCoord(g.lat) && isValidCoord(g.lng)) {
+				dayLocations.push({ latitude: g.lat, longitude: g.lng });
+			}
+		}
+	}
+
+	// 以當天最後一個有效座標作為 nearby 搜尋的錨點（locationBias）
+	const anchor = dayLocations.length ? dayLocations[dayLocations.length - 1] : null;
+
+	// 3) 解析每個推薦的真實座標
+	const resolved = await Promise.all(
+		attractions.map(async (spot) => {
+			const geo = await geocodeNearbySpotName(spot?.name, anchor);
+			if (geo) {
+				spot.location = { lat: geo.lat, lng: geo.lng };
+				// 保留完整 place，點擊卡片時直接沿用，不再重新搜尋（避免座標不一致）
+				spot._place = geo.place;
+			}
+			return { spot, geo };
+		}),
+	);
+
+	console.log("[nearbyFilter] 參考座標數:", dayLocations.length, dayLocations);
+
+	// 完全拿不到任何當天參考座標時無法計算距離，保留全部（但仍補上座標）
+	if (!dayLocations.length) {
+		console.warn("[nearbyFilter] 當天無任何參考座標，無法過濾，全數保留");
+		return resolved.map((r) => r.spot);
+	}
+
+	// 4) 與當天任一景點距離 > maxKm 即剔除；解析不到座標者也剔除（無法證明在範圍內）
+	return resolved
+		.filter(({ spot, geo }) => {
+			if (!geo || !isValidCoord(geo.lat) || !isValidCoord(geo.lng)) {
+				console.log(`[nearbyFilter] 剔除「${spot?.name}」：解析不到座標`);
+				return false;
+			}
+			const maxDist = Math.max(
+				...dayLocations.map((loc) => getDistance(geo.lat, geo.lng, loc.latitude, loc.longitude)),
+			);
+			const tooFar = maxDist > maxKm;
+			console.log(`[nearbyFilter] 「${spot?.name}」(${geo.lat},${geo.lng}) 最遠 ${maxDist.toFixed(1)}km → ${tooFar ? "剔除" : "保留"}`);
+			return !tooFar;
+		})
+		.map((r) => r.spot);
 }
 
 function appendNearbyAttractionCards(parentEl, attractions, dayNum) {
@@ -879,9 +1027,9 @@ function appendNearbyAttractionCards(parentEl, attractions, dayNum) {
 			card.appendChild(time);
 		}
 
-		card.addEventListener("click", () => showNearbySpotOnMap(spot.name, dayNum, card));
+		card.addEventListener("click", () => showNearbySpotOnMap(spot, dayNum, card));
 		card.addEventListener("keydown", (e) => {
-			if (e.key === "Enter" || e.key === " ") showNearbySpotOnMap(spot.name, dayNum, card);
+			if (e.key === "Enter" || e.key === " ") showNearbySpotOnMap(spot, dayNum, card);
 		});
 
 		container.appendChild(card);
@@ -891,59 +1039,73 @@ function appendNearbyAttractionCards(parentEl, attractions, dayNum) {
 	scrollToBottom();
 }
 
-async function showNearbySpotOnMap(spotName, dayNum, cardEl) {
+async function showNearbySpotOnMap(attraction, dayNum, cardEl) {
 	if (cardEl.classList.contains("is-loading")) return;
 	cardEl.classList.add("is-loading");
 
+	// 同時相容舊用法（傳字串）與新用法（傳整個 attraction 物件）
+	const spotName = typeof attraction === "string" ? attraction : (attraction?.name || "");
+	const prefetchedPlace = (attraction && typeof attraction === "object") ? attraction._place : null;
+
 	try {
-		// 用該天最後一個有效座標做 nearby 搜尋
-		const days = getActiveDays();
-		const targetDay = days.find((d, i) => Number(d.day) === Number(dayNum) || i === Number(dayNum) - 1);
-		const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
-		let anchorLocation = null;
-		for (let i = activities.length - 1; i >= 0; i--) {
-			const loc = normalizeActivityLocation(activities[i]?.location);
-			if (loc) { anchorLocation = loc; break; }
-		}
-
-		const authHeaders = {
-			"Content-Type": "application/json",
-			...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
-		};
-
 		const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
-		const useNearby = anchorLocation && isValidCoord(anchorLocation.lat) && isValidCoord(anchorLocation.lng);
 
-		let response;
-		if (useNearby) {
-			response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({
-					textQuery: spotName,
-					location: { latitude: anchorLocation.lat, longitude: anchorLocation.lng },
-					radius: 20000,
-					languageCode: "zh-TW",
-					maxResultCount: 1,
-				}),
-			});
-			// 若 nearby 失敗改走 general search
-			if (!response.ok) response = null;
+		let place = null;
+
+		// 優先沿用篩選階段已解析好的座標，確保地圖標示與過濾時用的是同一個地點
+		if (prefetchedPlace) {
+			const pLat = prefetchedPlace.location?.lat ?? prefetchedPlace.location?.latitude;
+			const pLng = prefetchedPlace.location?.lng ?? prefetchedPlace.location?.longitude;
+			if (isValidCoord(pLat) && isValidCoord(pLng)) place = prefetchedPlace;
 		}
 
-		if (!response) {
-			response = await fetch(`${API_BASE}/api/maps/search`, {
-				method: "POST",
-				headers: authHeaders,
-				body: JSON.stringify({ textQuery: spotName, languageCode: "zh-TW", maxResultCount: 1 }),
-			});
+		// 沒有預存座標才重新搜尋（舊路徑）
+		if (!place) {
+			const days = getActiveDays();
+			const targetDay = days.find((d, i) => Number(d.day) === Number(dayNum) || i === Number(dayNum) - 1);
+			const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
+			let anchorLocation = null;
+			for (let i = activities.length - 1; i >= 0; i--) {
+				const loc = normalizeActivityLocation(activities[i]?.location);
+				if (loc && isValidCoord(loc.latitude) && isValidCoord(loc.longitude)) { anchorLocation = loc; break; }
+			}
+
+			const authHeaders = {
+				"Content-Type": "application/json",
+				...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
+			};
+
+			let response;
+			if (anchorLocation) {
+				response = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+					method: "POST",
+					headers: authHeaders,
+					body: JSON.stringify({
+						textQuery: spotName,
+						location: { latitude: anchorLocation.latitude, longitude: anchorLocation.longitude },
+						radius: 20000,
+						languageCode: "zh-TW",
+						maxResultCount: 1,
+					}),
+				});
+				// 若 nearby 失敗改走 general search
+				if (!response.ok) response = null;
+			}
+
+			if (!response) {
+				response = await fetch(`${API_BASE}/api/maps/search`, {
+					method: "POST",
+					headers: authHeaders,
+					body: JSON.stringify({ textQuery: spotName, languageCode: "zh-TW", maxResultCount: 1 }),
+				});
+			}
+
+			const payload = await response.json();
+			const places = payload?.data?.places || [];
+			if (!places.length) return;
+			place = places[0];
 		}
 
-		const payload = await response.json();
-		const places = payload?.data?.places || [];
-		if (!places.length) return;
-
-		const place = places[0];
 		const spot = {
 			name: place.name || spotName,
 			place_id: place.place_id,
