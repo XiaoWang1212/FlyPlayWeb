@@ -29,6 +29,8 @@ const spotSearchState = {
 	results: [],
 	selectedIndex: -1,
 	requestId: 0,
+	// 由「修改行程 → 自己輸入」流程設定：選取地點時要替換（而非新增）的目標。
+	replaceTarget: null,
 };
 
 // --- SortableJS 設定 (拖拽功能) ---

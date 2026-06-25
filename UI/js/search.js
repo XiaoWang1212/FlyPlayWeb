@@ -323,12 +323,14 @@ function showSearchMessage(message) {
 
 // ===== 搜尋視窗與清單 =====
 // 開啟搜尋視窗並重置狀態。
-function openSpotSearchModal(initialKeyword = "") {
+function openSpotSearchModal(initialKeyword = "", replaceTarget = null) {
   spotSearchState.isOpen = true;
   spotSearchState.results = [];
   spotSearchState.selectedIndex = -1;
   spotSearchState.selectionToken =
     (spotSearchState.selectionToken || 0) + 1;
+  // 修改行程流程會帶入要替換的目標；一般新增則清空。
+  spotSearchState.replaceTarget = replaceTarget || null;
   selectedSpotForAdd = null;
   const keyword = String(initialKeyword || "").trim();
 
@@ -620,7 +622,45 @@ async function addSpotToItinerary(spot, evt) {
   if (!targetDay || !Array.isArray(targetDay.activities)) return;
 
   const newActivity = buildActivityFromSpot(spot);
-  targetDay.activities.push(newActivity);
+
+  // 「修改行程 → 自己輸入」：替換指定的活動而非新增到尾端。
+  const replaceTarget = spotSearchState.replaceTarget;
+  let didReplace = false;
+  if (replaceTarget) {
+    spotSearchState.replaceTarget = null;
+    const activities = targetDay.activities;
+    let replaceIndex =
+      Number.isInteger(replaceTarget.targetIndex) &&
+      replaceTarget.targetIndex >= 0 &&
+      replaceTarget.targetIndex < activities.length
+        ? replaceTarget.targetIndex
+        : activities.findIndex(
+            (a) =>
+              (a.place_name || a.location_name || a.name || "") ===
+              replaceTarget.targetItem,
+          );
+    if (replaceIndex !== -1) {
+      const oldActivity = activities[replaceIndex];
+      // 保留原本的時間/費用/描述等欄位，只更新地點相關資訊。
+      activities[replaceIndex] = {
+        ...oldActivity,
+        place_id: newActivity.place_id,
+        place_name: newActivity.place_name,
+        type: newActivity.type,
+        address: newActivity.address,
+        location: newActivity.location,
+        photos: newActivity.photos,
+        rating: newActivity.rating,
+        user_rating_count: newActivity.user_rating_count,
+      };
+      didReplace = true;
+    } else {
+      // 找不到目標時退回新增，避免使用者操作落空。
+      activities.push(newActivity);
+    }
+  } else {
+    targetDay.activities.push(newActivity);
+  }
 
   if (isEditMode && editedDays) {
     isDragChanged = true;
@@ -645,7 +685,14 @@ async function addSpotToItinerary(spot, evt) {
   }
   closeSpotSearchModal();
 
-  applySuggestedSpotDuration(newActivity);
+  // 替換時保留原本時間，且 newActivity 不在清單內，無須再要建議停留時間。
+  if (didReplace) {
+    if (!isEditMode && typeof saveItineraryToDb === "function") {
+      saveItineraryToDb(allDays);
+    }
+  } else {
+    applySuggestedSpotDuration(newActivity);
+  }
 }
 
 // 優先使用當前日期的最後一個活動位置，若無則從所有日期的最後活動往前找
@@ -757,7 +804,7 @@ async function performSpotSearch(
 
     if (!places.length) {
       if (showNoResultMessage) {
-        showSearchMessage("找不到相關景點，請嘗試其他關鍵字");
+        showSearchMessage("找不到附近相關景點，請嘗試其他關鍵字");
       } else {
         spotSearchResults.innerHTML = "";
       }
