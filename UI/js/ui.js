@@ -754,6 +754,12 @@ async function openProject(project) {
 		// 從 DB 載入 detailed_itinerary 並更新 allDays（補圖已在 setup 階段完成）
 		await generateDetailedItinerary();
 
+		// 切換 project 時一律回到行程顯示，不停留在 chat
+		if (typeof isChatMode !== "undefined" && isChatMode && typeof toggleChatMode === "function") {
+			await toggleChatMode();
+		}
+		if (typeof openSheet === "function") openSheet();
+
 		if (typeof resetChatConversation === "function") {
 			resetChatConversation();
 		}
