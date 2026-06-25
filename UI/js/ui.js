@@ -670,10 +670,12 @@ async function loadProjects() {
 	if (redirectToLoginIfUnauthorized(res.status, body)) return;
 	console.log("loadProjects", res.status, body);
 	if (res.ok && body.code === 200) {
-		// 完全沒專案（含 __tutorial__）才跳 setup
+		// 完全沒專案（含 __tutorial__）才跳 setup，並重置教學狀態
 		if (!body.data || body.data.length === 0) {
 			sessionStorage.removeItem("currentProjectId");
 			sessionStorage.removeItem("currentProjectTitle");
+			localStorage.removeItem("fp_tutorial_setup_done");
+			localStorage.removeItem("fp_tutorial_index_done");
 			sessionStorage.setItem("navigationType", "forward");
 			window.location.href = "setup.html";
 			return;
