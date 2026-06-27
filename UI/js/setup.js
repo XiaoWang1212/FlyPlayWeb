@@ -483,6 +483,7 @@ function generateCompanionCards(container) {
 
 const travelTypeOptions = [
   { value: "", label: "任何類型" },
+  { value: "popular attractions", label: "熱門景點" },
   { value: "food", label: "美食" },
   { value: "nature", label: "自然" },
   { value: "culture", label: "文化" },

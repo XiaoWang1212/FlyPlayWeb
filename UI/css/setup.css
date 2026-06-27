@@ -412,15 +412,17 @@ h1 {
 }
 
 /* ==================== 卡片式選擇器 ==================== */
+/* grid-template-rows 0fr→1fr：展開高度自動依選項數量撐開並保有動畫 */
 .card-picker-body {
   width: 100%;
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
-  transition: max-height 0.3s ease-out;
+  transition: grid-template-rows 0.3s ease-out;
 }
 
 .card-picker-group.active .card-picker-body {
-  max-height: 170px;
+  grid-template-rows: 1fr;
 }
 
 .card-picker-grid {
@@ -428,7 +430,13 @@ h1 {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   width: 100%;
-  padding: 0 20px 12px;
+  /* 底部 padding 移到展開時才加，否則收合的 grid item 會留 12px 露出卡片 */
+  padding: 0 20px;
+  min-height: 0;
+}
+
+.card-picker-group.active .card-picker-grid {
+  padding-bottom: 12px;
 }
 
 /* 只有兩個選項的選擇器，改成兩欄填滿 */
@@ -629,7 +637,7 @@ textarea {
   /* 卡片間距與內距收斂，維持點擊面積 */
   .card-picker-grid {
     gap: 8px;
-    padding: 0 16px 12px;
+    padding: 0 16px;
   }
 
   .picker-card {
