@@ -764,6 +764,236 @@ async function showDayPickerForNearbyAttractions(isFood) {
 	scrollToBottom();
 }
 
+async function showDayPickerForNearbyHotels() {
+	const days = getChatCurrentItinerary();
+	if (!days.length) {
+		await addBotMessage("目前沒有載入行程，請先確認行程已建立。");
+		return;
+	}
+	const msgEl = await typeMessage("你想查第幾天行程附近的飯店？", "bot", CHAT_TYPEWRITER_SPEED);
+	conversationHistory.push({ role: "assistant", content: "你想查第幾天行程附近的飯店？" });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+	days.forEach((day) => {
+		const dayNum = Number(day.day);
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = `第 ${dayNum} 天${day.weekday ? `（${day.weekday}）` : ""}`;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(`第 ${dayNum} 天`, "user");
+			pushConversationMessage("user", `第 ${dayNum} 天`);
+
+			const activeDays = getActiveDays();
+			const dayIndex = activeDays.findIndex((d) => Number(d.day) === dayNum);
+			const timelineBtn = document.querySelector(`#dayButtonContainer button[data-day-index="${dayIndex}"]`);
+			if (timelineBtn && dayIndex >= 0) switchDay(dayIndex, timelineBtn);
+
+			await showHotelModePickerMessage(dayNum);
+		});
+		row.appendChild(btn);
+	});
+	msgEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function showHotelModePickerMessage(dayNum) {
+	const msgEl = await typeMessage(
+		"你想讓 AI 推薦附近飯店，還是自己搜尋特定飯店？",
+		"bot",
+		CHAT_TYPEWRITER_SPEED,
+	);
+	conversationHistory.push({ role: "assistant", content: "你想讓 AI 推薦附近飯店，還是自己搜尋特定飯店？" });
+
+	const row = document.createElement("div");
+	row.className = "chat-picker-row";
+
+	[
+		{ label: "AI 推薦", mode: "ai" },
+		{ label: "自己搜尋", mode: "manual" },
+	].forEach(({ label, mode }) => {
+		const btn = document.createElement("button");
+		btn.className = "chat-picker-chip";
+		btn.textContent = label;
+		btn.addEventListener("click", async () => {
+			disablePickerContainer(row);
+			btn.classList.add("selected");
+			appendMsg(label, "user");
+			pushConversationMessage("user", label);
+			if (mode === "ai") {
+				await fetchNearbyHotels(dayNum);
+			} else {
+				await addBotMessage("好的，我幫你打開搜尋介面，可以直接輸入飯店名稱。");
+				await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+				openEditModeWithSearchKeyword("飯店", dayNum);
+			}
+		});
+		row.appendChild(btn);
+	});
+
+	msgEl.appendChild(row);
+	scrollToBottom();
+}
+
+async function fetchNearbyHotels(dayNum) {
+	const tripContext = buildChatTripContext();
+	const currentItinerary = getChatCurrentItinerary();
+	const itineraryId = localStorage.getItem("currentItineraryId") || null;
+	const message = `附近飯店推薦 第${dayNum}天`;
+
+	const loadingId = "loading-" + Date.now();
+	document.getElementById("chatMessages").insertAdjacentHTML(
+		"beforeend",
+		`<div class="typing" id="${loadingId}"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`,
+	);
+	scrollToBottom();
+
+	_chatTypingAborted = false;
+	_chatAbortController = new AbortController();
+	setChatResponding(true);
+	try {
+		const resp = await fetch(API_BASE + "/api/chat/message", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			signal: _chatAbortController.signal,
+			body: JSON.stringify({
+				message,
+				conversationHistory,
+				tripContext,
+				currentItinerary,
+				currentDayIndex: dayNum - 1,
+				itineraryId,
+			}),
+		});
+
+		const result = await resp.json();
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+
+		if (result && (result.code === 200 || result.success === true)) {
+			const data = result.data || result;
+			const parsed = data.parsed;
+
+			if (parsed && parsed.action === "nearby_attractions" && Array.isArray(parsed.attractions)) {
+				const spinnerEl = showChatLoadingSpinner();
+				const nearbyHotels = await filterNearbyAttractionsByDistance(
+					parsed.attractions,
+					parsed.target_day ?? dayNum,
+				);
+				removeChatLoadingSpinner(spinnerEl);
+
+				if (!nearbyHotels.length) {
+					const emptyMsg = `第 ${dayNum} 天附近沒有找到合適的飯店推薦，請再試一次或換一天看看。`;
+					await appendMsg(emptyMsg, "bot");
+					conversationHistory.push({ role: "assistant", content: emptyMsg });
+					return;
+				}
+
+				const summary = parsed.summary || `以下是第 ${dayNum} 天所在區域的推薦飯店：`;
+				const msgEl = await typeMessage(summary, "bot", CHAT_TYPEWRITER_SPEED);
+				conversationHistory.push({ role: "assistant", content: summary });
+				appendNearbyAttractionCards(msgEl, nearbyHotels, parsed.target_day ?? dayNum);
+			} else {
+				const aiText = (parsed?.question) || data.response || `抱歉，無法取得第 ${dayNum} 天的飯店推薦，請再試一次。`;
+				const msgEl = await typeMessage(aiText, "bot", CHAT_TYPEWRITER_SPEED);
+				conversationHistory.push({ role: "assistant", content: aiText });
+
+				// 先顯示文字回應，再用地圖 API 獨立搜尋附近飯店
+				const extractSpinner = showChatLoadingSpinner();
+				const hotels = await searchHotelsNearDay(dayNum);
+				removeChatLoadingSpinner(extractSpinner);
+
+				if (hotels.length > 0) {
+					appendNearbyAttractionCards(msgEl, hotels, dayNum);
+				} else {
+					const row = document.createElement("div");
+					row.className = "chat-picker-row";
+					const btn = document.createElement("button");
+					btn.className = "chat-picker-chip";
+					btn.textContent = "搜尋特定飯店";
+					btn.addEventListener("click", async () => {
+						disablePickerContainer(row);
+						btn.classList.add("selected");
+						await addBotMessage("好的，我幫你打開搜尋介面。");
+						await wait(CHAT_FLOW_TRANSITION_DELAY_MS);
+						openEditModeWithSearchKeyword("飯店", dayNum);
+					});
+					row.appendChild(btn);
+					msgEl.appendChild(row);
+					scrollToBottom();
+				}
+			}
+		} else {
+			await appendMsg("伺服器錯誤: " + (result.message || result.error || "未知"), "bot");
+		}
+	} catch (err) {
+		const loader = document.getElementById(loadingId);
+		if (loader) loader.remove();
+		if (err.name !== "AbortError") {
+			await appendMsg("網路錯誤，請稍後再試", "bot");
+		}
+	} finally {
+		_chatAbortController = null;
+		_chatTypingAborted = false;
+		setChatResponding(false);
+	}
+}
+
+async function searchHotelsNearDay(dayNum) {
+	const isValidCoord = (v) => typeof v === "number" && isFinite(v) && v !== 0;
+
+	const days = getActiveDays();
+	const targetDay = days.find((d, i) => Number(d.day) === Number(dayNum) || i === Number(dayNum) - 1);
+	const activities = Array.isArray(targetDay?.activities) ? targetDay.activities : [];
+
+	let anchorLocation = null;
+	for (let i = activities.length - 1; i >= 0; i--) {
+		const loc = normalizeActivityLocation(activities[i]?.location);
+		if (loc && isValidCoord(loc.latitude) && isValidCoord(loc.longitude)) {
+			anchorLocation = loc;
+			break;
+		}
+	}
+
+	if (!anchorLocation) return [];
+
+	try {
+		const authHeaders = {
+			"Content-Type": "application/json",
+			...(localStorage.getItem("userToken") && { Authorization: `Bearer ${localStorage.getItem("userToken")}` }),
+		};
+
+		const resp = await fetch(`${API_BASE}/api/maps/search_nearby`, {
+			method: "POST",
+			headers: authHeaders,
+			body: JSON.stringify({
+				textQuery: "飯店",
+				location: { latitude: anchorLocation.latitude, longitude: anchorLocation.longitude },
+				radius: 2000,
+				languageCode: "zh-TW",
+				maxResultCount: 5,
+			}),
+		});
+
+		if (!resp.ok) return [];
+		const payload = await resp.json();
+		const places = payload?.data?.places || [];
+
+		return places.map((place) => ({
+			name: place.name || "",
+			description: place.address || "",
+			type: "飯店",
+			location: place.location,
+			_place: place,
+		}));
+	} catch (err) {
+		console.error("searchHotelsNearDay error:", err);
+		return [];
+	}
+}
+
 async function fetchNearbyAttractions(dayNum, isFood) {
 	const tripContext = buildChatTripContext();
 	const currentItinerary = getChatCurrentItinerary();
@@ -1582,6 +1812,11 @@ async function handleItineraryEditFlowInput(text) {
 		if (/附近美食推薦|附近美食|附近餐廳/.test(String(text || ""))) {
 			addUserMessage(text);
 			await showDayPickerForNearbyAttractions(true);
+			return true;
+		}
+		if (/附近飯店|附近旅館|附近住宿|附近酒店/.test(String(text || ""))) {
+			addUserMessage(text);
+			await showDayPickerForNearbyHotels();
 			return true;
 		}
 		return false;

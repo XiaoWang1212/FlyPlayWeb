@@ -298,23 +298,22 @@ function displayDay(dayIndex) {
 	clearMapRoutes(); // 先清除舊路線
 	const day = getActiveDays()[dayIndex];
 
-	if (!day || !day.activities || day.activities.length < 2) {
-		console.error("該日期沒有足夠的活動");
+	if (!day || !day.activities) {
+		console.error("該日期資料不存在");
 		return;
 	}
 
-	const activities = day.activities;
-	const routeActivities = activities.filter((a) => isValidRouteLocation(a));
-
-	// 先更新該天時間線，避免路線失敗時仍顯示全部內容
+	// 不論活動數量，先更新時間線（確保新增的景點馬上顯示）
 	loadSingleDayTimeline(day, dayIndex);
 
+	// 路線渲染需要至少 2 個有效座標點
+	const routeActivities = day.activities.filter((a) => isValidRouteLocation(a));
+	if (routeActivities.length < 2) return;
+
 	// 根據該天所有景點的座標範圍自動決定縮放層級
-	if (routeActivities.length > 0) {
-		const bounds = new google.maps.LatLngBounds();
-		routeActivities.forEach((a) => bounds.extend(a.location));
-		map.fitBounds(bounds, { top: 60, right: 40, bottom: 320, left: 40 });
-	}
+	const bounds = new google.maps.LatLngBounds();
+	routeActivities.forEach((a) => bounds.extend(a.location));
+	map.fitBounds(bounds, { top: 60, right: 40, bottom: 320, left: 40 });
 
 	renderDayRoute(routeActivities, dayIndex, mapRouteSession, {
 		strokeColor: getColorByDay(dayIndex),
