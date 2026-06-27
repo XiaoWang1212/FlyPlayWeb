@@ -1,7 +1,7 @@
 // ===== 交通方式選擇器 =====
 
 let _currentTransitBlock = null;
-let _defaultTransitMode = 'WALKING';
+let _defaultTransitMode = 'TRANSIT';
 
 const _MODES = {
   DRIVING:  { label: '駕車',         icon: 'fas fa-car',     gmMode: 'driving'  },
@@ -18,7 +18,7 @@ function openTransitModal(block) {
     document.getElementById('tm_' + k)?.classList.remove('selected', 'disabled');
   });
   // 讀取該 block 的最佳模式
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   document.getElementById('tm_' + bestMode)?.classList.add('selected');
 
   // 檢查是否已有計算結果
@@ -104,7 +104,7 @@ function selectTransitMode(mode) {
 
 function openGoogleMapsRoute(event, block) {
   event.stopPropagation();
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   const gmMode = _MODES[bestMode]?.gmMode || 'walking';
   const oLat = block.dataset.originLat;
   const oLng = block.dataset.originLng;
@@ -194,12 +194,12 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
   if (block && autoSelectFastest) {
     if (modeDurations['WALKING'] !== undefined && modeDurations['WALKING'] <= 15) {
       block.dataset.bestMode = 'WALKING';
+    } else if (modeDurations['TRANSIT'] !== undefined && modeDurations['TRANSIT'] < 999) {
+      block.dataset.bestMode = 'TRANSIT';
     } else {
-      // 否則選擇最快的模式
       const validModes = Object.entries(modeDurations)
         .filter(([_, minutes]) => minutes < 999)
         .sort(([_, a], [__, b]) => a - b);
-      
       if (validModes.length > 0) {
         block.dataset.bestMode = validModes[0][0];
       }
@@ -213,7 +213,7 @@ function _updateBlockDisplay(block) {
   if (!textEl || !iconEl) return;
 
   // 使用該 block 的 bestMode
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   const mode = _MODES[bestMode];
   if (!mode) return;
   iconEl.className = mode.icon + ' transit-mode-icon';
