@@ -41,15 +41,19 @@
         line-height: 1.3 !important;
         flex: 1 !important;
       }
+      .fp-popover .driver-popover-title {
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        color: #0b559e !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        padding-right: 24px !important;
+        line-height: 1.3 !important;
+        flex: 1 !important;
+      }
       .fp-popover .driver-popover-close-btn {
-        position: static !important;
         color: #bbb !important;
         font-size: 16px !important;
-        width: auto !important;
-        height: auto !important;
-        padding: 0 !important;
-        flex-shrink: 0 !important;
-        align-self: flex-start !important;
       }
       .fp-popover .driver-popover-close-btn:hover {
         color: #555 !important;
@@ -120,7 +124,8 @@
     return window.driver?.js?.driver;
   }
 
-  // ---- setup.html 教學 ----
+  // ---- setup.html 教學（2 步） ----
+  // 修改教學文字請直接改 steps 陣列裡的 title / description
   function startSetupTutorial() {
     const driverFn = getDriver();
     if (!driverFn) return;
@@ -133,79 +138,41 @@
       nextBtnText: '下一步',
       prevBtnText: '上一步',
       doneBtnText: '開始規劃 ✈️',
-      allowClose: false,
+      allowClose: true,
       disableActiveInteraction: true,
       popoverClass: 'fp-popover',
       onDestroyStarted: () => {
         localStorage.setItem(SETUP_DONE_KEY, '1');
+        const btn = document.getElementById('ai-recommend-btn');
+        if (btn && btn.classList.contains('_fp_tutorial_show')) {
+          btn.classList.remove('show', '_fp_tutorial_show');
+        }
         driverObj.destroy();
       },
       steps: [
+        // ── Step 1：歡迎畫面 ──
         {
           popover: {
             title: '歡迎使用飛遊 ✈️',
-            description: '讓我帶你快速了解如何用 AI 規劃旅程，只需幾個步驟！',
+            description: '讓 AI 幫你規劃專屬旅程，只需幾個簡單步驟！',
           }
         },
+        // ── Step 2：一次框住所有表單欄位 ──
         {
-          element: '#departure-form-group',
+          element: '.form-scroll',
           popover: {
-            title: '① 抵達機場',
-            description: '點這裡選擇你要從哪個機場抵達目的地',
-            side: 'bottom',
-            align: 'start',
-          }
-        },
-        {
-          element: '#destination-form-group',
-          popover: {
-            title: '② 目的地',
-            description: '選擇你想去的城市或地區，可以多選！',
-            side: 'bottom',
-            align: 'start',
-          }
-        },
-        {
-          element: '#days-picker-group',
-          popover: {
-            title: '③ 旅遊天數',
-            description: '選擇幾天的行程（不含出發及返程日）',
-            side: 'bottom',
-            align: 'start',
-          }
-        },
-        {
-          element: '#companion-picker-group',
-          popover: {
-            title: '④ 旅伴',
-            description: '一個人？帶伴侶？還是家族旅遊？',
+            title: '自定義你的旅程',
+            description: '選擇目的地、天數、旅伴與旅遊風格，每項都可以依照你的喜好調整',
             side: 'top',
-            align: 'start',
+            align: 'center',
           }
         },
-        {
-          element: '#travel-type-picker-group',
-          popover: {
-            title: '⑤ 旅遊類型',
-            description: '選擇喜歡的旅遊風格，可以多選',
-            side: 'top',
-            align: 'start',
-          }
-        },
-        {
-          element: '#trip-pace-picker-group',
-          popover: {
-            title: '⑥ 行程緊湊度',
-            description: '想輕鬆走走，還是把行程排滿滿？',
-            side: 'top',
-            align: 'start',
-          }
-        },
+        // ── Step 3：指向 AI 生成按鈕 ──
         {
           element: '#ai-recommend-btn',
           popover: {
-            title: '🤖 AI 推薦行程',
-            description: '選好所有設定後，按這裡讓 AI 飛飛幫你生成專屬旅程！',
+            title: '開始規劃 🚀',
+            description: '設定完成後，按這裡讓 AI 飛飛幫你生成專屬行程！',
             side: 'top',
             align: 'center',
           },

@@ -800,12 +800,12 @@ async function showDayPickerForNearbyHotels() {
 }
 
 async function showHotelModePickerMessage(dayNum) {
+	// 這個 picker 是 UI 互動，不推進 conversationHistory，避免干擾後端 AI 的對話上下文
 	const msgEl = await typeMessage(
 		"你想讓 AI 推薦附近飯店，還是自己搜尋特定飯店？",
 		"bot",
 		CHAT_TYPEWRITER_SPEED,
 	);
-	conversationHistory.push({ role: "assistant", content: "你想讓 AI 推薦附近飯店，還是自己搜尋特定飯店？" });
 
 	const row = document.createElement("div");
 	row.className = "chat-picker-row";
@@ -821,7 +821,7 @@ async function showHotelModePickerMessage(dayNum) {
 			disablePickerContainer(row);
 			btn.classList.add("selected");
 			appendMsg(label, "user");
-			pushConversationMessage("user", label);
+			// 不推進 conversationHistory，避免「AI 推薦」等 UI 選項污染對話脈絡
 			if (mode === "ai") {
 				await fetchNearbyHotels(dayNum);
 			} else {
