@@ -18,6 +18,19 @@ let scrollEndTimeout;
 
 const API_BASE = `http://${window.location.hostname}:5001`;
 
+// 這段是擋「左右滑返回」用的
+// 目的：不讓使用者在 setup 還沒填完的情況下，不小心邊緣滑動就退出設定流程。
+// 純網頁階段的暫時做法，效果分瀏覽器：
+//   - Chrome：可以擋住
+//   - Safari：擋不住（Safari 的限制）
+// 之後這整段可能可以直接移除，改在原生端關手勢就好
+(function preventSwipeBack() {
+  history.pushState(null, "", location.href);
+  window.addEventListener("popstate", () => {
+    history.pushState(null, "", location.href);
+  });
+})();
+
 function formatItineraryFallbackText(rawOutput, parsedOutput) {
   const itinerary = parsedOutput?.parsed || parsedOutput;
   const days = Array.isArray(itinerary?.days)
