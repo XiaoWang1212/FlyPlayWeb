@@ -52,6 +52,9 @@
         flex: 1 !important;
       }
       .fp-popover .driver-popover-close-btn {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         color: #bbb !important;
         font-size: 16px !important;
       }
@@ -138,16 +141,20 @@
       nextBtnText: '下一步',
       prevBtnText: '上一步',
       doneBtnText: '開始規劃 ✈️',
-      allowClose: true,
+      allowClose: false,
       disableActiveInteraction: true,
       popoverClass: 'fp-popover',
       onDestroyStarted: () => {
+        const isLastStep = driverObj.getActiveIndex?.() === 2;
         localStorage.setItem(SETUP_DONE_KEY, '1');
         const btn = document.getElementById('ai-recommend-btn');
         if (btn && btn.classList.contains('_fp_tutorial_show')) {
           btn.classList.remove('show', '_fp_tutorial_show');
         }
         driverObj.destroy();
+        if (isLastStep && typeof submitTutorialTemplate === 'function') {
+          queueMicrotask(submitTutorialTemplate);
+        }
       },
       steps: [
         // ── Step 1：歡迎畫面 ──
