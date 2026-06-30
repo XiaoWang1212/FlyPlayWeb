@@ -830,6 +830,10 @@ class GeminiService:
             elif self._is_itinerary_edit_request(message):
                 try:
                     _, _, parsed_payload = self._parse_response_json(response)
+                    if isinstance(parsed_payload, dict):
+                        display = parsed_payload.get("summary") or parsed_payload.get("question")
+                        if display:
+                            ai_content = display
                 except Exception:
                     parsed_payload = None
 
