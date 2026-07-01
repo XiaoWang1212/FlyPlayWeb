@@ -1,4 +1,3 @@
-#from services.openai_service import GeminiService
 from services.gemini_service import GeminiService
 from services.travel_service import TravelService
 import asyncio

@@ -564,12 +564,12 @@ function renderProjects(projects) {
 	if (!list) return console.error("trip-list 不存在");
 	list.innerHTML = "";
 
-	// __tutorial__ 永遠隱藏，用 title 識別而非 ID
+	// 教學專案以 is_tutorial 旗標識別，與 title 無關
 	const tutorialProject = Array.isArray(projects)
-		? projects.find((p) => p.title === "__tutorial__")
+		? projects.find((p) => p.is_tutorial === true)
 		: null;
 	const visibleProjects = (Array.isArray(projects) ? projects : [])
-		.filter((p) => p.title !== "__tutorial__");
+		.filter((p) => p.is_tutorial !== true);
 
 	if (visibleProjects.length === 0) {
 		list.innerHTML = `<div class="trip-empty">點擊上方，開始規劃<br>你的第一趟旅程吧！</div>`;
@@ -741,7 +741,7 @@ async function loadProjects() {
 	if (redirectToLoginIfUnauthorized(res.status, body)) return;
 	console.log("loadProjects", res.status, body);
 	if (res.ok && body.code === 200) {
-		// 完全沒專案（含 __tutorial__）才跳 setup，並重置教學狀態
+		// 完全沒專案（含教學專案）才跳 setup，並重置教學狀態
 		if (!body.data || body.data.length === 0) {
 			sessionStorage.removeItem("currentProjectId");
 			sessionStorage.removeItem("currentProjectTitle");
@@ -751,8 +751,8 @@ async function loadProjects() {
 			window.location.href = "setup.html";
 			return;
 		}
-		// 預設開啟第一個「可見」專案（排除 __tutorial__）
-		const visibleData = (body.data || []).filter((p) => p.title !== "__tutorial__");
+		// 預設開啟第一個「可見」專案（排除 is_tutorial 教學專案）
+		const visibleData = (body.data || []).filter((p) => p.is_tutorial !== true);
 		// 有真實 project 代表使用者已用過 app，補上教學完成 key 避免換瀏覽器後重跑教學
 		if (visibleData.length > 0) {
 			localStorage.setItem("fp_tutorial_setup_done", "1");
@@ -765,8 +765,14 @@ async function loadProjects() {
 			sessionStorage.setItem("currentProjectId", String(defaultProject.project_id));
 		}
 		renderProjects(body.data);
-		if (defaultProject) {
-			await openProject(defaultProject);
+		if (sorted.length > 0) {
+			await openProject(sorted[0]);
+		} else {
+			// 沒有可見專案時（只有教學專案），自動開啟教學行程
+			const tutorialProject = (body.data || []).find((p) => p.is_tutorial === true);
+			if (tutorialProject) {
+				await openProject(tutorialProject);
+			}
 		}
 	} else {
 		console.warn("loadProjects 錯誤", res.status, body);
@@ -807,6 +813,36 @@ async function openProject(project) {
 			localStorage.setItem("selectedDestinations", JSON.stringify(cities));
 		} else {
 			localStorage.removeItem("selectedDestinations");
+		}
+
+		// 教學專案：若 detailed_itinerary 缺失，自動重新注入範本（相容舊帳號）
+		if (project.is_tutorial === true) {
+			const itinerary = body.data[0];
+			const hasDetailed =
+				itinerary?.detailed_itinerary &&
+				typeof itinerary.detailed_itinerary === "object" &&
+				(
+					(Array.isArray(itinerary.detailed_itinerary?.parsed?.days) && itinerary.detailed_itinerary.parsed.days.length > 0) ||
+					(Array.isArray(itinerary.detailed_itinerary?.days) && itinerary.detailed_itinerary.days.length > 0)
+				);
+			if (!hasDetailed) {
+				try {
+					const injectToken = localStorage.getItem("userToken");
+					await fetch(`${API_BASE}/api/travel/tutorial/inject`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json", Authorization: `Bearer ${injectToken}` },
+						body: JSON.stringify({ project_id: project.project_id }),
+					});
+					// 重新取行程資料（含注入後的 detailed_itinerary）
+					const res2 = await fetch(`${API_BASE}/api/travel/itineraries/${project.project_id}`, {
+						headers: { "Content-Type": "application/json", Authorization: `Bearer ${injectToken}` },
+					});
+					const body2 = await res2.json().catch(() => ({}));
+					if (res2.ok && body2.code === 200 && Array.isArray(body2.data) && body2.data.length > 0) {
+						body.data = body2.data;
+					}
+				} catch (_) {}
+			}
 		}
 
 		// 保存目前選中的 itinerary，供後續 /data/latlng 與 /api/itinerary/detail 使用
@@ -861,6 +897,19 @@ async function openProject(project) {
 		if (isChatMode && typeof showPendingChatOutput === "function") {
 			await showPendingChatOutput({ ensureChatMode: false });
 		}
+	} else if (project.is_tutorial === true) {
+		// 教學專案沒有 itinerary → 直接注入範本後重開
+		try {
+			const injectToken = localStorage.getItem("userToken");
+			const injectRes = await fetch(`${API_BASE}/api/travel/tutorial/inject`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${injectToken}` },
+				body: JSON.stringify({ project_id: project.project_id }),
+			});
+			if (injectRes.ok) {
+				await openProject(project);
+			}
+		} catch (_) {}
 	} else {
 		// 沒 itinerary -> 轉 setup
 		sessionStorage.setItem("currentProjectId", project.project_id);

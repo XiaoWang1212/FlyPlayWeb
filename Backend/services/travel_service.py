@@ -23,6 +23,19 @@ class TravelService:
                     ADD COLUMN IF NOT EXISTS morning_departure VARCHAR(50);
                     """
                 )
+                cur.execute(
+                    """
+                    ALTER TABLE projects
+                    ADD COLUMN IF NOT EXISTS is_tutorial BOOLEAN NOT NULL DEFAULT FALSE;
+                    """
+                )
+                # 將舊版以 title='__tutorial__' 識別的教學專案升級為 is_tutorial=TRUE
+                cur.execute(
+                    """
+                    UPDATE projects SET is_tutorial = TRUE
+                    WHERE title = '__tutorial__' AND is_tutorial = FALSE;
+                    """
+                )
             conn.commit()
 
     def create_project(self, user_id, title):
@@ -110,10 +123,19 @@ class TravelService:
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT project_id, user_id, title, is_pinned, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY updated_at DESC",
+                    "SELECT project_id, user_id, title, is_pinned, is_tutorial, created_at, updated_at FROM projects WHERE user_id=%s ORDER BY updated_at DESC",
                     (user_id,),
                 )
                 return cur.fetchall()
+
+    def mark_project_as_tutorial(self, project_id: int):
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE projects SET is_tutorial = TRUE WHERE project_id = %s",
+                    (project_id,),
+                )
+            conn.commit()
 
     def get_itinerary(self, itinerary_id):
         with self._conn() as conn:
@@ -202,3 +224,39 @@ class TravelService:
                     (project_id,),
                 )
                 return cur.fetchone()
+
+    def inject_tutorial_template(self, project_id: int, template: dict, start_date: str) -> int:
+        """刪除舊的教學行程，插入範本資料，回傳新的 itinerary_id。"""
+        with self._conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "DELETE FROM itineraries WHERE project_id=%s",
+                    (project_id,),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO itineraries
+                        (project_id, days, departure_airport, destination, type,
+                         companion, morning_departure, interests, start_date,
+                         data_json, data_latlng, detailed_itinerary)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    RETURNING itinerary_id
+                    """,
+                    (
+                        project_id,
+                        template["days"],
+                        template["departure_airport"],
+                        template["destination"],
+                        template["type"],
+                        template["companion"],
+                        template["morning_departure"],
+                        json.dumps(template["interests"]),
+                        start_date,
+                        json.dumps(template["data_json"]),
+                        json.dumps(template["data_latlng"]),
+                        json.dumps(template["detailed_itinerary"]),
+                    ),
+                )
+                new_id = cur.fetchone()["itinerary_id"]
+            conn.commit()
+        return new_id
