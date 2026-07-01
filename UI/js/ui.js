@@ -546,6 +546,7 @@ async function submitNewTripModal(event) {
 		if (resp.ok && result.code === 201) {
 			saveTripSetupToStorage({ startDate });
 			const projectId = result.data.project_id;
+			localStorage.setItem("lastOpenedProjectId", String(projectId));
 
 			closeNewTripModal();
 			navigateToSetup(projectId, title);
@@ -758,13 +759,14 @@ async function loadProjects() {
 			localStorage.setItem("fp_tutorial_index_done", "1");
 		}
 		const sorted = sortProjectsByPin(visibleData);
-		// 永遠預設第一個，先設定好讓 renderProjects 標記正確灰底
-		if (sorted.length > 0) {
-			sessionStorage.setItem("currentProjectId", String(sorted[0].project_id));
+		const lastId = localStorage.getItem("lastOpenedProjectId");
+		const defaultProject = (lastId && sorted.find(p => String(p.project_id) === lastId)) || sorted[0];
+		if (defaultProject) {
+			sessionStorage.setItem("currentProjectId", String(defaultProject.project_id));
 		}
 		renderProjects(body.data);
-		if (sorted.length > 0) {
-			await openProject(sorted[0]);
+		if (defaultProject) {
+			await openProject(defaultProject);
 		}
 	} else {
 		console.warn("loadProjects 錯誤", res.status, body);
@@ -775,6 +777,7 @@ async function openProject(project) {
 	const storedToken = localStorage.getItem("userToken");
 	sessionStorage.setItem("currentProjectId", String(project.project_id));
 	localStorage.setItem("currentProjectId", String(project.project_id));
+	localStorage.setItem("lastOpenedProjectId", String(project.project_id));
 	const res = await fetch(
 		`${API_BASE}/api/travel/itineraries/${project.project_id}`,
 		{

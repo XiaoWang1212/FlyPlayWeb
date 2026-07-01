@@ -154,15 +154,33 @@ async function goBackAndDeleteIncompleteProject() {
 
   if (projectId && token) {
     try {
-      await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      // 先確認行程是否已有資料，有的話不刪除
+      const checkRes = await fetch(`${API_BASE}/api/travel/itineraries/${projectId}`, {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
+      const checkBody = await checkRes.json().catch(() => ({}));
+      console.log("[goBack] itineraries response:", JSON.stringify(checkBody));
+      const itinerary = Array.isArray(checkBody.data) ? checkBody.data[0] : null;
+      console.log("[goBack] itinerary:", itinerary);
+      console.log("[goBack] detailed_itinerary:", itinerary?.detailed_itinerary);
+      console.log("[goBack] data_latlng:", itinerary?.data_latlng);
+      const hasData = itinerary && (
+        (itinerary.detailed_itinerary && Object.keys(itinerary.detailed_itinerary).length > 0) ||
+        (itinerary.data_latlng && (
+          (Array.isArray(itinerary.data_latlng) && itinerary.data_latlng.length > 0) ||
+          (itinerary.data_latlng.data && itinerary.data_latlng.data.length > 0)
+        ))
+      );
+      console.log("[goBack] hasData:", hasData, "→", hasData ? "不刪除" : "刪除");
+
+      if (!hasData) {
+        await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        });
+      }
     } catch (_) {
-      // 刪除失敗也繼續返回，不阻擋使用者
+      // 失敗也繼續返回，不阻擋使用者
     }
   }
 
