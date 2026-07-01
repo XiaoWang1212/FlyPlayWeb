@@ -190,11 +190,13 @@ class TravelService:
         if not set_items:
             return None
         values.append(itinerary_id)
-        sql = f"UPDATE itineraries SET {', '.join(set_items)} WHERE itinerary_id=%s RETURNING *"
+        sql = f"UPDATE itineraries SET {', '.join(set_items)} WHERE itinerary_id=%s RETURNING itinerary_id"
         with self._conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, tuple(values))
-                return cur.fetchone()
+                row = cur.fetchone()
+            conn.commit()
+        return row
 
     def delete_itinerary(self, itinerary_id):
         with self._conn() as conn:

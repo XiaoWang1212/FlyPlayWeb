@@ -75,6 +75,7 @@ async function loadCoordinatesFirst() {
 							photo_url: loc.photo_url || "",
 							address: loc.address || "",
 							rating: loc.rating ?? null,
+							transit_mode: loc.transit_mode || null,
 							description: "",
 							type: "",
 						})),
@@ -126,6 +127,7 @@ async function loadCoordinatesFirst() {
 					photo_url: loc.photo_url || "",
 					address: loc.address || "",
 					rating: loc.rating ?? null,
+					transit_mode: loc.transit_mode || null,
 					description: "",
 					type: "",
 				})),
@@ -420,6 +422,7 @@ function convertToAllDaysFormat(days) {
 			rating: item.rating ?? null,
 			address: item.address || "",
 			phone: item.phone || "",
+			transit_mode: item.transit_mode || null,
 		})),
 	}));
 }
@@ -460,17 +463,24 @@ function normalizeItineraryRowToAllDays(item) {
 							activity.location.lng === 0
 						);
 
-					if (hasValidLocation) return activity;
-
 					let matched = locations.find(
 						(loc) => loc?.location_name === activity?.place_name,
 					);
 					if (!matched) matched = locations[actIndex];
 
-					if (!matched?.location) return activity;
+					const transitMode = matched?.transit_mode || activity.transit_mode || null;
+
+					if (hasValidLocation) {
+						return transitMode !== activity.transit_mode
+							? { ...activity, transit_mode: transitMode }
+							: activity;
+					}
+
+					if (!matched?.location) return transitMode ? { ...activity, transit_mode: transitMode } : activity;
 
 					return {
 						...activity,
+						transit_mode: transitMode,
 						location: {
 							lat:
 								typeof matched.location.latitude === "number"
@@ -522,6 +532,7 @@ function normalizeItineraryRowToAllDays(item) {
 				description: "",
 				type: "",
 				cost: "",
+				transit_mode: loc.transit_mode || null,
 			})),
 		}));
 	}

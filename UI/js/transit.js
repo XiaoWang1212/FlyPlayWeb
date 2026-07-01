@@ -1,7 +1,32 @@
 // ===== 交通方式選擇器 =====
 
 let _currentTransitBlock = null;
-let _defaultTransitMode = 'WALKING';
+let _defaultTransitMode = 'TRANSIT';
+
+function _getTransitOverrideKey() {
+  const id = localStorage.getItem('currentItineraryId') || 'default';
+  return `transitOverrides_${id}`;
+}
+
+function _saveTransitOverride(dayIdx, actIdx, mode) {
+  const key = _getTransitOverrideKey();
+  const overrides = JSON.parse(localStorage.getItem(key) || '{}');
+  overrides[`${dayIdx}_${actIdx}`] = mode;
+  localStorage.setItem(key, JSON.stringify(overrides));
+}
+
+function _applyTransitOverrides() {
+  const key = _getTransitOverrideKey();
+  const overrides = JSON.parse(localStorage.getItem(key) || '{}');
+  if (!Object.keys(overrides).length) return;
+  document.querySelectorAll('.transit-block').forEach(block => {
+    const k = `${block.dataset.dayIndex}_${block.dataset.actIndex}`;
+    if (overrides[k]) {
+      block.dataset.bestMode = overrides[k];
+      _updateBlockDisplay(block);
+    }
+  });
+}
 
 const _MODES = {
   DRIVING:  { label: '駕車',         icon: 'fas fa-car',     gmMode: 'driving'  },
@@ -18,7 +43,7 @@ function openTransitModal(block) {
     document.getElementById('tm_' + k)?.classList.remove('selected', 'disabled');
   });
   // 讀取該 block 的最佳模式
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   document.getElementById('tm_' + bestMode)?.classList.add('selected');
 
   // 檢查是否已有計算結果
@@ -91,9 +116,17 @@ function closeTransitModal() {
 
 function selectTransitMode(mode) {
   if (document.getElementById('tm_' + mode)?.classList.contains('disabled')) return;
-  // 保存到該 block 的 dataset
   if (_currentTransitBlock) {
     _currentTransitBlock.dataset.bestMode = mode;
+    const dayIdx = parseInt(_currentTransitBlock.dataset.dayIndex, 10);
+    const actIdx = parseInt(_currentTransitBlock.dataset.actIndex, 10);
+    if (!isNaN(dayIdx) && !isNaN(actIdx)) {
+      _saveTransitOverride(dayIdx, actIdx, mode);
+      if (typeof allDays !== 'undefined' && allDays[dayIdx]?.activities?.[actIdx]) {
+        allDays[dayIdx].activities[actIdx].transit_mode = mode;
+        if (typeof saveItineraryToDb === 'function') saveItineraryToDb(allDays);
+      }
+    }
   }
   Object.keys(_MODES).forEach(k =>
     document.getElementById('tm_' + k)?.classList.toggle('selected', k === mode)
@@ -104,7 +137,7 @@ function selectTransitMode(mode) {
 
 function openGoogleMapsRoute(event, block) {
   event.stopPropagation();
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   const gmMode = _MODES[bestMode]?.gmMode || 'walking';
   const oLat = block.dataset.originLat;
   const oLng = block.dataset.originLng;
@@ -191,15 +224,15 @@ async function _fetchTransitData(oLat, oLng, dLat, dLng, block = null, autoSelec
 
   await Promise.all(promises);
 
-  if (block && autoSelectFastest) {
+  if (block && autoSelectFastest && !block.dataset.bestMode) {
     if (modeDurations['WALKING'] !== undefined && modeDurations['WALKING'] <= 15) {
       block.dataset.bestMode = 'WALKING';
+    } else if (modeDurations['TRANSIT'] !== undefined && modeDurations['TRANSIT'] < 999) {
+      block.dataset.bestMode = 'TRANSIT';
     } else {
-      // 否則選擇最快的模式
       const validModes = Object.entries(modeDurations)
         .filter(([_, minutes]) => minutes < 999)
         .sort(([_, a], [__, b]) => a - b);
-      
       if (validModes.length > 0) {
         block.dataset.bestMode = validModes[0][0];
       }
@@ -213,7 +246,7 @@ function _updateBlockDisplay(block) {
   if (!textEl || !iconEl) return;
 
   // 使用該 block 的 bestMode
-  const bestMode = block.dataset.bestMode || 'WALKING';
+  const bestMode = block.dataset.bestMode || 'TRANSIT';
   const mode = _MODES[bestMode];
   if (!mode) return;
   iconEl.className = mode.icon + ' transit-mode-icon';
@@ -298,21 +331,25 @@ async function _fetchTransitDataForModal(oLat, oLng, dLat, dLng) {
   }
 }
 
+let _initTransitRunning = false;
 async function initTransitBlocks() {
-  // 頁面載入完成時，自動計算所有 transit block 的時間並選擇最佳方案
-  const transitBlocks = document.querySelectorAll('.transit-block');
-  
-  for (const block of transitBlocks) {
-    const oLat = parseFloat(block.dataset.originLat);
-    const oLng = parseFloat(block.dataset.originLng);
-    const dLat = parseFloat(block.dataset.destLat);
-    const dLng = parseFloat(block.dataset.destLng);
-
-    // 確保坐標有效且非 0,0
-    const validCoord = (lat, lng) => !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
-    if (validCoord(oLat, oLng) && validCoord(dLat, dLng)) {
-      await _fetchTransitData(oLat, oLng, dLat, dLng, block, true);
-      _updateBlockDisplay(block);
+  if (_initTransitRunning) return;
+  _initTransitRunning = true;
+  try {
+    const transitBlocks = document.querySelectorAll('.transit-block');
+    for (const block of transitBlocks) {
+      const oLat = parseFloat(block.dataset.originLat);
+      const oLng = parseFloat(block.dataset.originLng);
+      const dLat = parseFloat(block.dataset.destLat);
+      const dLng = parseFloat(block.dataset.destLng);
+      const validCoord = (lat, lng) => !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
+      if (validCoord(oLat, oLng) && validCoord(dLat, dLng)) {
+        await _fetchTransitData(oLat, oLng, dLat, dLng, block, true);
+        _updateBlockDisplay(block);
+      }
     }
+    _applyTransitOverrides();
+  } finally {
+    _initTransitRunning = false;
   }
 }

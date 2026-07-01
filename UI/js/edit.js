@@ -85,7 +85,7 @@ function toggleEditMode(evt) {
 		timelineView.classList.add("editing");
 		const editBtnGroup = document.querySelector("[data-day-title] .edit-btn-group");
 		if (editBtnGroup) {
-			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">完成</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">取消</span>';
+			editBtnGroup.innerHTML = '<span class="edit-text-btn" onclick="confirmDrag()">儲存</span><span id="editTextLabel" class="edit-text-btn" onclick="toggleEditMode(event)">取消</span>';
 		}
 		timelineList.querySelectorAll(".add-item-btn").forEach((el) => el.remove());
 		const addBtn = document.createElement("div");

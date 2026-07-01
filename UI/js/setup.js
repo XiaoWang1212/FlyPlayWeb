@@ -18,6 +18,19 @@ let scrollEndTimeout;
 
 const API_BASE = `http://${window.location.hostname}:5001`;
 
+// 這段是擋「左右滑返回」用的
+// 目的：不讓使用者在 setup 還沒填完的情況下，不小心邊緣滑動就退出設定流程。
+// 純網頁階段的暫時做法，效果分瀏覽器：
+//   - Chrome：可以擋住
+//   - Safari：擋不住（Safari 的限制）
+// 之後這整段可能可以直接移除，改在原生端關手勢就好
+(function preventSwipeBack() {
+  history.pushState(null, "", location.href);
+  window.addEventListener("popstate", () => {
+    history.pushState(null, "", location.href);
+  });
+})();
+
 function formatItineraryFallbackText(rawOutput, parsedOutput) {
   const itinerary = parsedOutput?.parsed || parsedOutput;
   const days = Array.isArray(itinerary?.days)
@@ -141,15 +154,33 @@ async function goBackAndDeleteIncompleteProject() {
 
   if (projectId && token) {
     try {
-      await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      // 先確認行程是否已有資料，有的話不刪除
+      const checkRes = await fetch(`${API_BASE}/api/travel/itineraries/${projectId}`, {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
+      const checkBody = await checkRes.json().catch(() => ({}));
+      console.log("[goBack] itineraries response:", JSON.stringify(checkBody));
+      const itinerary = Array.isArray(checkBody.data) ? checkBody.data[0] : null;
+      console.log("[goBack] itinerary:", itinerary);
+      console.log("[goBack] detailed_itinerary:", itinerary?.detailed_itinerary);
+      console.log("[goBack] data_latlng:", itinerary?.data_latlng);
+      const hasData = itinerary && (
+        (itinerary.detailed_itinerary && Object.keys(itinerary.detailed_itinerary).length > 0) ||
+        (itinerary.data_latlng && (
+          (Array.isArray(itinerary.data_latlng) && itinerary.data_latlng.length > 0) ||
+          (itinerary.data_latlng.data && itinerary.data_latlng.data.length > 0)
+        ))
+      );
+      console.log("[goBack] hasData:", hasData, "→", hasData ? "不刪除" : "刪除");
+
+      if (!hasData) {
+        await fetch(`${API_BASE}/api/travel/project/${projectId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        });
+      }
     } catch (_) {
-      // 刪除失敗也繼續返回，不阻擋使用者
+      // 失敗也繼續返回，不阻擋使用者
     }
   }
 
@@ -483,7 +514,7 @@ function generateCompanionCards(container) {
 
 const travelTypeOptions = [
   { value: "", label: "任何類型" },
-  { value: "food", label: "美食" },
+  { value: "popular attractions", label: "熱門景點" },
   { value: "nature", label: "自然" },
   { value: "culture", label: "文化" },
   { value: "shopping", label: "購物" },

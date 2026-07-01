@@ -194,6 +194,7 @@ function serializeChatItinerary(days) {
 				photo_url: activity.photo_url || activity.photos?.[0]?.photo_url || "",
 				address: activity.address || "",
 				rating: activity.rating ?? null,
+				transit_mode: activity.transit_mode || null,
 			})),
 		})),
 	};
