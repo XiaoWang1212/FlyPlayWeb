@@ -10,9 +10,11 @@ from services.googlemap_service import GoogleMapService
 from services.data_fix_service import DataFixService
 from services.gemini_service import GeminiService
 from services.travel_service import TravelService
+from tutorial_template import TUTORIAL_TEMPLATE
 import os
 import traceback
 import json
+from datetime import date
 
 # 存储从 setup.html 传来的行程数据
 stored_itinerary_data = None
@@ -233,6 +235,24 @@ def create_app():
             "photos_fixed": total_fixed,
             "photos_failed": total_failed,
         }), 200
+
+    @app.route("/api/travel/tutorial/inject", methods=["POST"])
+    def inject_tutorial():
+        """注入教學範本行程到指定 project，每次重新教學都覆蓋一次。"""
+        data = request.get_json() or {}
+        project_id = data.get("project_id")
+        if not project_id:
+            return jsonify({"code": 400, "message": "project_id required"}), 400
+        try:
+            start_date = date.today().isoformat()
+            project_id_int = int(project_id)
+            travel_service.mark_project_as_tutorial(project_id_int)
+            itinerary_id = travel_service.inject_tutorial_template(
+                project_id_int, TUTORIAL_TEMPLATE, start_date
+            )
+            return jsonify({"code": 200, "data": {"project_id": project_id, "itinerary_id": itinerary_id}})
+        except Exception as exc:
+            return jsonify({"code": 500, "message": str(exc)}), 500
 
     @app.route("/cache/clear", methods=["POST"])
     def clear_cache():

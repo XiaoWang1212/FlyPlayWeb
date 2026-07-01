@@ -739,9 +739,10 @@ function showAIRecommendButton() {
 
   const daysValue = Number(tripSetup.daysValue || 0);
   const destCount = destinations.length;
-  const daysValid = daysValue === 0 || daysValue >= destCount; // 尚未選天數也算通過
+  const hasDays = daysValue > 0;
+  const daysValid = hasDays && daysValue >= destCount;
 
-  // 兩個必填欄位都有填，且天數 >= 目的地數量，才顯示按鈕
+  // 三個必填欄位都有填（出發地、目的地、天數），且天數 >= 目的地數量，才顯示按鈕
   if (hasDeparture && hasDestination && daysValid) {
     if (btn) {
       // 只有在按鈕目前是隱藏狀態時，才關閉所有選擇器
@@ -768,6 +769,8 @@ function showAIRecommendButton() {
         message = "請選擇出發地";
       } else if (!hasDestination) {
         message = "請選擇目的地";
+      } else if (!hasDays) {
+        message = "請選擇天數";
       } else if (!daysValid) {
         message = `已選 ${destCount} 個目的地，天數需至少選 ${destCount} 天`;
       }
@@ -1015,9 +1018,56 @@ function buildItineraryPayload() {
  *   失敗：stopPlaneAnim()    飛機緩降回起點
  *
  */
-async function submitAIRecommendation() {
+// 教學範本入口：找到或建立 __tutorial__ project，注入固定範本資料後導航
+async function submitTutorialTemplate() {
+  const token = localStorage.getItem('userToken');
+  if (!token) { window.location.href = 'login.html'; return; }
+
+  startPlaneAnim();
+
+  try {
+    const uid = Number(localStorage.getItem('userId') || 0);
+
+    // 1. 找或建教學 project（以 is_tutorial 旗標識別，與 title 無關）
+    const listRes = await fetch(`${API_BASE}/api/travel/projects?user_id=${uid}`, {
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    });
+    const listBody = await listRes.json().catch(() => ({}));
+    let tutorialProject = (listBody.data || []).find((p) => p.is_tutorial === true);
+
+    if (!tutorialProject) {
+      const createRes = await fetch(`${API_BASE}/api/travel/project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: uid, title: '__tutorial__' }),
+      });
+      const createBody = await createRes.json().catch(() => ({}));
+      if (!createRes.ok || createBody.code !== 201) throw new Error('建立教學 project 失敗');
+      tutorialProject = createBody.data;
+    }
+
+    const projectId = tutorialProject.project_id;
+    sessionStorage.setItem('currentProjectId', String(projectId));
+
+    // 2. 注入範本資料（每次重新教學都覆蓋）
+    const injectRes = await fetch(`${API_BASE}/api/travel/tutorial/inject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    if (!injectRes.ok) throw new Error('範本注入失敗');
+
+    flyToIndex();
+  } catch (e) {
+    console.warn('範本行程載入失敗:', e);
+    stopPlaneAnim();
+    alert('行程載入失敗，請稍後再試');
+  }
+}
+
+async function submitAIRecommendation(tutorialMode = false) {
   const btn = getGenerateBtn();
-  if (btn?.disabled) return;
+  if (btn?.disabled && !tutorialMode) return;
 
   const token = localStorage.getItem("userToken");
   if (!token) {
@@ -1035,7 +1085,7 @@ async function submitAIRecommendation() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
       const listBody = await listRes.json().catch(() => ({}));
-      const existing = (listBody.data || []).find((p) => p.title === "__tutorial__");
+      const existing = (listBody.data || []).find((p) => p.is_tutorial === true);
       if (existing) {
         sessionStorage.setItem("currentProjectId", String(existing.project_id));
       } else {
@@ -1224,13 +1274,14 @@ async function submitAIRecommendation() {
 }
 
 function isSetupComplete() {
-  // 必填：出發地、目的地；天數、旅伴、旅遊類型、出發時間都可以是「任何」
+  // 必填：出發地、目的地、天數；旅伴、旅遊類型、出發時間都可以是「任何」
   const tripSetup = loadTripSetup() || {};
   const selectedDestinations = JSON.parse(
     localStorage.getItem("selectedDestinations") || "[]",
   );
+  const daysValue = Number(tripSetup.daysValue || 0);
 
-  return selectedDestinations.length > 0 && !!tripSetup.departure;
+  return selectedDestinations.length > 0 && !!tripSetup.departure && daysValue > 0;
 }
 
 function updateAIRecommendButtonState() {

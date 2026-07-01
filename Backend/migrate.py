@@ -19,6 +19,29 @@ SQL_STATEMENTS = [
     ALTER TABLE projects
     ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE;
     """,
+    # --- 以下為教學系統相關 ---
+    """
+    ALTER TABLE itineraries
+    ADD COLUMN IF NOT EXISTS morning_departure VARCHAR(50);
+    """,
+    """
+    ALTER TABLE itineraries
+    ADD COLUMN IF NOT EXISTS data_latlng JSONB;
+    """,
+    """
+    ALTER TABLE itineraries
+    ADD COLUMN IF NOT EXISTS detailed_itinerary JSONB;
+    """,
+    """
+    ALTER TABLE projects
+    ADD COLUMN IF NOT EXISTS is_tutorial BOOLEAN NOT NULL DEFAULT FALSE;
+    """,
+    # 將舊版以 title='__tutorial__' 識別的教學專案升級為 is_tutorial=TRUE
+    """
+    UPDATE projects
+    SET is_tutorial = TRUE
+    WHERE title = '__tutorial__' AND is_tutorial = FALSE;
+    """,
 ]
 
 
@@ -41,7 +64,7 @@ def run_migration() -> None:
 
         conn.commit()
 
-    print("✅ migration 完成（itineraries: interests/start_date/travel_style; projects: is_pinned）")
+    print("✅ migration 完成（itineraries: interests/start_date/morning_departure/data_latlng/detailed_itinerary; projects: is_pinned/is_tutorial）")
 
 
 if __name__ == "__main__":
