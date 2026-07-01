@@ -103,7 +103,9 @@ function loadSingleDayTimeline(day, dayIndex) {
       <div class="transit-block"
            data-origin-lat="${oLat}" data-origin-lng="${oLng}"
            data-dest-lat="${dLat}" data-dest-lng="${dLng}"
-           data-origin-name="${oName}" data-dest-name="${dName}">
+           data-origin-name="${oName}" data-dest-name="${dName}"
+           data-day-index="${dayIndex}" data-act-index="${actIndex}"
+           ${activity.transit_mode ? `data-best-mode="${activity.transit_mode}"` : ''}>
         <div class="transit-line"></div>
         <div class="transit-info-row">
           <div class="transit-summary" onclick="openTransitModal(this.closest('.transit-block'))">
@@ -191,7 +193,9 @@ function loadAllTimelineActivities() {
       <div class="transit-block"
            data-origin-lat="${oLat}" data-origin-lng="${oLng}"
            data-dest-lat="${dLat}" data-dest-lng="${dLng}"
-           data-origin-name="${oName}" data-dest-name="${dName}">
+           data-origin-name="${oName}" data-dest-name="${dName}"
+           data-day-index="${dayIndex}" data-act-index="${actIndex}"
+           ${activity.transit_mode ? `data-best-mode="${activity.transit_mode}"` : ''}>
         <div class="transit-line"></div>
         <div class="transit-info-row">
           <div class="transit-summary" onclick="openTransitModal(this.closest('.transit-block'))">
