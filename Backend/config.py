@@ -5,7 +5,6 @@ load_dotenv()
 
 class Config:
     # API Keys
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     DATABASE_URL = os.getenv('DATABASE_URL')
